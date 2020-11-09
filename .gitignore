@@ -1,0 +1,5 @@
+build
+.terraform
+proto_bindings
+docs/build
+dev.db
