@@ -27,7 +27,7 @@ proto:
 .PHONY: proto
 
 test: proto
-	go test ./... -v
+	go test ./... -v -timeout 10s
 .PHONY: test
 
 install: all
