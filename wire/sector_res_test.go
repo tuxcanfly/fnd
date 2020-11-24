@@ -1,13 +1,14 @@
 package wire
 
 import (
-	"github.com/ddrp-org/ddrp/blob"
 	"testing"
+
+	"github.com/ddrp-org/ddrp/blob"
 )
 
 func TestSectorRes_Encoding(t *testing.T) {
 	sectorRes := &SectorRes{
-		Name:     "testname.",
+		Name:     "test",
 		SectorID: 16,
 		Sector:   blob.Sector{},
 	}
