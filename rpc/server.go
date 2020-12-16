@@ -2,6 +2,11 @@ package rpc
 
 import (
 	"context"
+	"net"
+	"strconv"
+	"sync/atomic"
+	"time"
+
 	"github.com/ddrp-org/ddrp/blob"
 	"github.com/ddrp-org/ddrp/crypto"
 	"github.com/ddrp-org/ddrp/log"
@@ -13,10 +18,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/syndtr/goleveldb/leveldb"
 	"google.golang.org/grpc"
-	"net"
-	"strconv"
-	"sync/atomic"
-	"time"
 )
 
 const (
@@ -274,13 +275,13 @@ func (s *Server) PreCommit(ctx context.Context, req *apiv1.PreCommitReq) (*apiv1
 	}
 
 	tx := awaiting.(*awaitingTx).tx
-	mt, err := blob.Merkleize(blob.NewReader(tx))
+	mt, err := blob.Hash(blob.NewReader(tx))
 	if err != nil {
 		return nil, errors.Wrap(err, "error generating blob merkle root")
 	}
 
 	return &apiv1.PreCommitRes{
-		MerkleRoot: mt.Root().Bytes(),
+		MerkleRoot: mt.Bytes(),
 	}, nil
 }
 
@@ -297,7 +298,7 @@ func (s *Server) Commit(ctx context.Context, req *apiv1.CommitReq) (*apiv1.Commi
 	if err != nil {
 		return nil, errors.Wrap(err, "error getting name info")
 	}
-	mt, err := blob.Merkleize(blob.NewReader(tx))
+	mt, err := blob.Hash(blob.NewReader(tx))
 	if err != nil {
 		return nil, errors.Wrap(err, "error generating blob merkle root")
 	}
@@ -305,7 +306,7 @@ func (s *Server) Commit(ctx context.Context, req *apiv1.CommitReq) (*apiv1.Commi
 	var sig crypto.Signature
 	copy(sig[:], req.Signature)
 	ts := time.Unix(int64(req.Timestamp), 0)
-	h := blob.SealHash(name, ts, mt.Root(), crypto.ZeroHash)
+	h := blob.SealHash(name, ts, mt, crypto.ZeroHash)
 	if !crypto.VerifySigPub(info.PublicKey, sig, h) {
 		return nil, errors.New("signature verification failed")
 	}
@@ -319,11 +320,11 @@ func (s *Server) Commit(ctx context.Context, req *apiv1.CommitReq) (*apiv1.Commi
 		return store.SetHeaderTx(tx, &store.Header{
 			Name:         name,
 			Timestamp:    ts,
-			MerkleRoot:   mt.Root(),
+			MerkleRoot:   mt,
 			Signature:    sig,
 			ReservedRoot: crypto.ZeroHash,
 			ReceivedAt:   time.Now(),
-		}, mt.ProtocolBase())
+		}, blob.ZeroMerkleBase)
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, "error storing header")
@@ -342,7 +343,7 @@ func (s *Server) Commit(ctx context.Context, req *apiv1.CommitReq) (*apiv1.Commi
 		recips, _ = p2p.GossipAll(s.mux, &wire.Update{
 			Name:       name,
 			Timestamp:  ts,
-			MerkleRoot: mt.Root(),
+			MerkleRoot: mt,
 			Signature:  sig,
 		})
 	}

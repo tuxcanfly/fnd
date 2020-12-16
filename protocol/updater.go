@@ -1,6 +1,9 @@
 package protocol
 
 import (
+	"sync"
+	"time"
+
 	"github.com/ddrp-org/ddrp/blob"
 	"github.com/ddrp-org/ddrp/config"
 	"github.com/ddrp-org/ddrp/log"
@@ -10,8 +13,6 @@ import (
 	"github.com/ddrp-org/ddrp/wire"
 	"github.com/pkg/errors"
 	"github.com/syndtr/goleveldb/leveldb"
-	"sync"
-	"time"
 )
 
 var (
@@ -230,14 +231,15 @@ func UpdateBlob(cfg *UpdateConfig) error {
 		return errors.Wrap(err, "error during sync")
 	}
 
-	tree, err := blob.Merkleize(blob.NewReader(tx))
+	// TODO: syncing needs update to use the new sequential hashing protocol
+	tree, err := blob.Hash(blob.NewReader(tx))
 	if err != nil {
 		if err := tx.Rollback(); err != nil {
 			updaterLogger.Error("error rolling back blob transaction", "err", err)
 		}
 		return errors.Wrap(err, "error calculating new blob merkle root")
 	}
-	if tree.Root() != item.MerkleRoot {
+	if tree != item.MerkleRoot {
 		if err := tx.Rollback(); err != nil {
 			updaterLogger.Error("error rolling back blob transaction", "err", err)
 		}
@@ -253,7 +255,7 @@ func UpdateBlob(cfg *UpdateConfig) error {
 			ReservedRoot: item.ReservedRoot,
 			ReceivedAt:   time.Now(),
 			Timebank:     newTimebank,
-		}, tree.ProtocolBase())
+		}, blob.ZeroMerkleBase)
 	})
 	if err != nil {
 		if err := tx.Rollback(); err != nil {
