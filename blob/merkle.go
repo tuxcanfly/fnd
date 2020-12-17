@@ -2,7 +2,6 @@ package blob
 
 import (
 	"bytes"
-	"fmt"
 	"io"
 	"math"
 	"math/bits"
@@ -137,7 +136,6 @@ func VerifySectorProof(sector Sector, sectorID uint8, merkleRoot crypto.Hash, pr
 		pos = pos / 2
 	}
 
-	fmt.Println(currHash, merkleRoot)
 	return currHash == merkleRoot
 }
 
