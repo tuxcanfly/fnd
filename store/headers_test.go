@@ -2,12 +2,13 @@ package store
 
 import (
 	"crypto/rand"
+	"testing"
+	"time"
+
 	"github.com/ddrp-org/ddrp/blob"
 	"github.com/ddrp-org/ddrp/crypto"
 	"github.com/stretchr/testify/require"
 	"github.com/syndtr/goleveldb/leveldb"
-	"testing"
-	"time"
 )
 
 func TestHeaders_GetSet(t *testing.T) {
@@ -43,7 +44,7 @@ func TestHeaders_GetSet(t *testing.T) {
 	require.Equal(t, expHeader.Signature, actHeader.Signature)
 	require.Equal(t, expHeader.ReservedRoot, actHeader.ReservedRoot)
 	require.Equal(t, expHeader.ReceivedAt.Unix(), actHeader.ReceivedAt.Unix())
-	actMB, err := GetMerkleBase(db, "foo")
+	actMB, err := GetSectorHashes(db, "foo")
 	require.NoError(t, err)
 	require.Equal(t, expMB, actMB)
 

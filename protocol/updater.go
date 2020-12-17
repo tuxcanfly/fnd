@@ -157,7 +157,7 @@ func UpdateBlob(cfg *UpdateConfig) error {
 	if header == nil {
 		sectorsNeeded = blob.ZeroMerkleBase.DiffWith(newMerkleBase)
 	} else {
-		base, err := store.GetMerkleBase(cfg.DB, item.Name)
+		base, err := store.GetSectorHashes(cfg.DB, item.Name)
 		if err != nil {
 			return errors.Wrap(err, "error getting merkle base")
 		}
@@ -239,7 +239,7 @@ func UpdateBlob(cfg *UpdateConfig) error {
 		}
 		return errors.Wrap(err, "error calculating new blob merkle root")
 	}
-	if tree != item.MerkleRoot {
+	if tree.Root() != item.MerkleRoot {
 		if err := tx.Rollback(); err != nil {
 			updaterLogger.Error("error rolling back blob transaction", "err", err)
 		}

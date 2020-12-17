@@ -3,6 +3,8 @@ package protocol
 import (
 	"errors"
 	"fmt"
+	"time"
+
 	"github.com/ddrp-org/ddrp/blob"
 	"github.com/ddrp-org/ddrp/config"
 	"github.com/ddrp-org/ddrp/crypto"
@@ -12,7 +14,6 @@ import (
 	"github.com/ddrp-org/ddrp/util"
 	"github.com/ddrp-org/ddrp/wire"
 	"github.com/syndtr/goleveldb/leveldb"
-	"time"
 )
 
 type SectorServer struct {
@@ -58,7 +59,7 @@ func (s *SectorServer) onTreeBaseReq(peerID crypto.Hash, envelope *wire.Envelope
 		lgr.Info("dropping diff req for busy name")
 		return
 	}
-	merkleBase, err := store.GetMerkleBase(s.db, reqMsg.Name)
+	merkleBase, err := store.GetSectorHashes(s.db, reqMsg.Name)
 	if err != nil {
 		s.nameLocker.RUnlock(reqMsg.Name)
 		lgr.Error("error getting merkle base", "err", err)

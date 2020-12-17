@@ -281,7 +281,7 @@ func (s *Server) PreCommit(ctx context.Context, req *apiv1.PreCommitReq) (*apiv1
 	}
 
 	return &apiv1.PreCommitRes{
-		MerkleRoot: mt.Bytes(),
+		MerkleRoot: mt.Root().Bytes(),
 	}, nil
 }
 
@@ -306,7 +306,7 @@ func (s *Server) Commit(ctx context.Context, req *apiv1.CommitReq) (*apiv1.Commi
 	var sig crypto.Signature
 	copy(sig[:], req.Signature)
 	ts := time.Unix(int64(req.Timestamp), 0)
-	h := blob.SealHash(name, ts, mt, crypto.ZeroHash)
+	h := blob.SealHash(name, ts, mt.Root(), crypto.ZeroHash)
 	if !crypto.VerifySigPub(info.PublicKey, sig, h) {
 		return nil, errors.New("signature verification failed")
 	}
@@ -320,7 +320,7 @@ func (s *Server) Commit(ctx context.Context, req *apiv1.CommitReq) (*apiv1.Commi
 		return store.SetHeaderTx(tx, &store.Header{
 			Name:         name,
 			Timestamp:    ts,
-			MerkleRoot:   mt,
+			MerkleRoot:   mt.Root(),
 			Signature:    sig,
 			ReservedRoot: crypto.ZeroHash,
 			ReceivedAt:   time.Now(),
@@ -343,7 +343,7 @@ func (s *Server) Commit(ctx context.Context, req *apiv1.CommitReq) (*apiv1.Commi
 		recips, _ = p2p.GossipAll(s.mux, &wire.Update{
 			Name:       name,
 			Timestamp:  ts,
-			MerkleRoot: mt,
+			MerkleRoot: mt.Root(),
 			Signature:  sig,
 		})
 	}

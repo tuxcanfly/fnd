@@ -4,6 +4,9 @@ import (
 	"bytes"
 	"encoding/hex"
 	"encoding/json"
+	"sync"
+	"time"
+
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/ddrp-org/ddrp/blob"
 	"github.com/ddrp-org/ddrp/crypto"
@@ -11,8 +14,6 @@ import (
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/iterator"
 	"github.com/syndtr/goleveldb/leveldb/util"
-	"sync"
-	"time"
 )
 
 type Header struct {
@@ -96,10 +97,10 @@ func (h *Header) UnmarshalJSON(b []byte) error {
 }
 
 var (
-	headersPrefix          = Prefixer("headers")
-	headerCountKey         = Prefixer(string(headersPrefix("count")))()
-	headerMerkleBasePrefix = Prefixer(string(headersPrefix("merkle-base")))
-	headerDataPrefix       = Prefixer(string(headersPrefix("header")))
+	headersPrefix            = Prefixer("headers")
+	headerCountKey           = Prefixer(string(headersPrefix("count")))()
+	headerSectorHashesPrefix = Prefixer(string(headersPrefix("sector-hashes")))
+	headerDataPrefix         = Prefixer(string(headersPrefix("header")))
 )
 
 func GetHeaderCount(db *leveldb.DB) (int, error) {
@@ -138,11 +139,11 @@ func GetHeader(db *leveldb.DB, name string) (*Header, error) {
 	return header, nil
 }
 
-func GetMerkleBase(db *leveldb.DB, name string) (blob.MerkleBase, error) {
+func GetSectorHashes(db *leveldb.DB, name string) (blob.MerkleBase, error) {
 	var base blob.MerkleBase
-	baseB, err := db.Get(headerMerkleBasePrefix(name), nil)
+	baseB, err := db.Get(headerSectorHashesPrefix(name), nil)
 	if err != nil {
-		return base, errors.Wrap(err, "error getting merkle base")
+		return base, errors.Wrap(err, "error getting sector hashes")
 	}
 	if err := base.Decode(bytes.NewReader(baseB)); err != nil {
 		panic(err)
@@ -159,8 +160,8 @@ func SetHeaderTx(tx *leveldb.Transaction, header *Header, merkleBase blob.Merkle
 	if err != nil {
 		return errors.Wrap(err, "error checking header existence")
 	}
-	if err := tx.Put(headerMerkleBasePrefix(header.Name), buf.Bytes(), nil); err != nil {
-		return errors.Wrap(err, "error writing merkle tree")
+	if err := tx.Put(headerSectorHashesPrefix(header.Name), buf.Bytes(), nil); err != nil {
+		return errors.Wrap(err, "error writing sector hashes")
 	}
 	if err := tx.Put(headerDataPrefix(header.Name), mustMarshalJSON(header), nil); err != nil {
 		return errors.Wrap(err, "error writing header tree")
