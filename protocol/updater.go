@@ -129,7 +129,7 @@ func UpdateBlob(cfg *UpdateConfig) error {
 	}
 	defer cfg.NameLocker.Unlock(item.Name)
 
-	newMerkleBase, err := SyncTreeBases(&SyncTreeBasesOpts{
+	newSectorHashes, err := SyncTreeBases(&SyncTreeBasesOpts{
 		Timeout:    DefaultSyncerTreeBaseResTimeout,
 		Mux:        cfg.Mux,
 		Peers:      item.PeerIDs,
@@ -155,18 +155,18 @@ func UpdateBlob(cfg *UpdateConfig) error {
 	var prevTimebank int
 	var payableSectorCount int
 	if header == nil {
-		sectorsNeeded = blob.ZeroMerkleBase.DiffWith(newMerkleBase)
+		sectorsNeeded = blob.ZeroSectorHashes.DiffWith(newSectorHashes)
 	} else {
 		base, err := store.GetSectorHashes(cfg.DB, item.Name)
 		if err != nil {
 			return errors.Wrap(err, "error getting merkle base")
 		}
-		sectorsNeeded = base.DiffWith(newMerkleBase)
+		sectorsNeeded = base.DiffWith(newSectorHashes)
 		prevUpdateTime = header.ReceivedAt
 		prevTimebank = header.Timebank
 	}
 	for _, sectorID := range sectorsNeeded {
-		if newMerkleBase[sectorID] == blob.EmptyBlobBaseHash {
+		if newSectorHashes[sectorID] == blob.EmptyBlobBaseHash {
 			continue
 		}
 		payableSectorCount++
@@ -220,7 +220,7 @@ func UpdateBlob(cfg *UpdateConfig) error {
 		Mux:           cfg.Mux,
 		Tx:            tx,
 		Peers:         item.PeerIDs,
-		MerkleBase:    newMerkleBase,
+		SectorHashes:  newSectorHashes,
 		SectorsNeeded: sectorsNeeded,
 		Name:          item.Name,
 	})

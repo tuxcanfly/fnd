@@ -139,8 +139,8 @@ func GetHeader(db *leveldb.DB, name string) (*Header, error) {
 	return header, nil
 }
 
-func GetSectorHashes(db *leveldb.DB, name string) (blob.MerkleBase, error) {
-	var base blob.MerkleBase
+func GetSectorHashes(db *leveldb.DB, name string) (blob.SectorHashes, error) {
+	var base blob.SectorHashes
 	baseB, err := db.Get(headerSectorHashesPrefix(name), nil)
 	if err != nil {
 		return base, errors.Wrap(err, "error getting sector hashes")

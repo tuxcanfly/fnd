@@ -4,13 +4,14 @@ import (
 	"bytes"
 	"crypto/rand"
 	"errors"
+	"testing"
+	"time"
+
 	"github.com/ddrp-org/ddrp/blob"
 	"github.com/ddrp-org/ddrp/crypto"
 	"github.com/ddrp-org/ddrp/testutil/mockapp"
 	"github.com/ddrp-org/ddrp/util"
 	"github.com/stretchr/testify/require"
-	"testing"
-	"time"
 )
 
 type syncTreeBasesSetup struct {
@@ -48,7 +49,7 @@ func TestSyncTreeBases(t *testing.T) {
 					bytes.NewReader(buf.Bytes()),
 				)
 
-				merkleBase, err := SyncTreeBases(&SyncTreeBasesOpts{
+				sectorHashes, err := SyncTreeBases(&SyncTreeBasesOpts{
 					Mux: setup.tp.LocalMux,
 					Peers: NewPeerSet([]crypto.Hash{
 						crypto.HashPub(setup.tp.RemoteSigner.Pub()),
@@ -58,7 +59,7 @@ func TestSyncTreeBases(t *testing.T) {
 				})
 
 				require.NoError(t, err)
-				for i, hash := range merkleBase {
+				for i, hash := range sectorHashes {
 					if i == 1 {
 						require.Equal(t, sectorHash, hash)
 						continue

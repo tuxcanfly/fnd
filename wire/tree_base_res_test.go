@@ -1,14 +1,15 @@
 package wire
 
 import (
-	"github.com/ddrp-org/ddrp/blob"
 	"testing"
+
+	"github.com/ddrp-org/ddrp/blob"
 )
 
 func TestTreeBaseRes_Encoding(t *testing.T) {
 	treeBaseRes := &TreeBaseRes{
-		Name:       "testname.",
-		MerkleBase: blob.ZeroMerkleBase,
+		Name:         "testname.",
+		SectorHashes: blob.ZeroSectorHashes,
 	}
 
 	testMessageEncoding(t, "tree_base_res", treeBaseRes, &TreeBaseRes{})

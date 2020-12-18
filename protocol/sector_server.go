@@ -59,7 +59,7 @@ func (s *SectorServer) onTreeBaseReq(peerID crypto.Hash, envelope *wire.Envelope
 		lgr.Info("dropping diff req for busy name")
 		return
 	}
-	merkleBase, err := store.GetSectorHashes(s.db, reqMsg.Name)
+	sectorHashes, err := store.GetSectorHashes(s.db, reqMsg.Name)
 	if err != nil {
 		s.nameLocker.RUnlock(reqMsg.Name)
 		lgr.Error("error getting merkle base", "err", err)
@@ -68,8 +68,8 @@ func (s *SectorServer) onTreeBaseReq(peerID crypto.Hash, envelope *wire.Envelope
 	s.nameLocker.RUnlock(reqMsg.Name)
 
 	resMsg := &wire.TreeBaseRes{
-		Name:       reqMsg.Name,
-		MerkleBase: merkleBase,
+		Name:         reqMsg.Name,
+		SectorHashes: sectorHashes,
 	}
 	if err := s.mux.Send(peerID, resMsg); err != nil {
 		lgr.Error("error serving tree base response", "err", err)

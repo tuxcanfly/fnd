@@ -1,17 +1,18 @@
 package wire
 
 import (
+	"io"
+
 	"github.com/ddrp-org/ddrp/blob"
 	"github.com/ddrp-org/ddrp/crypto"
 	"github.com/ddrp-org/dwire"
-	"io"
 )
 
 type TreeBaseRes struct {
 	HashCacher
 
-	Name       string
-	MerkleBase blob.MerkleBase
+	Name         string
+	SectorHashes blob.SectorHashes
 }
 
 func (d *TreeBaseRes) MsgType() MessageType {
@@ -25,14 +26,14 @@ func (d *TreeBaseRes) Equals(other Message) bool {
 	}
 
 	return d.Name == cast.Name &&
-		d.MerkleBase == cast.MerkleBase
+		d.SectorHashes == cast.SectorHashes
 }
 
 func (d *TreeBaseRes) Encode(w io.Writer) error {
 	return dwire.EncodeFields(
 		w,
 		d.Name,
-		d.MerkleBase,
+		d.SectorHashes,
 	)
 }
 
@@ -40,7 +41,7 @@ func (d *TreeBaseRes) Decode(r io.Reader) error {
 	return dwire.DecodeFields(
 		r,
 		&d.Name,
-		&d.MerkleBase,
+		&d.SectorHashes,
 	)
 }
 

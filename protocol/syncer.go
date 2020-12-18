@@ -1,14 +1,15 @@
 package protocol
 
 import (
+	"sync"
+	"time"
+
 	"github.com/ddrp-org/ddrp/blob"
 	"github.com/ddrp-org/ddrp/crypto"
 	"github.com/ddrp-org/ddrp/log"
 	"github.com/ddrp-org/ddrp/p2p"
 	"github.com/ddrp-org/ddrp/wire"
 	"github.com/pkg/errors"
-	"sync"
-	"time"
 )
 
 const (
@@ -30,15 +31,15 @@ type SyncTreeBasesOpts struct {
 	Name       string
 }
 
-func SyncTreeBases(opts *SyncTreeBasesOpts) (blob.MerkleBase, error) {
+func SyncTreeBases(opts *SyncTreeBasesOpts) (blob.SectorHashes, error) {
 	lgr := log.WithModule("tree-base-syncer")
 	treeBaseResCh := make(chan *wire.TreeBaseRes, 1)
 	iter := opts.Peers.Iterator()
-	var newMerkleBase blob.MerkleBase
+	var newSectorHashes blob.SectorHashes
 	for {
 		peerID, ok := iter()
 		if !ok {
-			return newMerkleBase, ErrNoTreeBaseCandidates
+			return newSectorHashes, ErrNoTreeBaseCandidates
 		}
 
 		var once sync.Once
@@ -76,13 +77,13 @@ func SyncTreeBases(opts *SyncTreeBasesOpts) (blob.MerkleBase, error) {
 			continue
 		case msg := <-treeBaseResCh:
 			unsubTreeBaseRes()
-			candMerkleTree := blob.MakeTreeFromBase(msg.MerkleBase)
+			candMerkleTree := msg.SectorHashes
 			if candMerkleTree.Root() != opts.MerkleRoot {
 				lgr.Warn("received invalid merkle base from peer, trying another", "peer_id", peerID)
 				continue
 			}
-			newMerkleBase = candMerkleTree.ProtocolBase()
-			return newMerkleBase, nil
+			newSectorHashes = candMerkleTree
+			return newSectorHashes, nil
 		}
 	}
 }
@@ -92,7 +93,7 @@ type SyncSectorsOpts struct {
 	Mux           *p2p.PeerMuxer
 	Tx            blob.Transaction
 	Peers         *PeerSet
-	MerkleBase    blob.MerkleBase
+	SectorHashes  blob.SectorHashes
 	SectorsNeeded []uint8
 	Name          string
 }
@@ -109,7 +110,7 @@ func SyncSectors(opts *SyncSectorsOpts) error {
 	tx := opts.Tx
 	reqdSectors := make(reqdSectorsMap)
 	for _, id := range opts.SectorsNeeded {
-		hash := opts.MerkleBase[id]
+		hash := opts.SectorHashes[id]
 		if hash == blob.EmptyBlobBaseHash {
 			if err := tx.WriteSector(id, blob.ZeroSector); err != nil {
 				return errors.Wrap(err, "error writing zero sector")
