@@ -1,6 +1,9 @@
 package protocol
 
 import (
+	"testing"
+	"time"
+
 	"github.com/ddrp-org/ddrp/blob"
 	"github.com/ddrp-org/ddrp/crypto"
 	"github.com/ddrp-org/ddrp/p2p"
@@ -10,8 +13,6 @@ import (
 	"github.com/ddrp-org/ddrp/wire"
 	"github.com/stretchr/testify/require"
 	"github.com/syndtr/goleveldb/leveldb"
-	"testing"
-	"time"
 )
 
 func TestUpdateQueue_Enqueue_InvalidBeforeEnqueue(t *testing.T) {
@@ -55,7 +56,7 @@ func TestUpdateQueue_Enqueue_InvalidBeforeEnqueue(t *testing.T) {
 			if err := store.SetNameInfoTx(tx, header.Name, pub, 10); err != nil {
 				return err
 			}
-			if err := store.SetHeaderTx(tx, header, blob.ZeroMerkleBase); err != nil {
+			if err := store.SetHeaderTx(tx, header, blob.ZeroSectorHashes); err != nil {
 				return err
 			}
 		}
@@ -162,7 +163,7 @@ func TestUpdateQueue_Enqueue_InvalidAfterEnqueue(t *testing.T) {
 		if err := store.SetNameInfoTx(tx, header.Name, pub, 10); err != nil {
 			return err
 		}
-		if err := store.SetHeaderTx(tx, header, blob.ZeroMerkleBase); err != nil {
+		if err := store.SetHeaderTx(tx, header, blob.ZeroSectorHashes); err != nil {
 			return err
 		}
 		return nil
@@ -202,7 +203,7 @@ func TestUpdateQueue_EnqueueDequeue(t *testing.T) {
 		if err := store.SetNameInfoTx(tx, header.Name, pub, 10); err != nil {
 			return err
 		}
-		if err := store.SetHeaderTx(tx, header, blob.ZeroMerkleBase); err != nil {
+		if err := store.SetHeaderTx(tx, header, blob.ZeroSectorHashes); err != nil {
 			return err
 		}
 		return nil

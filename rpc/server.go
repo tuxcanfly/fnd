@@ -324,7 +324,7 @@ func (s *Server) Commit(ctx context.Context, req *apiv1.CommitReq) (*apiv1.Commi
 			Signature:    sig,
 			ReservedRoot: crypto.ZeroHash,
 			ReceivedAt:   time.Now(),
-		}, blob.ZeroMerkleBase)
+		}, blob.ZeroSectorHashes)
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, "error storing header")

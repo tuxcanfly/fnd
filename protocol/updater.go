@@ -255,7 +255,7 @@ func UpdateBlob(cfg *UpdateConfig) error {
 			ReservedRoot: item.ReservedRoot,
 			ReceivedAt:   time.Now(),
 			Timebank:     newTimebank,
-		}, blob.ZeroMerkleBase)
+		}, blob.ZeroSectorHashes)
 	})
 	if err != nil {
 		if err := tx.Rollback(); err != nil {

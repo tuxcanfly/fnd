@@ -1,6 +1,10 @@
 package protocol
 
 import (
+	"io"
+	"testing"
+	"time"
+
 	"github.com/ddrp-org/ddrp/blob"
 	"github.com/ddrp-org/ddrp/crypto"
 	"github.com/ddrp-org/ddrp/p2p"
@@ -11,9 +15,6 @@ import (
 	"github.com/ddrp-org/ddrp/wire"
 	"github.com/stretchr/testify/require"
 	"github.com/syndtr/goleveldb/leveldb"
-	"io"
-	"testing"
-	"time"
 )
 
 func TestUpdateServer(t *testing.T) {
@@ -72,7 +73,7 @@ func TestUpdateServer(t *testing.T) {
 					return store.SetHeaderTx(tx, &store.Header{
 						Name:      "future",
 						Timestamp: time.Unix(5, 0),
-					}, blob.ZeroMerkleBase)
+					}, blob.ZeroSectorHashes)
 				}))
 			},
 			func(t *testing.T) {
@@ -90,7 +91,7 @@ func TestUpdateServer(t *testing.T) {
 					return store.SetHeaderTx(tx, &store.Header{
 						Name:      "equal",
 						Timestamp: time.Unix(10, 0),
-					}, blob.ZeroMerkleBase)
+					}, blob.ZeroSectorHashes)
 				}))
 			},
 			func(t *testing.T) {
@@ -114,7 +115,7 @@ func TestUpdateServer(t *testing.T) {
 						Timestamp:  ts,
 						MerkleRoot: tree.Root(),
 						Signature:  sig,
-					}, blob.ZeroMerkleBase)
+					}, blob.ZeroSectorHashes)
 				}))
 			},
 			func(t *testing.T) {

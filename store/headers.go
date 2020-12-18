@@ -151,9 +151,9 @@ func GetSectorHashes(db *leveldb.DB, name string) (blob.MerkleBase, error) {
 	return base, nil
 }
 
-func SetHeaderTx(tx *leveldb.Transaction, header *Header, merkleBase blob.MerkleBase) error {
+func SetHeaderTx(tx *leveldb.Transaction, header *Header, sectorHashes blob.SectorHashes) error {
 	var buf bytes.Buffer
-	if err := merkleBase.Encode(&buf); err != nil {
+	if err := sectorHashes.Encode(&buf); err != nil {
 		return errors.Wrap(err, "error encoding merkle tree")
 	}
 	exists, err := tx.Has(headerDataPrefix(header.Name), nil)

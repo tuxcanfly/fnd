@@ -8,7 +8,7 @@ import (
 )
 
 var (
-	zeroSectorHashes SectorHashes
+	ZeroSectorHashes SectorHashes
 )
 
 type SectorHashes [SectorCount]crypto.Hash
@@ -65,7 +65,7 @@ func Hash(br io.Reader) (SectorHashes, error) {
 		res[i] = hash
 		hasher.Write(hash[:])
 		if _, err := io.CopyN(hasher, br, SectorLen); err != nil {
-			return zeroSectorHashes, err
+			return ZeroSectorHashes, err
 		}
 		h := hasher.Sum(nil)
 		copy(hash[:], h)

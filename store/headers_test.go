@@ -14,7 +14,7 @@ import (
 func TestHeaders_GetSet(t *testing.T) {
 	db, done := setupLevelDB(t)
 
-	var expMB blob.MerkleBase
+	var expMB blob.SectorHashes
 	_, err := rand.Read(expMB[0][:])
 	require.NoError(t, err)
 

@@ -2,6 +2,10 @@ package mockapp
 
 import (
 	"crypto/rand"
+	"io"
+	"testing"
+	"time"
+
 	"github.com/ddrp-org/ddrp/blob"
 	"github.com/ddrp-org/ddrp/crypto"
 	"github.com/ddrp-org/ddrp/store"
@@ -9,9 +13,6 @@ import (
 	"github.com/ddrp-org/ddrp/wire"
 	"github.com/stretchr/testify/require"
 	"github.com/syndtr/goleveldb/leveldb"
-	"io"
-	"testing"
-	"time"
 )
 
 type TestStorage struct {
@@ -52,7 +53,7 @@ func FillBlobReader(t *testing.T, db *leveldb.DB, bs blob.Store, signer crypto.S
 	require.NoError(t, err)
 	_, err = io.Copy(blob.NewWriter(tx), io.LimitReader(r, blob.Size))
 	require.NoError(t, err)
-	tree, err := blob.Merkleize(blob.NewReader(tx))
+	tree, err := blob.Hash(blob.NewReader(tx))
 	require.NoError(t, err)
 	sig, err := blob.SignSeal(signer, name, ts, tree.Root(), crypto.ZeroHash)
 	require.NoError(t, err)
@@ -64,7 +65,7 @@ func FillBlobReader(t *testing.T, db *leveldb.DB, bs blob.Store, signer crypto.S
 			Signature:    sig,
 			ReservedRoot: crypto.ZeroHash,
 			ReceivedAt:   receivedAt,
-		}, tree.ProtocolBase())
+		}, tree)
 	}))
 	require.NoError(t, tx.Commit())
 	return &wire.Update{
