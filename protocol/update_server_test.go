@@ -125,7 +125,7 @@ func TestUpdateServer(t *testing.T) {
 				require.EqualValues(t, &wire.Update{
 					Name:       header.Name,
 					Timestamp:  header.Timestamp,
-					MerkleRoot: header.MerkleRoot,
+					SectorTipHash: header.MerkleRoot,
 					Signature:  header.Signature,
 				}, envelope.Message)
 			},

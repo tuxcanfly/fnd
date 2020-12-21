@@ -275,7 +275,7 @@ func (s *Server) PreCommit(ctx context.Context, req *apiv1.PreCommitReq) (*apiv1
 	}
 
 	tx := awaiting.(*awaitingTx).tx
-	mt, err := blob.Hash(blob.NewReader(tx))
+	mt, err := blob.SerialHash(blob.NewReader(tx))
 	if err != nil {
 		return nil, errors.Wrap(err, "error generating blob merkle root")
 	}
@@ -298,7 +298,7 @@ func (s *Server) Commit(ctx context.Context, req *apiv1.CommitReq) (*apiv1.Commi
 	if err != nil {
 		return nil, errors.Wrap(err, "error getting name info")
 	}
-	mt, err := blob.Hash(blob.NewReader(tx))
+	mt, err := blob.SerialHash(blob.NewReader(tx))
 	if err != nil {
 		return nil, errors.Wrap(err, "error generating blob merkle root")
 	}
@@ -343,7 +343,7 @@ func (s *Server) Commit(ctx context.Context, req *apiv1.CommitReq) (*apiv1.Commi
 		recips, _ = p2p.GossipAll(s.mux, &wire.Update{
 			Name:       name,
 			Timestamp:  ts,
-			MerkleRoot: mt.Root(),
+			SectorTipHash: mt.Root(),
 			Signature:  sig,
 		})
 	}
@@ -450,7 +450,7 @@ func (s *Server) SendUpdate(_ context.Context, req *apiv1.SendUpdateReq) (*apiv1
 	recips, _ := p2p.GossipAll(s.mux, &wire.Update{
 		Name:       req.Name,
 		Timestamp:  header.Timestamp,
-		MerkleRoot: header.MerkleRoot,
+		SectorTipHash: header.MerkleRoot,
 		Signature:  header.Signature,
 	})
 

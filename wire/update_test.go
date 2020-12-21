@@ -8,7 +8,7 @@ func TestUpdate_Encoding(t *testing.T) {
 	update := &Update{
 		Name:         "testname",
 		Timestamp:    fixedTime,
-		MerkleRoot:   fixedHash,
+		SectorTipHash:   fixedHash,
 		ReservedRoot: fixedHash,
 		Signature:    fixedSig,
 	}

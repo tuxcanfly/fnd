@@ -81,7 +81,7 @@ func (u *UpdateServer) UpdateReqHandler(peerID crypto.Hash, envelope *wire.Envel
 	err = u.mux.Send(peerID, &wire.Update{
 		Name:       msg.Name,
 		Timestamp:  header.Timestamp,
-		MerkleRoot: header.MerkleRoot,
+		SectorTipHash: header.MerkleRoot,
 		Signature:  header.Signature,
 	})
 	if err != nil {

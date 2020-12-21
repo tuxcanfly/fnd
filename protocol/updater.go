@@ -133,7 +133,7 @@ func UpdateBlob(cfg *UpdateConfig) error {
 		Timeout:    DefaultSyncerTreeBaseResTimeout,
 		Mux:        cfg.Mux,
 		Peers:      item.PeerIDs,
-		MerkleRoot: item.MerkleRoot,
+		SectorTipHash: item.MerkleRoot,
 		Name:       item.Name,
 	})
 	if err != nil {
@@ -232,7 +232,7 @@ func UpdateBlob(cfg *UpdateConfig) error {
 	}
 
 	// TODO: syncing needs update to use the new serial hashing protocol
-	tree, err := blob.Hash(blob.NewReader(tx))
+	tree, err := blob.SerialHash(blob.NewReader(tx))
 	if err != nil {
 		if err := tx.Rollback(); err != nil {
 			updaterLogger.Error("error rolling back blob transaction", "err", err)
@@ -278,7 +278,7 @@ func UpdateBlob(cfg *UpdateConfig) error {
 	update := &wire.Update{
 		Name:         item.Name,
 		Timestamp:    item.Timestamp,
-		MerkleRoot:   item.MerkleRoot,
+		SectorTipHash:   item.MerkleRoot,
 		Signature:    item.Signature,
 		ReservedRoot: item.ReservedRoot,
 	}

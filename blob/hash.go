@@ -8,6 +8,7 @@ import (
 )
 
 var (
+	ZeroHash         crypto.Hash
 	ZeroSectorHashes SectorHashes
 )
 
@@ -54,13 +55,21 @@ func (s SectorHashes) Root() crypto.Hash {
 	return s[SectorCount-1]
 }
 
-// Hash returns serial hash of the contents of the reader br
-func Hash(br io.Reader) (SectorHashes, error) {
+func SerialHashSector(sector Sector, prevHash crypto.Hash) crypto.Hash {
+	var res crypto.Hash
+	hasher, _ := blake2b.New256(nil)
+	hasher.Write(prevHash[:])
+	hasher.Write(sector[:])
+	h := hasher.Sum(nil)
+	copy(res[:], h)
+	return res
+}
+
+// SerialHash returns serial hash of the contents of the reader br
+func SerialHash(br io.Reader) (SectorHashes, error) {
 	var res SectorHashes
 	hasher, _ := blake2b.New256(nil)
-	var hash crypto.Hash
-	h := hasher.Sum(nil)
-	copy(hash[:], h)
+	var hash crypto.Hash = ZeroHash
 	for i := 0; i < SectorCount; i++ {
 		res[i] = hash
 		hasher.Write(hash[:])

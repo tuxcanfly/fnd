@@ -24,11 +24,11 @@ var (
 )
 
 type SyncTreeBasesOpts struct {
-	Timeout    time.Duration
-	Mux        *p2p.PeerMuxer
-	Peers      *PeerSet
-	MerkleRoot crypto.Hash
-	Name       string
+	Timeout       time.Duration
+	Mux           *p2p.PeerMuxer
+	Peers         *PeerSet
+	SectorTipHash crypto.Hash
+	Name          string
 }
 
 func SyncTreeBases(opts *SyncTreeBasesOpts) (blob.SectorHashes, error) {
@@ -77,12 +77,12 @@ func SyncTreeBases(opts *SyncTreeBasesOpts) (blob.SectorHashes, error) {
 			continue
 		case msg := <-treeBaseResCh:
 			unsubTreeBaseRes()
-			candMerkleTree := msg.SectorHashes
-			if candMerkleTree.Root() != opts.MerkleRoot {
-				lgr.Warn("received invalid merkle base from peer, trying another", "peer_id", peerID)
+			remoteSectorHashes := msg.SectorHashes
+			if remoteSectorHashes.Root() != opts.SectorTipHash {
+				lgr.Warn("received invalid sector hashes from peer, trying another", "peer_id", peerID)
 				continue
 			}
-			newSectorHashes = candMerkleTree
+			newSectorHashes = remoteSectorHashes
 			return newSectorHashes, nil
 		}
 	}

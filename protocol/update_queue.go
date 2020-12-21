@@ -101,7 +101,7 @@ func (u *UpdateQueue) Enqueue(peerID crypto.Hash, update *wire.Update) error {
 		return ErrInitialImportIncomplete
 	}
 
-	nameInfo, err := u.validateUpdate(update.Name, update.Timestamp, update.MerkleRoot, update.ReservedRoot, update.Signature)
+	nameInfo, err := u.validateUpdate(update.Name, update.Timestamp, update.SectorTipHash, update.ReservedRoot, update.Signature)
 	if err != nil {
 		return errors.Wrap(err, "name failed validation")
 	}
@@ -134,7 +134,7 @@ func (u *UpdateQueue) Enqueue(peerID crypto.Hash, update *wire.Update) error {
 			PeerIDs:      NewPeerSet([]crypto.Hash{peerID}),
 			Name:         update.Name,
 			Timestamp:    update.Timestamp,
-			MerkleRoot:   update.MerkleRoot,
+			MerkleRoot:   update.SectorTipHash,
 			ReservedRoot: update.ReservedRoot,
 			Signature:    update.Signature,
 			Pub:          nameInfo.PublicKey,

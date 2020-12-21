@@ -34,10 +34,12 @@ func TestSyncTreeBases(t *testing.T) {
 				var randSector blob.Sector
 				_, err := rand.Read(randSector[:])
 				require.NoError(t, err)
-				sectorHash := blob.HashSector(randSector)
+				sectorHash := blob.SerialHashSector(randSector, blob.ZeroHash)
 				buf := new(bytes.Buffer)
-				buf.Write(blob.ZeroSector[:])
 				buf.Write(randSector[:])
+				for i := 0; i < blob.SectorLen-1; i++ {
+					buf.Write(blob.ZeroSector[:])
+				}
 				update := mockapp.FillBlobReader(
 					t,
 					setup.rs.DB,
@@ -54,20 +56,15 @@ func TestSyncTreeBases(t *testing.T) {
 					Peers: NewPeerSet([]crypto.Hash{
 						crypto.HashPub(setup.tp.RemoteSigner.Pub()),
 					}),
-					MerkleRoot: update.MerkleRoot,
-					Name:       name,
+					SectorTipHash: update.SectorTipHash,
+					Name:          name,
 				})
 
 				require.NoError(t, err)
-				for i, hash := range sectorHashes {
-					if i == 1 {
-						require.Equal(t, sectorHash, hash)
-						continue
-					}
-					require.Equal(t, blob.EmptyBlobBaseHash, hash)
-				}
+				require.Equal(t, sectorHash, sectorHashes[1])
 			},
 		},
+
 		{
 			"aborts sync if all peers return invalid merkle bases",
 			func(t *testing.T, setup *syncTreeBasesSetup) {
@@ -100,16 +97,15 @@ func TestSyncTreeBases(t *testing.T) {
 					ts,
 				)
 
-				merkleBase, err := SyncTreeBases(&SyncTreeBasesOpts{
+				_, err := SyncTreeBases(&SyncTreeBasesOpts{
 					Mux: setup.tp.LocalMux,
 					Peers: NewPeerSet([]crypto.Hash{
 						crypto.HashPub(setup.tp.RemoteSigner.Pub()),
 						crypto.HashPub(addlPeer.Signer.Pub()),
 					}),
-					MerkleRoot: crypto.Rand32(),
-					Name:       name,
+					SectorTipHash: crypto.Rand32(),
+					Name:          name,
 				})
-				require.Equal(t, blob.ZeroMerkleBase, merkleBase)
 				require.Error(t, err)
 				require.True(t, errors.Is(err, ErrNoTreeBaseCandidates))
 			},
@@ -134,17 +130,16 @@ func TestSyncTreeBases(t *testing.T) {
 					ts,
 				)
 
-				merkleBase, err := SyncTreeBases(&SyncTreeBasesOpts{
+				_, err := SyncTreeBases(&SyncTreeBasesOpts{
 					Timeout: 250 * time.Millisecond,
 					Mux:     setup.tp.LocalMux,
 					Peers: NewPeerSet([]crypto.Hash{
 						crypto.HashPub(addlPeer.Signer.Pub()),
 						crypto.HashPub(setup.tp.RemoteSigner.Pub()),
 					}),
-					MerkleRoot: crypto.Rand32(),
-					Name:       name,
+					SectorTipHash: crypto.Rand32(),
+					Name:          name,
 				})
-				require.Equal(t, blob.ZeroMerkleBase, merkleBase)
 				require.Error(t, err)
 				require.True(t, errors.Is(err, ErrNoTreeBaseCandidates))
 			},
@@ -170,17 +165,16 @@ func TestSyncTreeBases(t *testing.T) {
 					ts,
 				)
 
-				merkleBase, err := SyncTreeBases(&SyncTreeBasesOpts{
+				_, err := SyncTreeBases(&SyncTreeBasesOpts{
 					Timeout: 250 * time.Millisecond,
 					Mux:     setup.tp.LocalMux,
 					Peers: NewPeerSet([]crypto.Hash{
 						crypto.HashPub(addlPeer.Signer.Pub()),
 						crypto.HashPub(setup.tp.RemoteSigner.Pub()),
 					}),
-					MerkleRoot: crypto.Rand32(),
-					Name:       name,
+					SectorTipHash: crypto.Rand32(),
+					Name:          name,
 				})
-				require.Equal(t, blob.ZeroMerkleBase, merkleBase)
 				require.Error(t, err)
 				require.True(t, errors.Is(err, ErrNoTreeBaseCandidates))
 			},

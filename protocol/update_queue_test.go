@@ -91,7 +91,7 @@ func TestUpdateQueue_Enqueue_InvalidBeforeEnqueue(t *testing.T) {
 			&wire.Update{
 				Name:         identicalHeader.Name,
 				Timestamp:    identicalHeader.Timestamp.Add(10 * time.Second),
-				MerkleRoot:   identicalHeader.MerkleRoot,
+				SectorTipHash:   identicalHeader.MerkleRoot,
 				ReservedRoot: identicalHeader.ReservedRoot,
 				Signature:    identicalHeader.Signature,
 			},
@@ -104,7 +104,7 @@ func TestUpdateQueue_Enqueue_InvalidBeforeEnqueue(t *testing.T) {
 			&wire.Update{
 				Name:         identicalHeader.Name,
 				Timestamp:    identicalHeader.Timestamp,
-				MerkleRoot:   identicalHeader.MerkleRoot,
+				SectorTipHash:   identicalHeader.MerkleRoot,
 				ReservedRoot: identicalHeader.ReservedRoot,
 				Signature:    identicalHeader.Signature,
 			},
@@ -117,7 +117,7 @@ func TestUpdateQueue_Enqueue_InvalidBeforeEnqueue(t *testing.T) {
 			signUpdate(t, &wire.Update{
 				Name:         throttledHeader.Name,
 				Timestamp:    throttledHeader.Timestamp.Add(10 * time.Second),
-				MerkleRoot:   throttledHeader.MerkleRoot,
+				SectorTipHash:   throttledHeader.MerkleRoot,
 				ReservedRoot: identicalHeader.ReservedRoot,
 			}),
 			func(t *testing.T, err error) {
@@ -129,7 +129,7 @@ func TestUpdateQueue_Enqueue_InvalidBeforeEnqueue(t *testing.T) {
 			signUpdate(t, &wire.Update{
 				Name:         staleHeader.Name,
 				Timestamp:    staleHeader.Timestamp.Add(-10 * time.Second),
-				MerkleRoot:   throttledHeader.MerkleRoot,
+				SectorTipHash:   throttledHeader.MerkleRoot,
 				ReservedRoot: identicalHeader.ReservedRoot,
 			}),
 			func(t *testing.T, err error) {
@@ -181,7 +181,7 @@ func TestUpdateQueue_Enqueue_InvalidAfterEnqueue(t *testing.T) {
 	require.Equal(t, ErrUpdateQueueSpltBrain, queue.Enqueue(crypto.Rand32(), signUpdate(t, &wire.Update{
 		Name:       header.Name,
 		Timestamp:  header.Timestamp.Add(1 * time.Second),
-		MerkleRoot: crypto.Rand32(),
+		SectorTipHash: crypto.Rand32(),
 	})))
 }
 
@@ -228,7 +228,7 @@ func TestUpdateQueue_EnqueueDequeue(t *testing.T) {
 	}
 	require.Equal(t, update.Name, item.Name)
 	require.Equal(t, update.Timestamp, item.Timestamp)
-	require.Equal(t, update.MerkleRoot, item.MerkleRoot)
+	require.Equal(t, update.SectorTipHash, item.MerkleRoot)
 	require.Equal(t, update.ReservedRoot, item.ReservedRoot)
 	require.Equal(t, update.Signature, item.Signature)
 	require.True(t, pub.IsEqual(item.Pub))
@@ -243,7 +243,7 @@ func signHeader(t *testing.T, header *store.Header) *store.Header {
 }
 
 func signUpdate(t *testing.T, update *wire.Update) *wire.Update {
-	sig, err := blob.SignSeal(testcrypto.FixedSigner(t), update.Name, update.Timestamp, update.MerkleRoot, update.ReservedRoot)
+	sig, err := blob.SignSeal(testcrypto.FixedSigner(t), update.Name, update.Timestamp, update.SectorTipHash, update.ReservedRoot)
 	require.NoError(t, err)
 	update.Signature = sig
 	return update

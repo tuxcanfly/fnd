@@ -53,7 +53,7 @@ func FillBlobReader(t *testing.T, db *leveldb.DB, bs blob.Store, signer crypto.S
 	require.NoError(t, err)
 	_, err = io.Copy(blob.NewWriter(tx), io.LimitReader(r, blob.Size))
 	require.NoError(t, err)
-	tree, err := blob.Hash(blob.NewReader(tx))
+	tree, err := blob.SerialHash(blob.NewReader(tx))
 	require.NoError(t, err)
 	sig, err := blob.SignSeal(signer, name, ts, tree.Root(), crypto.ZeroHash)
 	require.NoError(t, err)
@@ -69,11 +69,11 @@ func FillBlobReader(t *testing.T, db *leveldb.DB, bs blob.Store, signer crypto.S
 	}))
 	require.NoError(t, tx.Commit())
 	return &wire.Update{
-		Name:         name,
-		Timestamp:    ts,
-		MerkleRoot:   tree.Root(),
-		ReservedRoot: crypto.ZeroHash,
-		Signature:    sig,
+		Name:          name,
+		Timestamp:     ts,
+		SectorTipHash: tree.Root(),
+		ReservedRoot:  crypto.ZeroHash,
+		Signature:     sig,
 	}
 }
 

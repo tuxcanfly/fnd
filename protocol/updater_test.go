@@ -50,7 +50,7 @@ func TestUpdater(t *testing.T) {
 						}),
 						Name:         name,
 						Timestamp:    update.Timestamp,
-						MerkleRoot:   update.MerkleRoot,
+						MerkleRoot:   update.SectorTipHash,
 						ReservedRoot: update.ReservedRoot,
 						Signature:    update.Signature,
 						Pub:          setup.tp.RemoteSigner.Pub(),
@@ -96,7 +96,7 @@ func TestUpdater(t *testing.T) {
 						}),
 						Name:         name,
 						Timestamp:    update.Timestamp,
-						MerkleRoot:   update.MerkleRoot,
+						MerkleRoot:   update.SectorTipHash,
 						ReservedRoot: update.ReservedRoot,
 						Signature:    update.Signature,
 						Pub:          setup.tp.RemoteSigner.Pub(),
@@ -130,7 +130,7 @@ func TestUpdater(t *testing.T) {
 						}),
 						Name:         name,
 						Timestamp:    update.Timestamp,
-						MerkleRoot:   update.MerkleRoot,
+						MerkleRoot:   update.SectorTipHash,
 						ReservedRoot: update.ReservedRoot,
 						Signature:    update.Signature,
 						Pub:          setup.tp.RemoteSigner.Pub(),
@@ -199,7 +199,7 @@ func TestUpdater(t *testing.T) {
 						}),
 						Name:         name,
 						Timestamp:    update.Timestamp,
-						MerkleRoot:   update.MerkleRoot,
+						MerkleRoot:   update.SectorTipHash,
 						ReservedRoot: update.ReservedRoot,
 						Signature:    update.Signature,
 						Pub:          setup.tp.RemoteSigner.Pub(),
@@ -242,7 +242,7 @@ func TestUpdater(t *testing.T) {
 						}),
 						Name:         name,
 						Timestamp:    update.Timestamp,
-						MerkleRoot:   update.MerkleRoot,
+						MerkleRoot:   update.SectorTipHash,
 						ReservedRoot: update.ReservedRoot,
 						Signature:    update.Signature,
 						Pub:          setup.tp.RemoteSigner.Pub(),
@@ -291,7 +291,7 @@ func TestUpdater(t *testing.T) {
 						}),
 						Name:         name,
 						Timestamp:    update.Timestamp,
-						MerkleRoot:   update.MerkleRoot,
+						MerkleRoot:   update.SectorTipHash,
 						ReservedRoot: update.ReservedRoot,
 						Signature:    update.Signature,
 						Pub:          setup.tp.RemoteSigner.Pub(),
@@ -305,7 +305,7 @@ func TestUpdater(t *testing.T) {
 				case envelope := <-updateCh:
 					msg := envelope.Message.(*wire.Update)
 					require.Equal(t, name, msg.Name)
-					require.Equal(t, update.MerkleRoot, msg.MerkleRoot)
+					require.Equal(t, update.SectorTipHash, msg.SectorTipHash)
 					require.Equal(t, update.Signature, msg.Signature)
 				case <-timeout.C:
 					t.Fail()
