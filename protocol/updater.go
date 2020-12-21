@@ -231,7 +231,7 @@ func UpdateBlob(cfg *UpdateConfig) error {
 		return errors.Wrap(err, "error during sync")
 	}
 
-	// TODO: syncing needs update to use the new sequential hashing protocol
+	// TODO: syncing needs update to use the new serial hashing protocol
 	tree, err := blob.Hash(blob.NewReader(tx))
 	if err != nil {
 		if err := tx.Rollback(); err != nil {

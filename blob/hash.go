@@ -54,7 +54,7 @@ func (s SectorHashes) Root() crypto.Hash {
 	return s[SectorCount-1]
 }
 
-// Hash returns sequential hash of the contents of the reader br
+// Hash returns serial hash of the contents of the reader br
 func Hash(br io.Reader) (SectorHashes, error) {
 	var res SectorHashes
 	hasher, _ := blake2b.New256(nil)
