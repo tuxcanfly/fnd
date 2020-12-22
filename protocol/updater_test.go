@@ -2,6 +2,9 @@ package protocol
 
 import (
 	"errors"
+	"testing"
+	"time"
+
 	"github.com/ddrp-org/ddrp/crypto"
 	"github.com/ddrp-org/ddrp/p2p"
 	"github.com/ddrp-org/ddrp/store"
@@ -10,8 +13,6 @@ import (
 	"github.com/ddrp-org/ddrp/wire"
 	"github.com/stretchr/testify/require"
 	"github.com/syndtr/goleveldb/leveldb"
-	"testing"
-	"time"
 )
 
 type updaterTestSetup struct {
@@ -36,7 +37,8 @@ func TestUpdater(t *testing.T) {
 					setup.rs.BlobStore,
 					setup.tp.RemoteSigner,
 					name,
-					ts,
+					0,
+					0,
 					ts,
 				)
 				cfg := &UpdateConfig{
@@ -49,7 +51,8 @@ func TestUpdater(t *testing.T) {
 							crypto.HashPub(setup.tp.RemoteSigner.Pub()),
 						}),
 						Name:         name,
-						Timestamp:    update.Timestamp,
+						EpochHeight:  update.EpochHeight,
+						SectorSize:   update.SectorSize,
 						MerkleRoot:   update.SectorTipHash,
 						ReservedRoot: update.ReservedRoot,
 						Signature:    update.Signature,
@@ -64,6 +67,8 @@ func TestUpdater(t *testing.T) {
 			"syncs sectors when the local node has an older blob",
 			func(t *testing.T, setup *updaterTestSetup) {
 				ts := time.Now()
+				epochHeight := uint16(0)
+				sectorSize := uint16(0)
 				// insert the blob locally, ensuring that
 				// there will be enough time bank
 				mockapp.FillBlobRandom(
@@ -72,7 +77,8 @@ func TestUpdater(t *testing.T) {
 					setup.ls.BlobStore,
 					setup.tp.RemoteSigner,
 					name,
-					ts.Add(-48*time.Hour),
+					epochHeight,
+					sectorSize,
 					ts.Add(-48*time.Hour),
 				)
 				// create the new blob remotely
@@ -82,7 +88,8 @@ func TestUpdater(t *testing.T) {
 					setup.rs.BlobStore,
 					setup.tp.RemoteSigner,
 					name,
-					ts,
+					epochHeight,
+					sectorSize+100,
 					ts,
 				)
 				cfg := &UpdateConfig{
@@ -95,7 +102,8 @@ func TestUpdater(t *testing.T) {
 							crypto.HashPub(setup.tp.RemoteSigner.Pub()),
 						}),
 						Name:         name,
-						Timestamp:    update.Timestamp,
+						EpochHeight:  update.EpochHeight,
+						SectorSize:   update.SectorSize,
 						MerkleRoot:   update.SectorTipHash,
 						ReservedRoot: update.ReservedRoot,
 						Signature:    update.Signature,
@@ -110,13 +118,16 @@ func TestUpdater(t *testing.T) {
 			"aborts sync if the new timestamp is equal to the stored timestamp",
 			func(t *testing.T, setup *updaterTestSetup) {
 				ts := time.Now()
+				epochHeight := uint16(0)
+				sectorSize := uint16(0)
 				update := mockapp.FillBlobRandom(
 					t,
 					setup.ls.DB,
 					setup.ls.BlobStore,
 					setup.tp.RemoteSigner,
 					name,
-					ts,
+					epochHeight,
+					sectorSize,
 					ts,
 				)
 				cfg := &UpdateConfig{
@@ -129,7 +140,8 @@ func TestUpdater(t *testing.T) {
 							crypto.HashPub(setup.tp.RemoteSigner.Pub()),
 						}),
 						Name:         name,
-						Timestamp:    update.Timestamp,
+						EpochHeight:  update.EpochHeight,
+						SectorSize:   update.SectorSize,
 						MerkleRoot:   update.SectorTipHash,
 						ReservedRoot: update.ReservedRoot,
 						Signature:    update.Signature,
@@ -167,6 +179,8 @@ func TestUpdater(t *testing.T) {
 			"aborts sync if there is insufficient time bank to support the update",
 			func(t *testing.T, setup *updaterTestSetup) {
 				ts := time.Now()
+				epochHeight := uint16(0)
+				sectorSize := uint16(0)
 				// insert the blob locally, ensuring that
 				// there will be enough time bank
 				mockapp.FillBlobRandom(
@@ -175,7 +189,8 @@ func TestUpdater(t *testing.T) {
 					setup.ls.BlobStore,
 					setup.tp.RemoteSigner,
 					name,
-					ts.Add(-12*time.Hour),
+					epochHeight,
+					sectorSize,
 					ts.Add(-12*time.Hour),
 				)
 				// create the new blob remotely
@@ -185,7 +200,8 @@ func TestUpdater(t *testing.T) {
 					setup.rs.BlobStore,
 					setup.tp.RemoteSigner,
 					name,
-					ts,
+					epochHeight,
+					sectorSize+10,
 					ts,
 				)
 				cfg := &UpdateConfig{
@@ -198,7 +214,8 @@ func TestUpdater(t *testing.T) {
 							crypto.HashPub(setup.tp.RemoteSigner.Pub()),
 						}),
 						Name:         name,
-						Timestamp:    update.Timestamp,
+						EpochHeight:  update.EpochHeight,
+						SectorSize:   update.SectorSize,
 						MerkleRoot:   update.SectorTipHash,
 						ReservedRoot: update.ReservedRoot,
 						Signature:    update.Signature,
@@ -217,6 +234,8 @@ func TestUpdater(t *testing.T) {
 					return store.SetLastNameImportHeightTx(tx, 100)
 				}))
 				ts := time.Now()
+				epochHeight := uint16(0)
+				sectorSize := uint16(0)
 				updateCh := make(chan struct{})
 				unsub := setup.tp.RemoteMux.AddMessageHandler(p2p.PeerMessageHandlerForType(wire.MessageTypeUpdate, func(id crypto.Hash, envelope *wire.Envelope) {
 					updateCh <- struct{}{}
@@ -228,7 +247,8 @@ func TestUpdater(t *testing.T) {
 					setup.rs.BlobStore,
 					setup.tp.RemoteSigner,
 					name,
-					ts,
+					epochHeight,
+					sectorSize,
 					ts,
 				)
 				cfg := &UpdateConfig{
@@ -241,7 +261,8 @@ func TestUpdater(t *testing.T) {
 							crypto.HashPub(setup.tp.RemoteSigner.Pub()),
 						}),
 						Name:         name,
-						Timestamp:    update.Timestamp,
+						EpochHeight:  update.EpochHeight,
+						SectorSize:   update.SectorSize,
 						MerkleRoot:   update.SectorTipHash,
 						ReservedRoot: update.ReservedRoot,
 						Signature:    update.Signature,
@@ -266,6 +287,8 @@ func TestUpdater(t *testing.T) {
 					return store.SetLastNameImportHeightTx(tx, 100)
 				}))
 				ts := time.Now()
+				epochHeight := uint16(0)
+				sectorSize := uint16(10)
 				updateCh := make(chan *wire.Envelope, 1)
 				unsub := setup.tp.RemoteMux.AddMessageHandler(p2p.PeerMessageHandlerForType(wire.MessageTypeUpdate, func(id crypto.Hash, envelope *wire.Envelope) {
 					updateCh <- envelope
@@ -277,7 +300,8 @@ func TestUpdater(t *testing.T) {
 					setup.rs.BlobStore,
 					setup.tp.RemoteSigner,
 					name,
-					ts,
+					epochHeight,
+					sectorSize,
 					ts,
 				)
 				cfg := &UpdateConfig{
@@ -290,7 +314,8 @@ func TestUpdater(t *testing.T) {
 							crypto.HashPub(setup.tp.RemoteSigner.Pub()),
 						}),
 						Name:         name,
-						Timestamp:    update.Timestamp,
+						EpochHeight:  update.EpochHeight,
+						SectorSize:   update.SectorSize,
 						MerkleRoot:   update.SectorTipHash,
 						ReservedRoot: update.ReservedRoot,
 						Signature:    update.Signature,

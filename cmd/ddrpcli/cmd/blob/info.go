@@ -3,6 +3,10 @@ package blob
 import (
 	"encoding/hex"
 	"fmt"
+	"os"
+	"strconv"
+	"strings"
+
 	"github.com/ddrp-org/ddrp/cli"
 	"github.com/ddrp-org/ddrp/rpc"
 	apiv1 "github.com/ddrp-org/ddrp/rpc/v1"
@@ -10,9 +14,6 @@ import (
 	"github.com/olekukonko/tablewriter"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
-	"os"
-	"strconv"
-	"strings"
 )
 
 var infoCmd = &cobra.Command{
@@ -53,7 +54,8 @@ var infoCmd = &cobra.Command{
 			table.Append([]string{
 				res.Name,
 				hex.EncodeToString(res.PublicKey.SerializeCompressed()),
-				res.Timestamp.String(),
+				strconv.Itoa(int(res.EpochHeight)),
+				strconv.Itoa(int(res.SectorSize)),
 				res.MerkleRoot.String(),
 				res.ReservedRoot.String(),
 				res.ReceivedAt.String(),

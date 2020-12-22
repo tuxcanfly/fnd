@@ -2,13 +2,14 @@ package rpc
 
 import (
 	"context"
+	"io"
+	"time"
+
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/ddrp-org/ddrp/crypto"
 	apiv1 "github.com/ddrp-org/ddrp/rpc/v1"
 	"github.com/ddrp-org/ddrp/store"
 	"github.com/pkg/errors"
-	"io"
-	"time"
 )
 
 func GetBlobInfo(client apiv1.DDRPv1Client, name string) (*store.BlobInfo, error) {
@@ -78,7 +79,8 @@ func parseBlobInfoRes(res *apiv1.BlobInfoRes) (*store.BlobInfo, error) {
 		Name:         res.Name,
 		PublicKey:    pub,
 		ImportHeight: int(res.ImportHeight),
-		Timestamp:    time.Unix(int64(res.Timestamp), 0),
+		EpochHeight:  uint16(res.EpochHeight),
+		SectorSize:   uint16(res.SectorSize),
 		MerkleRoot:   merkleRoot,
 		ReservedRoot: reservedRoot,
 		ReceivedAt:   time.Unix(int64(res.ReceivedAt), 0),

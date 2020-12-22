@@ -18,7 +18,8 @@ import (
 
 type Header struct {
 	Name         string
-	Timestamp    time.Time
+	EpochHeight  uint16
+	SectorSize   uint16
 	MerkleRoot   crypto.Hash
 	Signature    crypto.Signature
 	ReservedRoot crypto.Hash
@@ -29,7 +30,8 @@ type Header struct {
 func (h *Header) MarshalJSON() ([]byte, error) {
 	out := &struct {
 		Name         string    `json:"name"`
-		Timestamp    time.Time `json:"timestamp"`
+		EpochHeight  uint16    `json:"epoch_height"`
+		SectorSize   uint16    `json:"sector_size"`
 		MerkleRoot   string    `json:"merkle_root"`
 		Signature    string    `json:"signature"`
 		ReservedRoot string    `json:"reserved_root"`
@@ -37,7 +39,8 @@ func (h *Header) MarshalJSON() ([]byte, error) {
 		Timebank     int       `json:"timebank"`
 	}{
 		h.Name,
-		h.Timestamp,
+		h.EpochHeight,
+		h.SectorSize,
 		h.MerkleRoot.String(),
 		h.Signature.String(),
 		h.ReservedRoot.String(),
@@ -51,7 +54,8 @@ func (h *Header) MarshalJSON() ([]byte, error) {
 func (h *Header) UnmarshalJSON(b []byte) error {
 	in := &struct {
 		Name         string    `json:"name"`
-		Timestamp    time.Time `json:"timestamp"`
+		EpochHeight  uint16    `json:"epoch_height"`
+		SectorSize   uint16    `json:"sector_size"`
 		MerkleRoot   string    `json:"merkle_root"`
 		Signature    string    `json:"signature"`
 		ReservedRoot string    `json:"reserved_root"`
@@ -87,7 +91,8 @@ func (h *Header) UnmarshalJSON(b []byte) error {
 	}
 
 	h.Name = in.Name
-	h.Timestamp = in.Timestamp
+	h.EpochHeight = in.EpochHeight
+	h.SectorSize = in.SectorSize
 	h.MerkleRoot = mr
 	h.Signature = sig
 	h.ReservedRoot = rr
@@ -178,7 +183,8 @@ type BlobInfo struct {
 	Name         string           `json:"name"`
 	PublicKey    *btcec.PublicKey `json:"public_key"`
 	ImportHeight int              `json:"import_height"`
-	Timestamp    time.Time        `json:"timestamp"`
+	EpochHeight  uint16           `json:"epoch_height"`
+	SectorSize   uint16           `json:"sector_size"`
 	MerkleRoot   crypto.Hash      `json:"merkle_root"`
 	Signature    crypto.Signature `json:"signature"`
 	ReservedRoot crypto.Hash      `json:"reserved_root"`
@@ -191,7 +197,8 @@ func (b *BlobInfo) MarshalJSON() ([]byte, error) {
 		Name         string    `json:"name"`
 		PublicKey    string    `json:"public_key"`
 		ImportHeight int       `json:"import_height"`
-		Timestamp    time.Time `json:"timestamp"`
+		EpochHeight  uint16    `json:"epoch_height"`
+		SectorSize   uint16    `json:"sector_size"`
 		MerkleRoot   string    `json:"merkle_root"`
 		Signature    string    `json:"signature"`
 		ReservedRoot string    `json:"reserved_root"`
@@ -201,7 +208,8 @@ func (b *BlobInfo) MarshalJSON() ([]byte, error) {
 		b.Name,
 		hex.EncodeToString(b.PublicKey.SerializeCompressed()),
 		b.ImportHeight,
-		b.Timestamp,
+		b.EpochHeight,
+		b.SectorSize,
 		hex.EncodeToString(b.MerkleRoot[:]),
 		hex.EncodeToString(b.Signature[:]),
 		hex.EncodeToString(b.ReservedRoot[:]),
@@ -232,7 +240,8 @@ func (bis *BlobInfoStream) Next() (*BlobInfo, error) {
 		Name:         header.Name,
 		PublicKey:    nameInfo.PublicKey,
 		ImportHeight: nameInfo.ImportHeight,
-		Timestamp:    header.Timestamp,
+		EpochHeight:  header.EpochHeight,
+		SectorSize:   header.SectorSize,
 		MerkleRoot:   header.MerkleRoot,
 		Signature:    header.Signature,
 		ReservedRoot: header.ReservedRoot,

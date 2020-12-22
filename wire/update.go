@@ -2,7 +2,6 @@ package wire
 
 import (
 	"io"
-	"time"
 
 	"github.com/ddrp-org/ddrp/crypto"
 	"github.com/ddrp-org/dwire"
@@ -12,7 +11,8 @@ type Update struct {
 	HashCacher
 
 	Name          string
-	Timestamp     time.Time
+	EpochHeight   uint16
+	SectorSize    uint16
 	SectorTipHash crypto.Hash
 	ReservedRoot  crypto.Hash
 	Signature     crypto.Signature
@@ -31,7 +31,8 @@ func (u *Update) Equals(other Message) bool {
 	}
 
 	return u.Name == cast.Name &&
-		u.Timestamp.Equal(cast.Timestamp) &&
+		u.EpochHeight == cast.EpochHeight &&
+		u.SectorSize == cast.SectorSize &&
 		u.SectorTipHash == cast.SectorTipHash &&
 		u.ReservedRoot == cast.ReservedRoot &&
 		u.Signature == cast.Signature
@@ -41,7 +42,8 @@ func (u *Update) Encode(w io.Writer) error {
 	return dwire.EncodeFields(
 		w,
 		u.Name,
-		u.Timestamp,
+		u.EpochHeight,
+		u.SectorSize,
 		u.SectorTipHash,
 		u.ReservedRoot,
 		u.Signature,
@@ -52,7 +54,8 @@ func (u *Update) Decode(r io.Reader) error {
 	return dwire.DecodeFields(
 		r,
 		&u.Name,
-		&u.Timestamp,
+		&u.EpochHeight,
+		&u.SectorSize,
 		&u.SectorTipHash,
 		&u.ReservedRoot,
 		&u.Signature,

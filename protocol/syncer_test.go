@@ -46,7 +46,8 @@ func TestSyncTreeBases(t *testing.T) {
 					setup.rs.BlobStore,
 					setup.tp.RemoteSigner,
 					name,
-					ts,
+					0,
+					blob.SectorLen,
 					ts,
 					bytes.NewReader(buf.Bytes()),
 				)
@@ -84,7 +85,8 @@ func TestSyncTreeBases(t *testing.T) {
 					setup.rs.BlobStore,
 					setup.tp.RemoteSigner,
 					name,
-					ts,
+					0,
+					0,
 					ts,
 				)
 				mockapp.FillBlobRandom(
@@ -93,7 +95,8 @@ func TestSyncTreeBases(t *testing.T) {
 					addlStorage.BlobStore,
 					setup.tp.RemoteSigner,
 					name,
-					ts,
+					0,
+					0,
 					ts,
 				)
 
@@ -126,7 +129,8 @@ func TestSyncTreeBases(t *testing.T) {
 					setup.rs.BlobStore,
 					setup.tp.RemoteSigner,
 					name,
-					ts,
+					0,
+					0,
 					ts,
 				)
 
@@ -161,7 +165,8 @@ func TestSyncTreeBases(t *testing.T) {
 					setup.rs.BlobStore,
 					setup.tp.RemoteSigner,
 					name,
-					ts,
+					0,
+					0,
 					ts,
 				)
 

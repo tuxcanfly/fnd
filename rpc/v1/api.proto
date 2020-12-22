@@ -139,12 +139,13 @@ message BlobInfoRes {
     string name = 1;
     bytes publicKey = 2;
     uint32 importHeight = 3;
-    uint64 timestamp = 4;
-    bytes merkleRoot = 5;
-    bytes reservedRoot = 6;
-    uint64 receivedAt = 7;
-    bytes signature = 8;
-    uint32 timebank = 9;
+    uint32 epochHeight = 4;
+    uint32 sectorSize = 5;
+    bytes merkleRoot = 6;
+    bytes reservedRoot = 7;
+    uint64 receivedAt = 8;
+    bytes signature = 9;
+    uint32 timebank = 10;
 }
 
 message SendUpdateReq {

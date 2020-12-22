@@ -24,7 +24,8 @@ func TestHeaders_GetSet(t *testing.T) {
 
 	expHeader := &Header{
 		Name:         "foo",
-		Timestamp:    time.Unix(10, 0),
+		EpochHeight:  uint16(0),
+		SectorSize:   uint16(0),
 		MerkleRoot:   crypto.Rand32(),
 		Signature:    sig,
 		ReservedRoot: crypto.Rand32(),
@@ -39,7 +40,8 @@ func TestHeaders_GetSet(t *testing.T) {
 	actHeader, err := GetHeader(db, "foo")
 	require.NoError(t, err)
 	require.Equal(t, expHeader.Name, actHeader.Name)
-	require.Equal(t, expHeader.Timestamp.Unix(), actHeader.Timestamp.Unix())
+	require.Equal(t, expHeader.EpochHeight, actHeader.EpochHeight)
+	require.Equal(t, expHeader.SectorSize, actHeader.SectorSize)
 	require.Equal(t, expHeader.MerkleRoot, actHeader.MerkleRoot)
 	require.Equal(t, expHeader.Signature, actHeader.Signature)
 	require.Equal(t, expHeader.ReservedRoot, actHeader.ReservedRoot)

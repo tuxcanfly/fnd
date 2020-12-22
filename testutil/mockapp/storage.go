@@ -46,7 +46,7 @@ func CreateTestDB(t *testing.T) (*leveldb.DB, func()) {
 	return db, done
 }
 
-func FillBlobReader(t *testing.T, db *leveldb.DB, bs blob.Store, signer crypto.Signer, name string, ts time.Time, receivedAt time.Time, r io.Reader) *wire.Update {
+func FillBlobReader(t *testing.T, db *leveldb.DB, bs blob.Store, signer crypto.Signer, name string, epochHeight, sectorSize uint16, receivedAt time.Time, r io.Reader) *wire.Update {
 	bl, err := bs.Open(name)
 	require.NoError(t, err)
 	tx, err := bl.Transaction()
@@ -55,12 +55,13 @@ func FillBlobReader(t *testing.T, db *leveldb.DB, bs blob.Store, signer crypto.S
 	require.NoError(t, err)
 	tree, err := blob.SerialHash(blob.NewReader(tx))
 	require.NoError(t, err)
-	sig, err := blob.SignSeal(signer, name, ts, tree.Root(), crypto.ZeroHash)
+	sig, err := blob.SignSeal(signer, name, epochHeight, sectorSize, tree.Root(), crypto.ZeroHash)
 	require.NoError(t, err)
 	require.NoError(t, store.WithTx(db, func(tx *leveldb.Transaction) error {
 		return store.SetHeaderTx(tx, &store.Header{
 			Name:         name,
-			Timestamp:    ts,
+			EpochHeight:  epochHeight,
+			SectorSize:   sectorSize,
 			MerkleRoot:   tree.Root(),
 			Signature:    sig,
 			ReservedRoot: crypto.ZeroHash,
@@ -70,21 +71,23 @@ func FillBlobReader(t *testing.T, db *leveldb.DB, bs blob.Store, signer crypto.S
 	require.NoError(t, tx.Commit())
 	return &wire.Update{
 		Name:          name,
-		Timestamp:     ts,
+		EpochHeight:   epochHeight,
+		SectorSize:    sectorSize,
 		SectorTipHash: tree.Root(),
 		ReservedRoot:  crypto.ZeroHash,
 		Signature:     sig,
 	}
 }
 
-func FillBlobRandom(t *testing.T, db *leveldb.DB, bs blob.Store, signer crypto.Signer, name string, ts time.Time, receivedAt time.Time) *wire.Update {
+func FillBlobRandom(t *testing.T, db *leveldb.DB, bs blob.Store, signer crypto.Signer, name string, epochHeight, sectorSize uint16, receivedAt time.Time) *wire.Update {
 	return FillBlobReader(
 		t,
 		db,
 		bs,
 		signer,
 		name,
-		ts,
+		epochHeight,
+		sectorSize,
 		receivedAt,
 		rand.Reader,
 	)

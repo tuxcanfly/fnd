@@ -120,7 +120,7 @@ func UpdateBlob(cfg *UpdateConfig) error {
 	if err != nil && !errors.Is(err, leveldb.ErrNotFound) {
 		return errors.Wrap(err, "error getting header")
 	}
-	if header != nil && header.Timestamp.Equal(item.Timestamp) {
+	if header != nil && header.SectorSize == item.SectorSize {
 		return ErrUpdaterAlreadySynchronized
 	}
 
@@ -130,11 +130,11 @@ func UpdateBlob(cfg *UpdateConfig) error {
 	defer cfg.NameLocker.Unlock(item.Name)
 
 	newSectorHashes, err := SyncSectorHashes(&SyncTreeBasesOpts{
-		Timeout:    DefaultSyncerTreeBaseResTimeout,
-		Mux:        cfg.Mux,
-		Peers:      item.PeerIDs,
+		Timeout:       DefaultSyncerTreeBaseResTimeout,
+		Mux:           cfg.Mux,
+		Peers:         item.PeerIDs,
 		SectorTipHash: item.MerkleRoot,
-		Name:       item.Name,
+		Name:          item.Name,
 	})
 	if err != nil {
 		return errors.Wrap(err, "error syncing merkle base")
@@ -249,7 +249,8 @@ func UpdateBlob(cfg *UpdateConfig) error {
 	err = store.WithTx(cfg.DB, func(tx *leveldb.Transaction) error {
 		return store.SetHeaderTx(tx, &store.Header{
 			Name:         item.Name,
-			Timestamp:    item.Timestamp,
+			EpochHeight:  item.EpochHeight,
+			SectorSize:   item.SectorSize,
 			MerkleRoot:   item.MerkleRoot,
 			Signature:    item.Signature,
 			ReservedRoot: item.ReservedRoot,
@@ -276,11 +277,12 @@ func UpdateBlob(cfg *UpdateConfig) error {
 	}
 
 	update := &wire.Update{
-		Name:         item.Name,
-		Timestamp:    item.Timestamp,
-		SectorTipHash:   item.MerkleRoot,
-		Signature:    item.Signature,
-		ReservedRoot: item.ReservedRoot,
+		Name:          item.Name,
+		EpochHeight:   item.EpochHeight,
+		SectorSize:    item.SectorSize,
+		SectorTipHash: item.MerkleRoot,
+		Signature:     item.Signature,
+		ReservedRoot:  item.ReservedRoot,
 	}
 	p2p.GossipAll(cfg.Mux, update)
 	return nil

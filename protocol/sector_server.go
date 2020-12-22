@@ -99,7 +99,7 @@ func (s *SectorServer) onSectorReq(peerID crypto.Hash, envelope *wire.Envelope) 
 		s.nameLocker.RUnlock(reqMsg.Name)
 		return
 	}
-	cacheKey := fmt.Sprintf("%s:%d:%d", reqMsg.Name, header.Timestamp.Unix(), reqMsg.SectorID)
+	cacheKey := fmt.Sprintf("%s:%d:%d:%d", reqMsg.Name, header.EpochHeight, header.SectorSize, reqMsg.SectorID)
 	cached := s.cache.Get(cacheKey)
 	if cached != nil {
 		s.nameLocker.RUnlock(reqMsg.Name)

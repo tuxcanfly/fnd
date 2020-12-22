@@ -3,7 +3,6 @@ package protocol
 import (
 	"io"
 	"testing"
-	"time"
 
 	"github.com/ddrp-org/ddrp/blob"
 	"github.com/ddrp-org/ddrp/crypto"
@@ -41,8 +40,9 @@ func TestUpdateServer(t *testing.T) {
 		{
 			"sends a nil update for locked names",
 			&wire.UpdateReq{
-				Name:      "locked",
-				Timestamp: time.Now(),
+				Name:        "locked",
+				EpochHeight: uint16(0),
+				SectorSize:  uint16(0),
 			},
 			func(t *testing.T) {
 				require.True(t, nameLocker.TryLock("locked"))
@@ -54,8 +54,8 @@ func TestUpdateServer(t *testing.T) {
 		{
 			"sends a nil update for unknown names",
 			&wire.UpdateReq{
-				Name:      "unknown",
-				Timestamp: time.Now(),
+				EpochHeight: uint16(0),
+				SectorSize:  uint16(0),
 			},
 			func(t *testing.T) {},
 			func(t *testing.T) {
@@ -65,14 +65,16 @@ func TestUpdateServer(t *testing.T) {
 		{
 			"sends a nil update for update requests with future timestamps",
 			&wire.UpdateReq{
-				Name:      "future",
-				Timestamp: time.Unix(10, 0),
+				Name:        "future",
+				EpochHeight: uint16(0),
+				SectorSize:  uint16(10),
 			},
 			func(t *testing.T) {
 				require.NoError(t, store.WithTx(db, func(tx *leveldb.Transaction) error {
 					return store.SetHeaderTx(tx, &store.Header{
-						Name:      "future",
-						Timestamp: time.Unix(5, 0),
+						Name:        "future",
+						EpochHeight: uint16(0),
+						SectorSize:  uint16(5),
 					}, blob.ZeroSectorHashes)
 				}))
 			},
@@ -83,14 +85,16 @@ func TestUpdateServer(t *testing.T) {
 		{
 			"sends a nil update for update requests with timestamps equal to stored",
 			&wire.UpdateReq{
-				Name:      "equal",
-				Timestamp: time.Unix(10, 0),
+				Name:        "equal",
+				EpochHeight: uint16(0),
+				SectorSize:  uint16(10),
 			},
 			func(t *testing.T) {
 				require.NoError(t, store.WithTx(db, func(tx *leveldb.Transaction) error {
 					return store.SetHeaderTx(tx, &store.Header{
-						Name:      "equal",
-						Timestamp: time.Unix(10, 0),
+						Name:        "equal",
+						EpochHeight: uint16(0),
+						SectorSize:  uint16(10),
 					}, blob.ZeroSectorHashes)
 				}))
 			},
@@ -101,20 +105,23 @@ func TestUpdateServer(t *testing.T) {
 		{
 			"sends an update for valid update requests with past timestamps",
 			&wire.UpdateReq{
-				Name:      "valid",
-				Timestamp: time.Unix(5, 0),
+				Name:        "valid",
+				EpochHeight: uint16(0),
+				SectorSize:  uint16(5),
 			},
 			func(t *testing.T) {
-				ts := time.Unix(10, 0)
+				epochHeight := uint16(0)
+				sectorSize := uint16(10)
 				tree := blob.MakeTreeFromBase(blob.ZeroMerkleBase)
-				sig, err := blob.SignSeal(signer, "valid", ts, tree.Root(), crypto.ZeroHash)
+				sig, err := blob.SignSeal(signer, "valid", epochHeight, sectorSize, tree.Root(), crypto.ZeroHash)
 				require.NoError(t, err)
 				require.NoError(t, store.WithTx(db, func(tx *leveldb.Transaction) error {
 					return store.SetHeaderTx(tx, &store.Header{
-						Name:       "valid",
-						Timestamp:  ts,
-						MerkleRoot: tree.Root(),
-						Signature:  sig,
+						Name:        "valid",
+						EpochHeight: epochHeight,
+						SectorSize:  sectorSize,
+						MerkleRoot:  tree.Root(),
+						Signature:   sig,
 					}, blob.ZeroSectorHashes)
 				}))
 			},
@@ -123,10 +130,11 @@ func TestUpdateServer(t *testing.T) {
 				require.NoError(t, err)
 				envelope := testutil.ReceiveEnvelope(t, clientConn)
 				require.EqualValues(t, &wire.Update{
-					Name:       header.Name,
-					Timestamp:  header.Timestamp,
+					Name:          header.Name,
+					EpochHeight:   header.EpochHeight,
+					SectorSize:    header.SectorSize,
 					SectorTipHash: header.MerkleRoot,
-					Signature:  header.Signature,
+					Signature:     header.Signature,
 				}, envelope.Message)
 			},
 		},

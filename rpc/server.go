@@ -305,8 +305,10 @@ func (s *Server) Commit(ctx context.Context, req *apiv1.CommitReq) (*apiv1.Commi
 
 	var sig crypto.Signature
 	copy(sig[:], req.Signature)
-	ts := time.Unix(int64(req.Timestamp), 0)
-	h := blob.SealHash(name, ts, mt.Root(), crypto.ZeroHash)
+	// TODO: update grpc API to use epochHeight, sectorSize
+	epochHeight := uint16(0)
+	sectorSize := uint16(0)
+	h := blob.SealHash(name, epochHeight, sectorSize, mt.Root(), crypto.ZeroHash)
 	if !crypto.VerifySigPub(info.PublicKey, sig, h) {
 		return nil, errors.New("signature verification failed")
 	}
@@ -319,7 +321,8 @@ func (s *Server) Commit(ctx context.Context, req *apiv1.CommitReq) (*apiv1.Commi
 	err = store.WithTx(s.db, func(tx *leveldb.Transaction) error {
 		return store.SetHeaderTx(tx, &store.Header{
 			Name:         name,
-			Timestamp:    ts,
+			EpochHeight:  epochHeight,
+			SectorSize:   sectorSize,
 			MerkleRoot:   mt.Root(),
 			Signature:    sig,
 			ReservedRoot: crypto.ZeroHash,
@@ -341,10 +344,11 @@ func (s *Server) Commit(ctx context.Context, req *apiv1.CommitReq) (*apiv1.Commi
 	var recips []crypto.Hash
 	if req.Broadcast {
 		recips, _ = p2p.GossipAll(s.mux, &wire.Update{
-			Name:       name,
-			Timestamp:  ts,
+			Name:          name,
+			EpochHeight:   0,
+			SectorSize:    0,
 			SectorTipHash: mt.Root(),
-			Signature:  sig,
+			Signature:     sig,
 		})
 	}
 	s.lgr.Info("committed blob", "name", name, "recipient_count", len(recips))
@@ -400,7 +404,8 @@ func (s *Server) GetBlobInfo(_ context.Context, req *apiv1.BlobInfoReq) (*apiv1.
 		Name:         name,
 		PublicKey:    info.PublicKey.SerializeCompressed(),
 		ImportHeight: uint32(info.ImportHeight),
-		Timestamp:    uint64(header.Timestamp.Unix()),
+		EpochHeight:  uint32(header.EpochHeight),
+		SectorSize:   uint32(header.SectorSize),
 		MerkleRoot:   header.MerkleRoot[:],
 		ReservedRoot: header.ReservedRoot[:],
 		ReceivedAt:   uint64(header.ReceivedAt.Unix()),
@@ -428,7 +433,8 @@ func (s *Server) ListBlobInfo(req *apiv1.ListBlobInfoReq, srv apiv1.DDRPv1_ListB
 			Name:         info.Name,
 			PublicKey:    info.PublicKey.SerializeCompressed(),
 			ImportHeight: uint32(info.ImportHeight),
-			Timestamp:    uint64(info.Timestamp.Unix()),
+			EpochHeight:  uint32(info.EpochHeight),
+			SectorSize:   uint32(info.SectorSize),
 			MerkleRoot:   info.MerkleRoot[:],
 			ReservedRoot: info.ReservedRoot[:],
 			ReceivedAt:   uint64(info.ReceivedAt.Unix()),
@@ -448,10 +454,11 @@ func (s *Server) SendUpdate(_ context.Context, req *apiv1.SendUpdateReq) (*apiv1
 	}
 
 	recips, _ := p2p.GossipAll(s.mux, &wire.Update{
-		Name:       req.Name,
-		Timestamp:  header.Timestamp,
+		Name:          req.Name,
+		EpochHeight:   header.EpochHeight,
+		SectorSize:    header.SectorSize,
 		SectorTipHash: header.MerkleRoot,
-		Signature:  header.Signature,
+		Signature:     header.Signature,
 	})
 
 	return &apiv1.SendUpdateRes{

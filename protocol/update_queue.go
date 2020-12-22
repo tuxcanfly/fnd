@@ -1,6 +1,10 @@
 package protocol
 
 import (
+	"sync"
+	"sync/atomic"
+	"time"
+
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/ddrp-org/ddrp/blob"
 	"github.com/ddrp-org/ddrp/config"
@@ -12,9 +16,6 @@ import (
 	"github.com/mslipper/handshake/primitives"
 	"github.com/pkg/errors"
 	"github.com/syndtr/goleveldb/leveldb"
-	"sync"
-	"sync/atomic"
-	"time"
 )
 
 var (
@@ -42,7 +43,8 @@ type UpdateQueue struct {
 type UpdateQueueItem struct {
 	PeerIDs      *PeerSet
 	Name         string
-	Timestamp    time.Time
+	EpochHeight  uint16
+	SectorSize   uint16
 	MerkleRoot   crypto.Hash
 	ReservedRoot crypto.Hash
 	Signature    crypto.Signature
@@ -101,25 +103,26 @@ func (u *UpdateQueue) Enqueue(peerID crypto.Hash, update *wire.Update) error {
 		return ErrInitialImportIncomplete
 	}
 
-	nameInfo, err := u.validateUpdate(update.Name, update.Timestamp, update.SectorTipHash, update.ReservedRoot, update.Signature)
+	nameInfo, err := u.validateUpdate(update.Name, update.EpochHeight, update.SectorSize, update.SectorTipHash, update.ReservedRoot, update.Signature)
 	if err != nil {
 		return errors.Wrap(err, "name failed validation")
 	}
 
-	var storedTimestamp time.Time
+	// FIXME: epochHeight?
+	var storedSectorSize uint16
 	var headerReceivedAt time.Time
 	header, err := store.GetHeader(u.db, update.Name)
 	if err != nil && !errors.Is(err, leveldb.ErrNotFound) {
 		return errors.Wrap(err, "error getting name header")
 	} else if err == nil {
-		storedTimestamp = header.Timestamp
+		storedSectorSize = header.SectorSize
 		headerReceivedAt = header.ReceivedAt
 	}
 
-	if storedTimestamp.After(update.Timestamp) {
+	if storedSectorSize > update.SectorSize {
 		return ErrUpdateQueueStaleTimestamp
 	}
-	if storedTimestamp.Equal(update.Timestamp) {
+	if storedSectorSize == update.SectorSize {
 		return ErrUpdateQueueIdenticalTimestamp
 	}
 	if time.Now().Sub(headerReceivedAt) < u.MinUpdateInterval {
@@ -129,11 +132,12 @@ func (u *UpdateQueue) Enqueue(peerID crypto.Hash, update *wire.Update) error {
 	u.mu.Lock()
 	defer u.mu.Unlock()
 	entry := u.entries[update.Name]
-	if entry == nil || entry.Timestamp.Before(update.Timestamp) {
+	if entry == nil || entry.SectorSize < update.SectorSize {
 		u.entries[update.Name] = &UpdateQueueItem{
 			PeerIDs:      NewPeerSet([]crypto.Hash{peerID}),
 			Name:         update.Name,
-			Timestamp:    update.Timestamp,
+			EpochHeight:  update.EpochHeight,
+			SectorSize:   update.SectorSize,
 			MerkleRoot:   update.SectorTipHash,
 			ReservedRoot: update.ReservedRoot,
 			Signature:    update.Signature,
@@ -145,18 +149,18 @@ func (u *UpdateQueue) Enqueue(peerID crypto.Hash, update *wire.Update) error {
 			u.queue = append(u.queue, update.Name)
 			atomic.AddInt32(&u.queueLen, 1)
 		}
-		u.lgr.Info("enqueued update", "name", update.Name, "timestamp", update.Timestamp)
+		u.lgr.Info("enqueued update", "name", update.Name, "epoch", update.EpochHeight, "sector", update.SectorSize)
 		return nil
 	}
 
-	if entry.Timestamp.After(update.Timestamp) {
+	if entry.SectorSize > update.SectorSize {
 		return ErrUpdateQueueStaleTimestamp
 	}
 	if entry.Signature != update.Signature {
 		return ErrUpdateQueueSpltBrain
 	}
 
-	u.lgr.Info("enqueued update", "name", update.Name, "timestamp", update.Timestamp)
+	u.lgr.Info("enqueued update", "name", update.Name, "epoch", update.EpochHeight, "sector", update.SectorSize)
 	entry.PeerIDs.Add(peerID)
 	return nil
 }
@@ -175,7 +179,7 @@ func (u *UpdateQueue) Dequeue() *UpdateQueueItem {
 	return ret
 }
 
-func (u *UpdateQueue) validateUpdate(name string, ts time.Time, mr crypto.Hash, rr crypto.Hash, sig crypto.Signature) (*store.NameInfo, error) {
+func (u *UpdateQueue) validateUpdate(name string, epochHeight, sectorSize uint16, mr crypto.Hash, rr crypto.Hash, sig crypto.Signature) (*store.NameInfo, error) {
 	if err := primitives.ValidateName(name); err != nil {
 		return nil, errors.Wrap(err, "update name is invalid")
 	}
@@ -190,7 +194,7 @@ func (u *UpdateQueue) validateUpdate(name string, ts time.Time, mr crypto.Hash, 
 	if err != nil {
 		return nil, errors.Wrap(err, "error reading name info")
 	}
-	h := blob.SealHash(name, ts, mr, rr)
+	h := blob.SealHash(name, epochHeight, sectorSize, mr, rr)
 	if !crypto.VerifySigPub(info.PublicKey, sig, h) {
 		return nil, errors.New("update signature is invalid")
 	}

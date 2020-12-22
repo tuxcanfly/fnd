@@ -2,12 +2,13 @@ package rpc
 
 import (
 	"context"
+	"io"
+	"time"
+
 	"github.com/ddrp-org/ddrp/blob"
 	"github.com/ddrp-org/ddrp/crypto"
 	apiv1 "github.com/ddrp-org/ddrp/rpc/v1"
 	"github.com/pkg/errors"
-	"io"
-	"time"
 )
 
 type BlobWriter struct {
@@ -150,9 +151,12 @@ func (b *BlobWriter) Commit(broadcast bool) error {
 		return errors.Wrap(err, "error retrieving precommit")
 	}
 	ts := time.Now()
+	// FIXME
+	epochHeight := uint16(0)
+	sectorSize := uint16(0)
 	var mr crypto.Hash
 	copy(mr[:], precommitRes.MerkleRoot)
-	sig, err := blob.SignSeal(b.signer, b.name, ts, mr, crypto.ZeroHash)
+	sig, err := blob.SignSeal(b.signer, b.name, epochHeight, sectorSize, mr, crypto.ZeroHash)
 	if err != nil {
 		return errors.Wrap(err, "error sealing blob")
 	}
