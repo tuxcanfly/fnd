@@ -31,7 +31,7 @@ type SyncTreeBasesOpts struct {
 	Name          string
 }
 
-func SyncTreeBases(opts *SyncTreeBasesOpts) (blob.SectorHashes, error) {
+func SyncSectorHashes(opts *SyncTreeBasesOpts) (blob.SectorHashes, error) {
 	lgr := log.WithModule("tree-base-syncer")
 	treeBaseResCh := make(chan *wire.TreeBaseRes, 1)
 	iter := opts.Peers.Iterator()

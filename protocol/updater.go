@@ -129,7 +129,7 @@ func UpdateBlob(cfg *UpdateConfig) error {
 	}
 	defer cfg.NameLocker.Unlock(item.Name)
 
-	newSectorHashes, err := SyncTreeBases(&SyncTreeBasesOpts{
+	newSectorHashes, err := SyncSectorHashes(&SyncTreeBasesOpts{
 		Timeout:    DefaultSyncerTreeBaseResTimeout,
 		Mux:        cfg.Mux,
 		Peers:      item.PeerIDs,

@@ -51,7 +51,7 @@ func TestSyncTreeBases(t *testing.T) {
 					bytes.NewReader(buf.Bytes()),
 				)
 
-				sectorHashes, err := SyncTreeBases(&SyncTreeBasesOpts{
+				sectorHashes, err := SyncSectorHashes(&SyncTreeBasesOpts{
 					Mux: setup.tp.LocalMux,
 					Peers: NewPeerSet([]crypto.Hash{
 						crypto.HashPub(setup.tp.RemoteSigner.Pub()),
@@ -97,7 +97,7 @@ func TestSyncTreeBases(t *testing.T) {
 					ts,
 				)
 
-				_, err := SyncTreeBases(&SyncTreeBasesOpts{
+				_, err := SyncSectorHashes(&SyncTreeBasesOpts{
 					Mux: setup.tp.LocalMux,
 					Peers: NewPeerSet([]crypto.Hash{
 						crypto.HashPub(setup.tp.RemoteSigner.Pub()),
@@ -130,7 +130,7 @@ func TestSyncTreeBases(t *testing.T) {
 					ts,
 				)
 
-				_, err := SyncTreeBases(&SyncTreeBasesOpts{
+				_, err := SyncSectorHashes(&SyncTreeBasesOpts{
 					Timeout: 250 * time.Millisecond,
 					Mux:     setup.tp.LocalMux,
 					Peers: NewPeerSet([]crypto.Hash{
@@ -165,7 +165,7 @@ func TestSyncTreeBases(t *testing.T) {
 					ts,
 				)
 
-				_, err := SyncTreeBases(&SyncTreeBasesOpts{
+				_, err := SyncSectorHashes(&SyncTreeBasesOpts{
 					Timeout: 250 * time.Millisecond,
 					Mux:     setup.tp.LocalMux,
 					Peers: NewPeerSet([]crypto.Hash{
