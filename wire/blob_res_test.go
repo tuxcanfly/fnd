@@ -6,12 +6,17 @@ import (
 	"github.com/ddrp-org/ddrp/blob"
 )
 
-func TestSectorRes_Encoding(t *testing.T) {
-	sectorRes := &SectorRes{
-		Name:     "test",
-		SectorID: 16,
-		Sector:   blob.Sector{},
+func TestBlobRes_Encoding(t *testing.T) {
+	sectorRes := &BlobRes{
+		SectorSize:  1,
+		Name:        "testname.",
+		EpochHeight: 0,
+		//PayloadPosition uint16,
+		//PrevHash        crypto.Hash
+		//MessageRoot     crypto.Hash
+		//Signature       crypto.Signature
+		Payload: blob.Sector{},
 	}
 
-	testMessageEncoding(t, "sector_res", sectorRes, &SectorRes{})
+	testMessageEncoding(t, "sector_res", sectorRes, &BlobRes{})
 }

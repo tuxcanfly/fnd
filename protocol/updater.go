@@ -129,17 +129,6 @@ func UpdateBlob(cfg *UpdateConfig) error {
 	}
 	defer cfg.NameLocker.Unlock(item.Name)
 
-	newSectorHashes, err := SyncSectorHashes(&SyncTreeBasesOpts{
-		Timeout:       DefaultSyncerTreeBaseResTimeout,
-		Mux:           cfg.Mux,
-		Peers:         item.PeerIDs,
-		SectorTipHash: item.MerkleRoot,
-		Name:          item.Name,
-	})
-	if err != nil {
-		return errors.Wrap(err, "error syncing merkle base")
-	}
-
 	bl, err := cfg.BlobStore.Open(item.Name)
 	if err != nil {
 		return errors.Wrap(err, "error getting blob")
@@ -150,79 +139,19 @@ func UpdateBlob(cfg *UpdateConfig) error {
 		}
 	}()
 
-	var sectorsNeeded []uint8
-	var prevUpdateTime time.Time
-	var prevTimebank int
-	var payableSectorCount int
-	if header == nil {
-		sectorsNeeded = blob.ZeroSectorHashes.DiffWith(newSectorHashes)
-	} else {
-		base, err := store.GetSectorHashes(cfg.DB, item.Name)
-		if err != nil {
-			return errors.Wrap(err, "error getting merkle base")
-		}
-		sectorsNeeded = base.DiffWith(newSectorHashes)
-		prevUpdateTime = header.ReceivedAt
-		prevTimebank = header.Timebank
-	}
-	for _, sectorID := range sectorsNeeded {
-		if newSectorHashes[sectorID] == blob.EmptyBlobBaseHash {
-			continue
-		}
-		payableSectorCount++
-	}
-	if payableSectorCount == 0 {
-		l.Debug(
-			"no payable sectors, truncating",
-			"count", len(sectorsNeeded),
-		)
-		tx, err := bl.Transaction()
-		if err != nil {
-			return errors.Wrap(err, "error starting transaction")
-		}
-		for _, sectorID := range sectorsNeeded {
-			if err := tx.WriteSector(sectorID, blob.ZeroSector); err != nil {
-				return errors.Wrap(err, "error truncating sector")
-			}
-		}
-		if err := tx.Commit(); err != nil {
-			return errors.Wrap(err, "error committing blob")
-		}
-		return nil
-	}
-	l.Debug(
-		"calculated needed sectors",
-		"total", len(sectorsNeeded),
-		"payable", payableSectorCount,
-	)
-
-	newTimebank := CheckTimebank(&TimebankParams{
-		TimebankDuration:     48 * time.Hour,
-		MinUpdateInterval:    2 * time.Minute,
-		FullUpdatesPerPeriod: 2,
-	}, prevUpdateTime, prevTimebank, payableSectorCount)
-	l.Debug(
-		"calculated new timebank",
-		"prev", prevTimebank,
-		"new", newTimebank,
-	)
-	if newTimebank == -1 {
-		return ErrInsufficientTimebank
-	}
-
 	tx, err := bl.Transaction()
 	if err != nil {
 		return errors.Wrap(err, "error starting transaction")
 	}
 
 	err = SyncSectors(&SyncSectorsOpts{
-		Timeout:       DefaultSyncerSectorResTimeout,
-		Mux:           cfg.Mux,
-		Tx:            tx,
-		Peers:         item.PeerIDs,
-		SectorHashes:  newSectorHashes,
-		SectorsNeeded: sectorsNeeded,
-		Name:          item.Name,
+		Timeout:     DefaultSyncerBlobResTimeout,
+		Mux:         cfg.Mux,
+		Tx:          tx,
+		Peers:       item.PeerIDs,
+		EpochHeight: item.EpochHeight,
+		SectorSize:  item.SectorSize,
+		Name:        item.Name,
 	})
 	if err != nil {
 		if err := tx.Rollback(); err != nil {
@@ -246,6 +175,22 @@ func UpdateBlob(cfg *UpdateConfig) error {
 		return ErrUpdaterMerkleRootMismatch
 	}
 
+	var prevUpdateTime time.Time
+	var prevTimebank int
+	var payableSectorCount int
+	newTimebank := CheckTimebank(&TimebankParams{
+		TimebankDuration:     48 * time.Hour,
+		MinUpdateInterval:    2 * time.Minute,
+		FullUpdatesPerPeriod: 2,
+	}, prevUpdateTime, prevTimebank, payableSectorCount)
+	l.Debug(
+		"calculated new timebank",
+		"prev", prevTimebank,
+		"new", newTimebank,
+	)
+	if newTimebank == -1 {
+		return ErrInsufficientTimebank
+	}
 	err = store.WithTx(cfg.DB, func(tx *leveldb.Transaction) error {
 		return store.SetHeaderTx(tx, &store.Header{
 			Name:         item.Name,
@@ -277,12 +222,9 @@ func UpdateBlob(cfg *UpdateConfig) error {
 	}
 
 	update := &wire.Update{
-		Name:          item.Name,
-		EpochHeight:   item.EpochHeight,
-		SectorSize:    item.SectorSize,
-		SectorTipHash: item.MerkleRoot,
-		Signature:     item.Signature,
-		ReservedRoot:  item.ReservedRoot,
+		Name:        item.Name,
+		EpochHeight: item.EpochHeight,
+		SectorSize:  item.SectorSize,
 	}
 	p2p.GossipAll(cfg.Mux, update)
 	return nil

@@ -70,12 +70,9 @@ func FillBlobReader(t *testing.T, db *leveldb.DB, bs blob.Store, signer crypto.S
 	}))
 	require.NoError(t, tx.Commit())
 	return &wire.Update{
-		Name:          name,
-		EpochHeight:   epochHeight,
-		SectorSize:    sectorSize,
-		SectorTipHash: tree.Root(),
-		ReservedRoot:  crypto.ZeroHash,
-		Signature:     sig,
+		Name:        name,
+		EpochHeight: epochHeight,
+		SectorSize:  sectorSize,
 	}
 }
 

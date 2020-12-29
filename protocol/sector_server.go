@@ -39,8 +39,7 @@ func NewSectorServer(mux *p2p.PeerMuxer, db *leveldb.DB, bs blob.Store, nameLock
 }
 
 func (s *SectorServer) Start() error {
-	s.mux.AddMessageHandler(p2p.PeerMessageHandlerForType(wire.MessageTypeTreeBaseReq, s.onTreeBaseReq))
-	s.mux.AddMessageHandler(p2p.PeerMessageHandlerForType(wire.MessageTypeSectorReq, s.onSectorReq))
+	s.mux.AddMessageHandler(p2p.PeerMessageHandlerForType(wire.MessageTypeBlobReq, s.onBlobReq))
 	return nil
 }
 
@@ -48,38 +47,8 @@ func (s *SectorServer) Stop() error {
 	return nil
 }
 
-func (s *SectorServer) onTreeBaseReq(peerID crypto.Hash, envelope *wire.Envelope) {
-	reqMsg := envelope.Message.(*wire.TreeBaseReq)
-	lgr := s.lgr.Sub(
-		"name", reqMsg.Name,
-		"peer_id", peerID,
-	)
-
-	if !s.nameLocker.TryRLock(reqMsg.Name) {
-		lgr.Info("dropping diff req for busy name")
-		return
-	}
-	sectorHashes, err := store.GetSectorHashes(s.db, reqMsg.Name)
-	if err != nil {
-		s.nameLocker.RUnlock(reqMsg.Name)
-		lgr.Error("error getting merkle base", "err", err)
-		return
-	}
-	s.nameLocker.RUnlock(reqMsg.Name)
-
-	resMsg := &wire.TreeBaseRes{
-		Name:         reqMsg.Name,
-		SectorHashes: sectorHashes,
-	}
-	if err := s.mux.Send(peerID, resMsg); err != nil {
-		lgr.Error("error serving tree base response", "err", err)
-		return
-	}
-	lgr.Debug("served tree base response")
-}
-
-func (s *SectorServer) onSectorReq(peerID crypto.Hash, envelope *wire.Envelope) {
-	reqMsg := envelope.Message.(*wire.SectorReq)
+func (s *SectorServer) onBlobReq(peerID crypto.Hash, envelope *wire.Envelope) {
+	reqMsg := envelope.Message.(*wire.BlobReq)
 	lgr := s.lgr.Sub(
 		"name", reqMsg.Name,
 		"peer_id", peerID,
@@ -99,11 +68,11 @@ func (s *SectorServer) onSectorReq(peerID crypto.Hash, envelope *wire.Envelope) 
 		s.nameLocker.RUnlock(reqMsg.Name)
 		return
 	}
-	cacheKey := fmt.Sprintf("%s:%d:%d:%d", reqMsg.Name, header.EpochHeight, header.SectorSize, reqMsg.SectorID)
+	cacheKey := fmt.Sprintf("%s:%d:%d", reqMsg.Name, header.EpochHeight, header.SectorSize)
 	cached := s.cache.Get(cacheKey)
 	if cached != nil {
 		s.nameLocker.RUnlock(reqMsg.Name)
-		s.sendResponse(peerID, reqMsg.Name, reqMsg.SectorID, cached.(blob.Sector))
+		s.sendResponse(peerID, reqMsg.Name, cached.(blob.Sector), reqMsg.EpochHeight, reqMsg.SectorSize)
 		return
 	}
 
@@ -121,7 +90,8 @@ func (s *SectorServer) onSectorReq(peerID crypto.Hash, envelope *wire.Envelope) 
 			s.lgr.Error("failed to close blob", "err", err)
 		}
 	}()
-	sector, err := bl.ReadSector(reqMsg.SectorID)
+	// FIXME: Using sectorsize to read sector as sector id - cross check
+	sector, err := bl.ReadSector(uint8(reqMsg.SectorSize))
 	if err != nil {
 		s.nameLocker.RUnlock(reqMsg.Name)
 		lgr.Error(
@@ -132,14 +102,19 @@ func (s *SectorServer) onSectorReq(peerID crypto.Hash, envelope *wire.Envelope) 
 	}
 	s.cache.Set(cacheKey, sector, int64(s.CacheExpiry/time.Millisecond))
 	s.nameLocker.RUnlock(reqMsg.Name)
-	s.sendResponse(peerID, reqMsg.Name, reqMsg.SectorID, sector)
+	s.sendResponse(peerID, reqMsg.Name, sector, reqMsg.EpochHeight, reqMsg.SectorSize)
 }
 
-func (s *SectorServer) sendResponse(peerID crypto.Hash, name string, sectorID uint8, sector blob.Sector) {
-	resMsg := &wire.SectorRes{
-		Name:     name,
-		SectorID: sectorID,
-		Sector:   sector,
+func (s *SectorServer) sendResponse(peerID crypto.Hash, name string, sector blob.Sector, epochHeight, sectorSize uint16) {
+	resMsg := &wire.BlobRes{
+		SectorSize:  sectorSize,
+		Name:        name,
+		EpochHeight: epochHeight,
+		//PayloadPosition uint16,
+		//PrevHash        crypto.Hash
+		//MessageRoot     crypto.Hash
+		//Signature       crypto.Signature
+		Payload: sector,
 	}
 	if err := s.mux.Send(peerID, resMsg); err != nil {
 		s.lgr.Error("error serving sector response", "err", err)
@@ -148,6 +123,6 @@ func (s *SectorServer) sendResponse(peerID crypto.Hash, name string, sectorID ui
 	s.lgr.Debug(
 		"served sector response",
 		"peer_id", peerID,
-		"sector_id", sectorID,
+		"sector_size", sectorSize,
 	)
 }

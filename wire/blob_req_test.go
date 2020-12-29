@@ -4,11 +4,12 @@ import (
 	"testing"
 )
 
-func TestSectorReq_Encoding(t *testing.T) {
-	sectorReq := &SectorReq{
-		Name:     "testname.",
-		SectorID: 16,
+func TestBlobReq_Encoding(t *testing.T) {
+	sectorReq := &BlobReq{
+		Name:        "testname.",
+		EpochHeight: 0,
+		SectorSize:  1,
 	}
 
-	testMessageEncoding(t, "sector_req", sectorReq, &SectorReq{})
+	testMessageEncoding(t, "sector_req", sectorReq, &BlobReq{})
 }
