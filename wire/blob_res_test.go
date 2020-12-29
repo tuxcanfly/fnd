@@ -7,7 +7,7 @@ import (
 )
 
 func TestBlobRes_Encoding(t *testing.T) {
-	sectorRes := &BlobRes{
+	blobRes := &BlobRes{
 		SectorSize:  1,
 		Name:        "testname.",
 		EpochHeight: 0,
@@ -18,5 +18,5 @@ func TestBlobRes_Encoding(t *testing.T) {
 		Payload: blob.Sector{},
 	}
 
-	testMessageEncoding(t, "sector_res", sectorRes, &BlobRes{})
+	testMessageEncoding(t, "blob_res", blobRes, &BlobRes{})
 }

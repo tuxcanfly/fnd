@@ -7,12 +7,9 @@ import (
 )
 
 func TestLookupDNSSeeds(t *testing.T) {
-	seeds, err := ResolveDNSSeeds("seeds-test.ddrp.network")
+	seeds, err := ResolveDNSSeeds("seeds-test.merkleblock.com")
 	require.NoError(t, err)
 
-	require.Equal(t, 4, len(seeds))
-	require.Contains(t, seeds, "198.54.117.200")
-	require.Contains(t, seeds, "198.54.117.199")
-	require.Contains(t, seeds, "198.54.117.198")
-	require.Contains(t, seeds, "198.54.117.197")
+	require.Equal(t, 1, len(seeds))
+	require.Contains(t, seeds, "78.46.17.17")
 }

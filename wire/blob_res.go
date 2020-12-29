@@ -60,14 +60,14 @@ func (s *BlobRes) Encode(w io.Writer) error {
 func (s *BlobRes) Decode(r io.Reader) error {
 	return dwire.DecodeFields(
 		r,
-		s.SectorSize,
-		s.Name,
-		s.EpochHeight,
-		s.PayloadPosition,
-		s.PrevHash,
-		s.MessageRoot,
-		s.Signature,
-		s.Payload,
+		&s.SectorSize,
+		&s.Name,
+		&s.EpochHeight,
+		&s.PayloadPosition,
+		&s.PrevHash,
+		&s.MessageRoot,
+		&s.Signature,
+		&s.Payload,
 	)
 }
 

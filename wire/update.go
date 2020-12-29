@@ -56,9 +56,9 @@ func (u *Update) Decode(r io.Reader) error {
 		&u.Name,
 		&u.EpochHeight,
 		&u.SectorSize,
-		u.SectorTipHash,
-		u.ReservedRoot,
-		u.Signature,
+		&u.SectorTipHash,
+		&u.ReservedRoot,
+		&u.Signature,
 	)
 }
 
