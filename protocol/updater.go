@@ -175,9 +175,25 @@ func UpdateBlob(cfg *UpdateConfig) error {
 		return ErrUpdaterMerkleRootMismatch
 	}
 
+	var sectorsNeeded uint16
 	var prevUpdateTime time.Time
 	var prevTimebank int
 	var payableSectorCount int
+
+	if header == nil {
+		sectorsNeeded = item.SectorSize
+	} else {
+		sectorsNeeded = header.SectorSize - item.SectorSize
+		prevUpdateTime = header.ReceivedAt
+		prevTimebank = header.Timebank
+	}
+	// FIXME: handle no payable sectors
+	l.Debug(
+		"calculated needed sectors",
+		"total", sectorsNeeded,
+		"payable", payableSectorCount,
+	)
+
 	newTimebank := CheckTimebank(&TimebankParams{
 		TimebankDuration:     48 * time.Hour,
 		MinUpdateInterval:    2 * time.Minute,
