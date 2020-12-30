@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ddrp-org/ddrp/blob"
 	"github.com/ddrp-org/ddrp/crypto"
 	"github.com/ddrp-org/ddrp/p2p"
 	"github.com/ddrp-org/ddrp/store"
@@ -38,7 +39,7 @@ func TestUpdater(t *testing.T) {
 					setup.tp.RemoteSigner,
 					name,
 					0,
-					0,
+					blob.SectorLen,
 					ts,
 				)
 				cfg := &UpdateConfig{

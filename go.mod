@@ -4,6 +4,7 @@ go 1.12
 
 require (
 	github.com/btcsuite/btcd v0.20.1-beta
+	github.com/davecgh/go-spew v1.1.1
 	github.com/ddrp-org/dwire v1.0.1
 	github.com/golang/protobuf v1.4.1
 	github.com/golang/snappy v0.0.1 // indirect

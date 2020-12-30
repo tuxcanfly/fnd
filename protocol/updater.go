@@ -4,6 +4,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/ddrp-org/ddrp/blob"
 	"github.com/ddrp-org/ddrp/config"
 	"github.com/ddrp-org/ddrp/log"
@@ -160,6 +161,10 @@ func UpdateBlob(cfg *UpdateConfig) error {
 		return errors.Wrap(err, "error during sync")
 	}
 
+	var buf [32]byte
+	_, err = blob.ReadBlobAt(tx, buf[:], 0)
+	spew.Dump(buf[:32])
+
 	// TODO: syncing needs update to use the new serial hashing protocol
 	tree, err := blob.SerialHash(blob.NewReader(tx))
 	if err != nil {
@@ -168,6 +173,7 @@ func UpdateBlob(cfg *UpdateConfig) error {
 		}
 		return errors.Wrap(err, "error calculating new blob merkle root")
 	}
+	spew.Dump(tree.Root())
 	if tree.Root() != item.MerkleRoot {
 		if err := tx.Rollback(); err != nil {
 			updaterLogger.Error("error rolling back blob transaction", "err", err)
