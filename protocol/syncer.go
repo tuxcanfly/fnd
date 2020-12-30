@@ -15,9 +15,8 @@ const (
 )
 
 var (
-	ErrNoTreeBaseCandidates = errors.New("no tree base candidates")
-	ErrSyncerNoProgress     = errors.New("sync not progressing")
-	ErrSyncerMaxAttempts    = errors.New("reached max sync attempts")
+	ErrSyncerNoProgress  = errors.New("sync not progressing")
+	ErrSyncerMaxAttempts = errors.New("reached max sync attempts")
 )
 
 type SyncSectorsOpts struct {
@@ -34,8 +33,6 @@ type sectorRes struct {
 	peerID crypto.Hash
 	msg    *wire.BlobRes
 }
-
-type reqdSectorsMap map[uint8][33]byte
 
 func SyncSectors(opts *SyncSectorsOpts) error {
 	// l := log.WithModule("sector-syncer").Sub("name", opts.Name)

@@ -54,6 +54,7 @@ func TestUpdateServer(t *testing.T) {
 		{
 			"sends a nil update for unknown names",
 			&wire.UpdateReq{
+				Name:        "unknown",
 				EpochHeight: uint16(0),
 				SectorSize:  uint16(0),
 			},

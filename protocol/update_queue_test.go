@@ -134,8 +134,8 @@ func TestUpdateQueue_Enqueue_InvalidBeforeEnqueue(t *testing.T) {
 			"stale",
 			signUpdate(t, &wire.Update{
 				Name:          staleHeader.Name,
-				EpochHeight:   identicalHeader.EpochHeight,
-				SectorSize:    identicalHeader.SectorSize - 10,
+				EpochHeight:   staleHeader.EpochHeight,
+				SectorSize:    staleHeader.SectorSize - 10,
 				SectorTipHash: throttledHeader.MerkleRoot,
 				ReservedRoot:  identicalHeader.ReservedRoot,
 			}),
