@@ -275,7 +275,7 @@ func (s *Server) PreCommit(ctx context.Context, req *apiv1.PreCommitReq) (*apiv1
 	}
 
 	tx := awaiting.(*awaitingTx).tx
-	mt, err := blob.SerialHash(blob.NewReader(tx))
+	mt, err := blob.SerialHash(blob.NewReader(tx), blob.ZeroHash)
 	if err != nil {
 		return nil, errors.Wrap(err, "error generating blob merkle root")
 	}
@@ -298,7 +298,7 @@ func (s *Server) Commit(ctx context.Context, req *apiv1.CommitReq) (*apiv1.Commi
 	if err != nil {
 		return nil, errors.Wrap(err, "error getting name info")
 	}
-	mt, err := blob.SerialHash(blob.NewReader(tx))
+	mt, err := blob.SerialHash(blob.NewReader(tx), blob.ZeroHash)
 	if err != nil {
 		return nil, errors.Wrap(err, "error generating blob merkle root")
 	}

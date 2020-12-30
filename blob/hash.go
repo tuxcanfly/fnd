@@ -66,10 +66,10 @@ func SerialHashSector(sector Sector, prevHash crypto.Hash) crypto.Hash {
 }
 
 // SerialHash returns serial hash of the contents of the reader br
-func SerialHash(br io.Reader) (SectorHashes, error) {
+func SerialHash(br io.Reader, prevHash crypto.Hash) (SectorHashes, error) {
 	var res SectorHashes
 	hasher, _ := blake2b.New256(nil)
-	var hash crypto.Hash = ZeroHash
+	var hash crypto.Hash = prevHash
 	for i := 0; i < SectorCount; i++ {
 		res[i] = hash
 		hasher.Write(hash[:])

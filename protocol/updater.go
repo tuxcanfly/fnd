@@ -4,8 +4,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/ddrp-org/ddrp/blob"
 	"github.com/ddrp-org/ddrp/config"
+	"github.com/ddrp-org/ddrp/crypto"
 	"github.com/ddrp-org/ddrp/log"
 	"github.com/ddrp-org/ddrp/p2p"
 	"github.com/ddrp-org/ddrp/store"
@@ -124,10 +126,12 @@ func UpdateBlob(cfg *UpdateConfig) error {
 		return ErrUpdaterAlreadySynchronized
 	}
 
+	var prevHash crypto.Hash = blob.ZeroHash
 	var epochHeight, sectorSize uint16
 	if header != nil {
 		epochHeight = header.EpochHeight
 		sectorSize = header.SectorSize
+		prevHash = header.MerkleRoot
 	}
 
 	if !cfg.NameLocker.TryLock(item.Name) {
@@ -166,14 +170,19 @@ func UpdateBlob(cfg *UpdateConfig) error {
 		return errors.Wrap(err, "error during sync")
 	}
 
+	//var buf [blob.SectorLen]byte
+	//_, err = blob.ReadBlobAt(tx, buf[:], 0)
+	//spew.Dump(buf[:])
+
 	// TODO: syncing needs update to use the new serial hashing protocol
-	tree, err := blob.SerialHash(blob.NewReader(tx))
+	tree, err := blob.SerialHash(blob.NewReader(tx), prevHash)
 	if err != nil {
 		if err := tx.Rollback(); err != nil {
 			updaterLogger.Error("error rolling back blob transaction", "err", err)
 		}
 		return errors.Wrap(err, "error calculating new blob merkle root")
 	}
+	spew.Dump(tree.Root(), item.MerkleRoot)
 	if tree.Root() != item.MerkleRoot {
 		if err := tx.Rollback(); err != nil {
 			updaterLogger.Error("error rolling back blob transaction", "err", err)
