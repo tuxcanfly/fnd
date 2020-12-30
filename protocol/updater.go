@@ -4,6 +4,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/ddrp-org/ddrp/blob"
 	"github.com/ddrp-org/ddrp/config"
 	"github.com/ddrp-org/ddrp/log"
@@ -159,6 +160,10 @@ func UpdateBlob(cfg *UpdateConfig) error {
 		}
 		return errors.Wrap(err, "error during sync")
 	}
+
+	var buf [blob.Size]byte
+	_, err = blob.ReadBlobAt(tx, buf[:], 0)
+	spew.Dump(buf[:])
 
 	// TODO: syncing needs update to use the new serial hashing protocol
 	tree, err := blob.SerialHash(blob.NewReader(tx))

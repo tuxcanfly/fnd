@@ -82,7 +82,7 @@ func SyncSectors(opts *SyncSectorsOpts) error {
 					lgr.Trace("received sector for extraneous name", "other_name", msg.Name, "sector_size", msg.SectorSize)
 					continue
 				}
-				if err := opts.Tx.WriteSector(uint8(msg.SectorSize), msg.Payload); err != nil {
+				if _, err := opts.Tx.WriteAt(msg.Payload, int64(msg.SectorSize)); err != nil {
 					lgr.Error("failed to write sector", "sector_size", msg.SectorSize, "err", err)
 					continue
 				}

@@ -72,7 +72,7 @@ func (s *SectorServer) onBlobReq(peerID crypto.Hash, envelope *wire.Envelope) {
 	cached := s.cache.Get(cacheKey)
 	if cached != nil {
 		s.nameLocker.RUnlock(reqMsg.Name)
-		s.sendResponse(peerID, reqMsg.Name, cached.(blob.Sector), reqMsg.EpochHeight, reqMsg.SectorSize)
+		s.sendResponse(peerID, reqMsg.Name, cached.([]byte), reqMsg.EpochHeight, reqMsg.SectorSize)
 		return
 	}
 
@@ -91,7 +91,8 @@ func (s *SectorServer) onBlobReq(peerID crypto.Hash, envelope *wire.Envelope) {
 		}
 	}()
 	// FIXME: Using sectorsize to read sector as sector id - cross check
-	sector, err := bl.ReadSector(uint8(reqMsg.SectorSize))
+	var sector []byte
+	_, err = bl.ReadAt(sector, int64(reqMsg.SectorSize))
 	if err != nil {
 		s.nameLocker.RUnlock(reqMsg.Name)
 		lgr.Error(
@@ -105,7 +106,7 @@ func (s *SectorServer) onBlobReq(peerID crypto.Hash, envelope *wire.Envelope) {
 	s.sendResponse(peerID, reqMsg.Name, sector, reqMsg.EpochHeight, reqMsg.SectorSize)
 }
 
-func (s *SectorServer) sendResponse(peerID crypto.Hash, name string, sector blob.Sector, epochHeight, sectorSize uint16) {
+func (s *SectorServer) sendResponse(peerID crypto.Hash, name string, sector []byte, epochHeight, sectorSize uint16) {
 	resMsg := &wire.BlobRes{
 		SectorSize:  sectorSize,
 		Name:        name,
