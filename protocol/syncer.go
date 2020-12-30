@@ -3,7 +3,6 @@ package protocol
 import (
 	"time"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/ddrp-org/ddrp/blob"
 	"github.com/ddrp-org/ddrp/crypto"
 	"github.com/ddrp-org/ddrp/log"
@@ -39,44 +38,75 @@ type sectorRes struct {
 func SyncSectors(opts *SyncSectorsOpts) error {
 	lgr := log.WithModule("sector-syncer").Sub("name", opts.Name)
 	// Implement sector hash based sync
+	sectorResCh := make(chan *sectorRes)
+	sectorProcessedCh := make(chan struct{}, 1)
 	doneCh := make(chan struct{})
 	unsubRes := opts.Mux.AddMessageHandler(p2p.PeerMessageHandlerForType(wire.MessageTypeBlobRes, func(peerID crypto.Hash, envelope *wire.Envelope) {
-		msg, ok := envelope.Message.(*wire.BlobRes)
-		spew.Dump(msg.Payload[:32], ok)
-		if !ok {
-			lgr.Warn("error parsing BlobRes envelope")
+		sectorResCh <- &sectorRes{
+			peerID: peerID,
+			msg:    envelope.Message.(*wire.BlobRes),
 		}
-		if err := opts.Tx.WriteSector(uint8(msg.SectorSize), msg.Payload); err != nil {
-			lgr.Error("failed to write sector", "sector_id", msg.SectorSize, "err", err)
-		}
-		<-doneCh
 	}))
-	iter := opts.Peers.Iterator()
-	var sendCount int
+
+	go func() {
+		for {
+			iter := opts.Peers.Iterator()
+			var sendCount int
+			for {
+				peerID, ok := iter()
+				if !ok {
+					break
+				}
+				if sendCount == 7 {
+					break
+				}
+				err := opts.Mux.Send(peerID, &wire.BlobReq{
+					Name:        opts.Name,
+					EpochHeight: opts.EpochHeight,
+					SectorSize:  opts.SectorSize,
+				})
+				if err != nil {
+					lgr.Warn("error fetching sector from peer, trying another", "peer_id", peerID, "err", err)
+					continue
+				}
+				lgr.Debug(
+					"requested sector from peer",
+					"peer_id", peerID,
+				)
+				sendCount++
+			}
+			select {
+			case res := <-sectorResCh:
+				msg := res.msg
+				if msg.Name != opts.Name {
+					lgr.Trace("received sector for extraneous name", "other_name", msg.Name, "sector_size", msg.SectorSize)
+					continue
+				}
+				if err := opts.Tx.WriteSector(uint8(msg.SectorSize), msg.Payload); err != nil {
+					lgr.Error("failed to write sector", "sector_size", msg.SectorSize, "err", err)
+					continue
+				}
+				sectorProcessedCh <- struct{}{}
+			case <-doneCh:
+				return
+			}
+		}
+	}()
+
+sectorLoop:
 	for {
-		peerID, ok := iter()
-		if !ok {
-			break
+		lgr.Debug("requesting sector")
+		select {
+		case <-sectorProcessedCh:
+			lgr.Debug("sector processed")
+			break sectorLoop
+		case <-time.NewTimer(opts.Timeout).C:
+			lgr.Warn("sector request timed out")
+			break sectorLoop
 		}
-		if sendCount == 7 {
-			break
-		}
-		err := opts.Mux.Send(peerID, &wire.BlobReq{
-			Name:        opts.Name,
-			EpochHeight: opts.EpochHeight,
-			SectorSize:  opts.SectorSize,
-		})
-		if err != nil {
-			lgr.Warn("error fetching sector from peer, trying another", "peer_id", peerID, "err", err)
-			continue
-		}
-		lgr.Debug(
-			"requested sector from peer",
-			"peer_id", peerID,
-		)
-		sendCount++
 	}
-	<-doneCh
+
 	unsubRes()
+	close(doneCh)
 	return nil
 }

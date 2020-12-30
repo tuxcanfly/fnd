@@ -3,7 +3,6 @@ package blob
 import (
 	"io"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/ddrp-org/ddrp/crypto"
 	"golang.org/x/crypto/blake2b"
 )
@@ -80,6 +79,5 @@ func SerialHash(br io.Reader) (SectorHashes, error) {
 		h := hasher.Sum(nil)
 		copy(hash[:], h)
 	}
-	spew.Dump(res[SectorCount-1])
 	return res, nil
 }
