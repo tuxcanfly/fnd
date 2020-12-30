@@ -39,7 +39,7 @@ func TestUpdater(t *testing.T) {
 					setup.tp.RemoteSigner,
 					name,
 					0,
-					blob.SectorLen,
+					blob.SectorCount,
 					ts,
 				)
 				cfg := &UpdateConfig{
