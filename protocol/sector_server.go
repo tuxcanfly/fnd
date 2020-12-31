@@ -80,7 +80,7 @@ func (s *SectorServer) onBlobReq(peerID crypto.Hash, envelope *wire.Envelope) {
 	}()
 	// FIXME: Using sectorsize to read sector as sector id - cross check
 	var sector blob.Sector
-	_, err = bl.ReadAt(sector[:], int64(blob.SectorLen*reqMsg.SectorSize))
+	_, err = bl.ReadAt(sector[:], int64(reqMsg.SectorSize)*blob.SectorLen)
 	if err != nil {
 		s.nameLocker.RUnlock(reqMsg.Name)
 		lgr.Error(
