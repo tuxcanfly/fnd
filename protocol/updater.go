@@ -130,7 +130,9 @@ func UpdateBlob(cfg *UpdateConfig) error {
 	if header != nil {
 		epochHeight = header.EpochHeight
 		sectorSize = header.SectorSize
-		prevHash = header.MerkleRoot
+		if sectorSize != 0 {
+			prevHash = header.MerkleRoot
+		}
 	}
 
 	if !cfg.NameLocker.TryLock(item.Name) {
