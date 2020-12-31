@@ -4,7 +4,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/ddrp-org/ddrp/blob"
 	"github.com/ddrp-org/ddrp/config"
 	"github.com/ddrp-org/ddrp/crypto"
@@ -169,12 +168,6 @@ func UpdateBlob(cfg *UpdateConfig) error {
 		}
 		return errors.Wrap(err, "error during sync")
 	}
-
-	//var buf [blob.SectorLen]byte
-	//_, err = blob.ReadBlobAt(tx, buf[:], 0)
-	//spew.Dump(buf[:])
-
-	// TODO: syncing needs update to use the new serial hashing protocol
 	tree, err := blob.SerialHash(blob.NewReader(tx), prevHash)
 	if err != nil {
 		if err := tx.Rollback(); err != nil {
@@ -182,7 +175,6 @@ func UpdateBlob(cfg *UpdateConfig) error {
 		}
 		return errors.Wrap(err, "error calculating new blob merkle root")
 	}
-	spew.Dump(tree.Root(), item.MerkleRoot)
 	if tree.Root() != item.MerkleRoot {
 		if err := tx.Rollback(); err != nil {
 			updaterLogger.Error("error rolling back blob transaction", "err", err)
@@ -219,9 +211,10 @@ func UpdateBlob(cfg *UpdateConfig) error {
 		"prev", prevTimebank,
 		"new", newTimebank,
 	)
-	if newTimebank == -1 {
-		return ErrInsufficientTimebank
-	}
+	// FIXME: Disable timebank for now
+	//if newTimebank == -1 {
+	//return ErrInsufficientTimebank
+	//}
 	err = store.WithTx(cfg.DB, func(tx *leveldb.Transaction) error {
 		return store.SetHeaderTx(tx, &store.Header{
 			Name:         item.Name,

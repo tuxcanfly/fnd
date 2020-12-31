@@ -53,11 +53,6 @@ func FillBlobReader(t *testing.T, db *leveldb.DB, bs blob.Store, signer crypto.S
 	require.NoError(t, err)
 	_, err = io.Copy(blob.NewWriter(tx), io.LimitReader(r, blob.Size))
 	require.NoError(t, err)
-
-	//var buf [blob.Size]byte
-	//_, err = blob.ReadBlobAt(tx, buf[:], 0)
-	//spew.Dump(buf[:])
-
 	tree, err := blob.SerialHash(blob.NewReader(tx), blob.ZeroHash)
 	require.NoError(t, err)
 	sig, err := blob.SignSeal(signer, name, epochHeight, sectorSize, tree.Root(), crypto.ZeroHash)

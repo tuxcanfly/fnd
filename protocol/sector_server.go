@@ -1,7 +1,6 @@
 package protocol
 
 import (
-	"errors"
 	"fmt"
 	"time"
 
@@ -10,7 +9,6 @@ import (
 	"github.com/ddrp-org/ddrp/crypto"
 	"github.com/ddrp-org/ddrp/log"
 	"github.com/ddrp-org/ddrp/p2p"
-	"github.com/ddrp-org/ddrp/store"
 	"github.com/ddrp-org/ddrp/util"
 	"github.com/ddrp-org/ddrp/wire"
 	"github.com/syndtr/goleveldb/leveldb"
@@ -58,17 +56,7 @@ func (s *SectorServer) onBlobReq(peerID crypto.Hash, envelope *wire.Envelope) {
 		lgr.Info("dropping sector req for busy name")
 		return
 	}
-	header, err := store.GetHeader(s.db, reqMsg.Name)
-	if errors.Is(err, leveldb.ErrNotFound) {
-		s.nameLocker.RUnlock(reqMsg.Name)
-		return
-	}
-	if err != nil {
-		lgr.Error("error getting blob header", "err", err)
-		s.nameLocker.RUnlock(reqMsg.Name)
-		return
-	}
-	cacheKey := fmt.Sprintf("%s:%d:%d", reqMsg.Name, header.EpochHeight, header.SectorSize)
+	cacheKey := fmt.Sprintf("%s:%d:%d", reqMsg.Name, reqMsg.EpochHeight, reqMsg.SectorSize)
 	cached := s.cache.Get(cacheKey)
 	if cached != nil {
 		s.nameLocker.RUnlock(reqMsg.Name)
