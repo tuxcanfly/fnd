@@ -4,7 +4,7 @@ import (
 	"io"
 
 	"github.com/ddrp-org/ddrp/crypto"
-	"github.com/ddrp-org/dwire"
+	"github.com/ddrp-org/ddrp/dwire"
 )
 
 type UpdateReq struct {

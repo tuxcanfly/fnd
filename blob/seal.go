@@ -2,7 +2,7 @@ package blob
 
 import (
 	"github.com/ddrp-org/ddrp/crypto"
-	"github.com/ddrp-org/dwire"
+	"github.com/ddrp-org/ddrp/dwire"
 	"golang.org/x/crypto/blake2b"
 )
 

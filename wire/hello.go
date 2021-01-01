@@ -1,10 +1,11 @@
 package wire
 
 import (
+	"io"
+
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/ddrp-org/ddrp/crypto"
-	"github.com/ddrp-org/dwire"
-	"io"
+	"github.com/ddrp-org/ddrp/dwire"
 )
 
 type Hello struct {

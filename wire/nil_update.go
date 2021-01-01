@@ -1,9 +1,10 @@
 package wire
 
 import (
-	"github.com/ddrp-org/ddrp/crypto"
-	"github.com/ddrp-org/dwire"
 	"io"
+
+	"github.com/ddrp-org/ddrp/crypto"
+	"github.com/ddrp-org/ddrp/dwire"
 )
 
 type NilUpdate struct {

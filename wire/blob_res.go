@@ -5,7 +5,7 @@ import (
 
 	"github.com/ddrp-org/ddrp/blob"
 	"github.com/ddrp-org/ddrp/crypto"
-	"github.com/ddrp-org/dwire"
+	"github.com/ddrp-org/ddrp/dwire"
 )
 
 type BlobRes struct {

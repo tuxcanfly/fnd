@@ -2,10 +2,11 @@ package wire
 
 import (
 	"bytes"
-	"github.com/ddrp-org/ddrp/crypto"
-	"github.com/ddrp-org/dwire"
 	"io"
 	"net"
+
+	"github.com/ddrp-org/ddrp/crypto"
+	"github.com/ddrp-org/ddrp/dwire"
 )
 
 type Peer struct {
