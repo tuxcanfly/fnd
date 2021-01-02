@@ -78,7 +78,6 @@ func (s *SectorServer) onBlobReq(peerID crypto.Hash, envelope *wire.Envelope) {
 			s.lgr.Error("failed to close blob", "err", err)
 		}
 	}()
-	// FIXME: Using sectorsize to read sector as sector id - cross check
 	sector := make([]byte, blob.Size)
 	_, err = bl.ReadAt(sector, int64(reqMsg.SectorSize)*blob.SectorLen)
 	if err != nil {

@@ -195,7 +195,6 @@ func UpdateBlob(cfg *UpdateConfig) error {
 		prevUpdateTime = header.ReceivedAt
 		prevTimebank = header.Timebank
 	}
-	// FIXME: handle no payable sectors
 	l.Debug(
 		"calculated needed sectors",
 		"total", sectorsNeeded,

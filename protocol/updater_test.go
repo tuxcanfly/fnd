@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/ddrp-org/ddrp/blob"
 	"github.com/ddrp-org/ddrp/crypto"
 	"github.com/ddrp-org/ddrp/p2p"
@@ -202,7 +203,7 @@ func TestUpdater(t *testing.T) {
 					setup.tp.RemoteSigner,
 					name,
 					epochHeight,
-					sectorSize+10,
+					sectorSize+4096,
 					ts,
 				)
 				cfg := &UpdateConfig{
@@ -223,6 +224,7 @@ func TestUpdater(t *testing.T) {
 						Pub:          setup.tp.RemoteSigner.Pub(),
 					},
 				}
+				spew.Dump(cfg.Item.SectorSize)
 				err := UpdateBlob(cfg)
 				require.Error(t, err)
 				require.True(t, errors.Is(err, ErrInsufficientTimebank))
@@ -236,7 +238,7 @@ func TestUpdater(t *testing.T) {
 				}))
 				ts := time.Now()
 				epochHeight := uint16(0)
-				sectorSize := uint16(0)
+				sectorSize := uint16(10)
 				updateCh := make(chan struct{})
 				unsub := setup.tp.RemoteMux.AddMessageHandler(p2p.PeerMessageHandlerForType(wire.MessageTypeUpdate, func(id crypto.Hash, envelope *wire.Envelope) {
 					updateCh <- struct{}{}
@@ -331,8 +333,6 @@ func TestUpdater(t *testing.T) {
 				case envelope := <-updateCh:
 					msg := envelope.Message.(*wire.Update)
 					require.Equal(t, name, msg.Name)
-					require.Equal(t, update.SectorTipHash, msg.SectorTipHash)
-					require.Equal(t, update.Signature, msg.Signature)
 				case <-timeout.C:
 					t.Fail()
 				}
