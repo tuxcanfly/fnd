@@ -38,7 +38,6 @@ type sectorRes struct {
 func SyncSectors(opts *SyncSectorsOpts) error {
 	lgr := log.WithModule("sector-syncer").Sub("name", opts.Name)
 	// Implement sector hash based sync
-	sectorReqCh := make(chan uint16)
 	sectorResCh := make(chan *sectorRes)
 	sectorProcessedCh := make(chan struct{}, 1)
 	doneCh := make(chan struct{})
@@ -53,38 +52,37 @@ func SyncSectors(opts *SyncSectorsOpts) error {
 		for {
 			iter := opts.Peers.Iterator()
 			var sendCount int
-			select {
-			case id := <-sectorReqCh:
-				for {
-					peerID, ok := iter()
-					if !ok {
-						break
-					}
-					if sendCount == 7 {
-						break
-					}
-					err := opts.Mux.Send(peerID, &wire.BlobReq{
-						Name:        opts.Name,
-						EpochHeight: opts.EpochHeight,
-						SectorSize:  id,
-					})
-					if err != nil {
-						lgr.Warn("error fetching sector from peer, trying another", "peer_id", peerID, "err", err)
-						continue
-					}
-					lgr.Debug(
-						"requested sector from peer",
-						"peer_id", peerID,
-					)
-					sendCount++
+			for {
+				peerID, ok := iter()
+				if !ok {
+					break
 				}
+				if sendCount == 7 {
+					break
+				}
+				err := opts.Mux.Send(peerID, &wire.BlobReq{
+					Name:        opts.Name,
+					EpochHeight: opts.EpochHeight,
+					SectorSize:  opts.SectorSize,
+				})
+				if err != nil {
+					lgr.Warn("error fetching sector from peer, trying another", "peer_id", peerID, "err", err)
+					continue
+				}
+				lgr.Debug(
+					"requested sector from peer",
+					"peer_id", peerID,
+				)
+				sendCount++
+			}
+			select {
 			case res := <-sectorResCh:
 				msg := res.msg
 				if msg.Name != opts.Name {
 					lgr.Trace("received sector for extraneous name", "other_name", msg.Name, "sector_size", msg.SectorSize)
 					continue
 				}
-				if _, err := opts.Tx.WriteAt(msg.Payload[:], int64(msg.SectorSize)*blob.SectorLen); err != nil {
+				if _, err := opts.Tx.WriteAt(msg.Payload, int64(msg.SectorSize)); err != nil {
 					lgr.Error("failed to write sector", "sector_size", msg.SectorSize, "err", err)
 					continue
 				}
@@ -96,12 +94,12 @@ func SyncSectors(opts *SyncSectorsOpts) error {
 	}()
 
 sectorLoop:
-	for i := opts.SectorSize; i < blob.SectorCount; i++ {
-		lgr.Debug("requesting sector", "id", i)
-		sectorReqCh <- i
+	for {
+		lgr.Debug("requesting sector")
 		select {
 		case <-sectorProcessedCh:
 			lgr.Debug("sector processed")
+			break sectorLoop
 		case <-time.NewTimer(opts.Timeout).C:
 			lgr.Warn("sector request timed out")
 			break sectorLoop

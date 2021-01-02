@@ -4,7 +4,7 @@ import "io"
 
 const (
 	DefaultMaxVariableArrayLen = 1024
-	DefaultMaxByteFieldLen     = 256 * 4096
+	DefaultMaxByteFieldLen     = 8 * 256 * 4096
 )
 
 // Encoder is an interface that allows arbitrary types to be

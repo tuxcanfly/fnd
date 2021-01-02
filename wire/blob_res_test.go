@@ -2,8 +2,6 @@ package wire
 
 import (
 	"testing"
-
-	"github.com/ddrp-org/ddrp/blob"
 )
 
 func TestBlobRes_Encoding(t *testing.T) {
@@ -15,7 +13,7 @@ func TestBlobRes_Encoding(t *testing.T) {
 		//PrevHash        crypto.Hash
 		//MessageRoot     crypto.Hash
 		//Signature       crypto.Signature
-		Payload: blob.Sector{},
+		Payload: make([]byte, 1024),
 	}
 
 	testMessageEncoding(t, "blob_res", blobRes, &BlobRes{})
