@@ -187,12 +187,11 @@ func UpdateBlob(cfg *UpdateConfig) error {
 	var sectorsNeeded uint16
 	var prevUpdateTime time.Time
 	var prevTimebank int
-	var payableSectorCount int
 
 	if header == nil {
 		sectorsNeeded = item.SectorSize
 	} else {
-		sectorsNeeded = header.SectorSize - item.SectorSize
+		sectorsNeeded = item.SectorSize - header.SectorSize
 		prevUpdateTime = header.ReceivedAt
 		prevTimebank = header.Timebank
 	}
@@ -200,23 +199,21 @@ func UpdateBlob(cfg *UpdateConfig) error {
 	l.Debug(
 		"calculated needed sectors",
 		"total", sectorsNeeded,
-		"payable", payableSectorCount,
 	)
 
 	newTimebank := CheckTimebank(&TimebankParams{
 		TimebankDuration:     48 * time.Hour,
 		MinUpdateInterval:    2 * time.Minute,
 		FullUpdatesPerPeriod: 2,
-	}, prevUpdateTime, prevTimebank, payableSectorCount)
+	}, prevUpdateTime, prevTimebank, int(sectorsNeeded))
 	l.Debug(
 		"calculated new timebank",
 		"prev", prevTimebank,
 		"new", newTimebank,
 	)
-	// FIXME: Disable timebank for now
-	//if newTimebank == -1 {
-	//return ErrInsufficientTimebank
-	//}
+	if newTimebank == -1 {
+		return ErrInsufficientTimebank
+	}
 	err = store.WithTx(cfg.DB, func(tx *leveldb.Transaction) error {
 		return store.SetHeaderTx(tx, &store.Header{
 			Name:         item.Name,

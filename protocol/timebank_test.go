@@ -1,9 +1,10 @@
 package protocol
 
 import (
-	"github.com/stretchr/testify/require"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestCheckTimebank(t *testing.T) {
@@ -46,14 +47,14 @@ func TestCheckTimebank(t *testing.T) {
 			"not enough time bank - one sector interval",
 			now.Add(-1 * 10 * time.Minute),
 			0,
-			3,
+			32,
 			-1,
 		},
 		{
 			"not enough time bank - multiple sector intervals",
 			now.Add(-1 * 24 * time.Hour),
 			0,
-			257,
+			4097,
 			-1,
 		},
 		{
@@ -61,35 +62,35 @@ func TestCheckTimebank(t *testing.T) {
 			now.Add(-1 * 10 * time.Minute),
 			2,
 			1,
-			2,
+			29,
 		},
 		{
 			"enough time bank - multiple sector intervals",
 			now.Add(-1 * 24 * time.Hour),
 			0,
 			100,
-			156,
+			4014,
 		},
 		{
 			"enough time bank - multiple sector intervals with high initial bank",
 			now.Add(-1 * 24 * time.Hour),
 			512,
 			100,
-			412,
+			4526,
 		},
 		{
 			"enough time bank - multiple sector intervals zero bank",
 			now.Add(-1 * params.TimebankDuration),
 			0,
 			100,
-			412,
+			8092,
 		},
 		{
 			"enough time bank - no previous update time",
 			time.Time{},
 			0,
 			32,
-			480,
+			8160,
 		},
 	}
 	for _, tt := range tests {

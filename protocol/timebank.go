@@ -2,6 +2,8 @@ package protocol
 
 import (
 	"time"
+
+	"github.com/ddrp-org/ddrp/blob"
 )
 
 type TimebankParams struct {
@@ -14,7 +16,7 @@ func CheckTimebank(params *TimebankParams, prevUpdateTime time.Time, prevTimeban
 	if sectorsNeeded == 0 {
 		return -1
 	}
-	if sectorsNeeded > 256 {
+	if sectorsNeeded > blob.SectorCount {
 		return -1
 	}
 
@@ -23,7 +25,7 @@ func CheckTimebank(params *TimebankParams, prevUpdateTime time.Time, prevTimeban
 		return -1
 	}
 
-	sectorUpdatesPerPeriod := params.FullUpdatesPerPeriod * 256
+	sectorUpdatesPerPeriod := params.FullUpdatesPerPeriod * blob.SectorCount
 	secondsSince := int(time.Since(prevUpdateTime) / time.Second)
 	secondsPerSector := int(params.TimebankDuration/time.Second) / sectorUpdatesPerPeriod
 	sectorsAvailable := prevTimebank + (secondsSince / secondsPerSector)
