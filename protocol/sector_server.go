@@ -9,6 +9,7 @@ import (
 	"github.com/ddrp-org/ddrp/crypto"
 	"github.com/ddrp-org/ddrp/log"
 	"github.com/ddrp-org/ddrp/p2p"
+	"github.com/ddrp-org/ddrp/store"
 	"github.com/ddrp-org/ddrp/util"
 	"github.com/ddrp-org/ddrp/wire"
 	"github.com/syndtr/goleveldb/leveldb"
@@ -56,11 +57,21 @@ func (s *SectorServer) onBlobReq(peerID crypto.Hash, envelope *wire.Envelope) {
 		lgr.Info("dropping sector req for busy name")
 		return
 	}
+
+	// FIXME: skip if sectorSize == 0; we know it will be ZeroHash
+	prevHash, err := store.GetSectorHash(s.db, reqMsg.Name, reqMsg.SectorSize)
+	if err != nil {
+		lgr.Error(
+			"failed to fetch sector hash",
+			"err", err)
+		return
+	}
+
 	cacheKey := fmt.Sprintf("%s:%d:%d", reqMsg.Name, reqMsg.EpochHeight, reqMsg.SectorSize)
 	cached := s.cache.Get(cacheKey)
 	if cached != nil {
 		s.nameLocker.RUnlock(reqMsg.Name)
-		s.sendResponse(peerID, reqMsg.Name, cached.([]blob.Sector), reqMsg.EpochHeight, reqMsg.SectorSize)
+		s.sendResponse(peerID, reqMsg.Name, prevHash, cached.([]blob.Sector), reqMsg.EpochHeight, reqMsg.SectorSize)
 		return
 	}
 
@@ -94,19 +105,16 @@ func (s *SectorServer) onBlobReq(peerID crypto.Hash, envelope *wire.Envelope) {
 	}
 	s.cache.Set(cacheKey, sectors, int64(s.CacheExpiry/time.Millisecond))
 	s.nameLocker.RUnlock(reqMsg.Name)
-	s.sendResponse(peerID, reqMsg.Name, sectors, reqMsg.EpochHeight, reqMsg.SectorSize)
+	s.sendResponse(peerID, reqMsg.Name, prevHash, sectors, reqMsg.EpochHeight, reqMsg.SectorSize)
 }
 
-func (s *SectorServer) sendResponse(peerID crypto.Hash, name string, sectors []blob.Sector, epochHeight, sectorSize uint16) {
+func (s *SectorServer) sendResponse(peerID crypto.Hash, name string, prevHash crypto.Hash, sectors []blob.Sector, epochHeight, sectorSize uint16) {
 	resMsg := &wire.BlobRes{
-		SectorSize:  sectorSize,
-		Name:        name,
-		EpochHeight: epochHeight,
-		//PayloadPosition uint16,
-		//PrevHash        crypto.Hash
-		//MessageRoot     crypto.Hash
-		//Signature       crypto.Signature
-		Payload: sectors,
+		Name:            name,
+		EpochHeight:     epochHeight,
+		PayloadPosition: sectorSize,
+		PrevHash:        prevHash,
+		Payload:         sectors,
 	}
 	if err := s.mux.Send(peerID, resMsg); err != nil {
 		s.lgr.Error("error serving sector response", "err", err)

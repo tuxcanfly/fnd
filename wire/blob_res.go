@@ -11,13 +11,11 @@ import (
 type BlobRes struct {
 	HashCacher
 
-	SectorSize      uint16
 	Name            string
 	EpochHeight     uint16
 	PayloadPosition uint16
 	PrevHash        crypto.Hash
-	MessageRoot     crypto.Hash
-	Signature       crypto.Signature
+	ReservedRoot    crypto.Hash
 	Payload         []blob.Sector
 }
 
@@ -33,25 +31,21 @@ func (s *BlobRes) Equals(other Message) bool {
 		return false
 	}
 
-	return s.SectorSize == cast.SectorSize &&
-		s.Name == cast.Name &&
+	return s.Name == cast.Name &&
 		s.EpochHeight == cast.EpochHeight &&
 		s.PayloadPosition == cast.PayloadPosition &&
 		s.PrevHash == cast.PrevHash &&
-		s.MessageRoot == cast.MessageRoot &&
-		s.Signature == cast.Signature
+		s.ReservedRoot == cast.ReservedRoot
 }
 
 func (s *BlobRes) Encode(w io.Writer) error {
 	return dwire.EncodeFields(
 		w,
-		s.SectorSize,
 		s.Name,
 		s.EpochHeight,
 		s.PayloadPosition,
 		s.PrevHash,
-		s.MessageRoot,
-		s.Signature,
+		s.ReservedRoot,
 		s.Payload,
 	)
 }
@@ -59,13 +53,11 @@ func (s *BlobRes) Encode(w io.Writer) error {
 func (s *BlobRes) Decode(r io.Reader) error {
 	return dwire.DecodeFields(
 		r,
-		&s.SectorSize,
 		&s.Name,
 		&s.EpochHeight,
 		&s.PayloadPosition,
 		&s.PrevHash,
-		&s.MessageRoot,
-		&s.Signature,
+		&s.ReservedRoot,
 		&s.Payload,
 	)
 }

@@ -79,12 +79,16 @@ func SyncSectors(opts *SyncSectorsOpts) error {
 			case res := <-sectorResCh:
 				msg := res.msg
 				if msg.Name != opts.Name {
-					lgr.Trace("received sector for extraneous name", "other_name", msg.Name, "sector_size", msg.SectorSize)
+					lgr.Trace("received sector for extraneous name", "other_name", msg.Name)
+					continue
+				}
+				if int(msg.PayloadPosition)+len(msg.Payload) != blob.SectorCount {
+					lgr.Trace("received unexpected payload size", "expected", blob.SectorCount-msg.PayloadPosition, len(msg.Payload))
 					continue
 				}
 				for i := msg.PayloadPosition; int(i) < len(msg.Payload); i++ {
 					if _, err := opts.Tx.WriteAt(msg.Payload[i][:], int64(i)*blob.SectorLen); err != nil {
-						lgr.Error("failed to write sector", "sector_size", msg.SectorSize, "err", err)
+						lgr.Error("failed to write sector", "sector_id", i, "err", err)
 						continue
 					}
 				}

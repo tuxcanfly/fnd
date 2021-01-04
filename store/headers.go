@@ -139,6 +139,17 @@ func GetHeader(db *leveldb.DB, name string) (*Header, error) {
 	return header, nil
 }
 
+func GetSectorHash(db *leveldb.DB, name string, index uint16) (crypto.Hash, error) {
+	hashes, err := GetSectorHashes(db, name)
+	if err != nil {
+		return crypto.ZeroHash, err
+	}
+	if int(index) > len(hashes) {
+		return crypto.ZeroHash, errors.Wrap(err, "error getting index")
+	}
+	return hashes[index], nil
+}
+
 func GetSectorHashes(db *leveldb.DB, name string) (blob.SectorHashes, error) {
 	var base blob.SectorHashes
 	baseB, err := db.Get(headerSectorHashesPrefix(name), nil)
