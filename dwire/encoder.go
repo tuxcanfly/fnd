@@ -3,7 +3,7 @@ package dwire
 import "io"
 
 const (
-	DefaultMaxVariableArrayLen = 1024
+	DefaultMaxVariableArrayLen = 4096
 	DefaultMaxByteFieldLen     = 8 * 256 * 4096
 )
 

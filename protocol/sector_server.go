@@ -60,7 +60,7 @@ func (s *SectorServer) onBlobReq(peerID crypto.Hash, envelope *wire.Envelope) {
 	cached := s.cache.Get(cacheKey)
 	if cached != nil {
 		s.nameLocker.RUnlock(reqMsg.Name)
-		s.sendResponse(peerID, reqMsg.Name, cached.([]byte), reqMsg.EpochHeight, reqMsg.SectorSize)
+		s.sendResponse(peerID, reqMsg.Name, cached.([]blob.Sector), reqMsg.EpochHeight, reqMsg.SectorSize)
 		return
 	}
 
@@ -78,22 +78,26 @@ func (s *SectorServer) onBlobReq(peerID crypto.Hash, envelope *wire.Envelope) {
 			s.lgr.Error("failed to close blob", "err", err)
 		}
 	}()
-	sector := make([]byte, blob.Size)
-	_, err = bl.ReadAt(sector, int64(reqMsg.SectorSize)*blob.SectorLen)
-	if err != nil {
-		s.nameLocker.RUnlock(reqMsg.Name)
-		lgr.Error(
-			"failed to read sector",
-			"err", err,
-		)
-		return
+	var sectors []blob.Sector
+	for i := reqMsg.SectorSize; i < blob.SectorCount; i++ {
+		sector := &blob.Sector{}
+		_, err = bl.ReadAt(sector[:], int64(i)*blob.SectorLen)
+		if err != nil {
+			s.nameLocker.RUnlock(reqMsg.Name)
+			lgr.Error(
+				"failed to read sector",
+				"err", err,
+			)
+			return
+		}
+		sectors = append(sectors, *sector)
 	}
-	s.cache.Set(cacheKey, sector, int64(s.CacheExpiry/time.Millisecond))
+	s.cache.Set(cacheKey, sectors, int64(s.CacheExpiry/time.Millisecond))
 	s.nameLocker.RUnlock(reqMsg.Name)
-	s.sendResponse(peerID, reqMsg.Name, sector, reqMsg.EpochHeight, reqMsg.SectorSize)
+	s.sendResponse(peerID, reqMsg.Name, sectors, reqMsg.EpochHeight, reqMsg.SectorSize)
 }
 
-func (s *SectorServer) sendResponse(peerID crypto.Hash, name string, sector []byte, epochHeight, sectorSize uint16) {
+func (s *SectorServer) sendResponse(peerID crypto.Hash, name string, sectors []blob.Sector, epochHeight, sectorSize uint16) {
 	resMsg := &wire.BlobRes{
 		SectorSize:  sectorSize,
 		Name:        name,
@@ -102,7 +106,7 @@ func (s *SectorServer) sendResponse(peerID crypto.Hash, name string, sector []by
 		//PrevHash        crypto.Hash
 		//MessageRoot     crypto.Hash
 		//Signature       crypto.Signature
-		Payload: sector,
+		Payload: sectors,
 	}
 	if err := s.mux.Send(peerID, resMsg); err != nil {
 		s.lgr.Error("error serving sector response", "err", err)

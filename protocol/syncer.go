@@ -82,9 +82,11 @@ func SyncSectors(opts *SyncSectorsOpts) error {
 					lgr.Trace("received sector for extraneous name", "other_name", msg.Name, "sector_size", msg.SectorSize)
 					continue
 				}
-				if _, err := opts.Tx.WriteAt(msg.Payload, int64(msg.SectorSize)); err != nil {
-					lgr.Error("failed to write sector", "sector_size", msg.SectorSize, "err", err)
-					continue
+				for i := msg.PayloadPosition; int(i) < len(msg.Payload); i++ {
+					if _, err := opts.Tx.WriteAt(msg.Payload[i][:], int64(i)*blob.SectorLen); err != nil {
+						lgr.Error("failed to write sector", "sector_size", msg.SectorSize, "err", err)
+						continue
+					}
 				}
 				sectorProcessedCh <- struct{}{}
 			case <-doneCh:

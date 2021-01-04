@@ -1,9 +1,9 @@
 package wire
 
 import (
-	"bytes"
 	"io"
 
+	"github.com/ddrp-org/ddrp/blob"
 	"github.com/ddrp-org/ddrp/crypto"
 	"github.com/ddrp-org/ddrp/dwire"
 )
@@ -18,7 +18,7 @@ type BlobRes struct {
 	PrevHash        crypto.Hash
 	MessageRoot     crypto.Hash
 	Signature       crypto.Signature
-	Payload         []byte
+	Payload         []blob.Sector
 }
 
 var _ Message = (*BlobRes)(nil)
@@ -39,8 +39,7 @@ func (s *BlobRes) Equals(other Message) bool {
 		s.PayloadPosition == cast.PayloadPosition &&
 		s.PrevHash == cast.PrevHash &&
 		s.MessageRoot == cast.MessageRoot &&
-		s.Signature == cast.Signature &&
-		bytes.Equal(s.Payload, cast.Payload)
+		s.Signature == cast.Signature
 }
 
 func (s *BlobRes) Encode(w io.Writer) error {

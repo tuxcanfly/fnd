@@ -13,7 +13,7 @@ func TestBlobRes_Encoding(t *testing.T) {
 		//PrevHash        crypto.Hash
 		//MessageRoot     crypto.Hash
 		//Signature       crypto.Signature
-		Payload: make([]byte, 1024),
+		Payload: nil,
 	}
 
 	testMessageEncoding(t, "blob_res", blobRes, &BlobRes{})
