@@ -145,7 +145,6 @@ message BlobInfoRes {
     bytes reservedRoot = 7;
     uint64 receivedAt = 8;
     bytes signature = 9;
-    uint32 timebank = 10;
 }
 
 message SendUpdateReq {

@@ -30,7 +30,6 @@ func TestHeaders_GetSet(t *testing.T) {
 		Signature:    sig,
 		ReservedRoot: crypto.Rand32(),
 		ReceivedAt:   time.Unix(11, 0),
-		Timebank:     100,
 	}
 	_, err = GetHeader(db, "foo")
 	require.Error(t, err)

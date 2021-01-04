@@ -410,7 +410,6 @@ func (s *Server) GetBlobInfo(_ context.Context, req *apiv1.BlobInfoReq) (*apiv1.
 		ReservedRoot: header.ReservedRoot[:],
 		ReceivedAt:   uint64(header.ReceivedAt.Unix()),
 		Signature:    header.Signature[:],
-		Timebank:     uint32(header.Timebank),
 	}, nil
 }
 
@@ -439,7 +438,6 @@ func (s *Server) ListBlobInfo(req *apiv1.ListBlobInfoReq, srv apiv1.DDRPv1_ListB
 			ReservedRoot: info.ReservedRoot[:],
 			ReceivedAt:   uint64(info.ReceivedAt.Unix()),
 			Signature:    info.Signature[:],
-			Timebank:     uint32(info.Timebank),
 		}
 		if err = srv.Send(res); err != nil {
 			return errors.Wrap(err, "error sending info")

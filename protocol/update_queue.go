@@ -28,16 +28,15 @@ var (
 )
 
 type UpdateQueue struct {
-	MaxLen            int32
-	MinUpdateInterval time.Duration
-	mux               *p2p.PeerMuxer
-	db                *leveldb.DB
-	entries           map[string]*UpdateQueueItem
-	quitCh            chan struct{}
-	queue             []string
-	queueLen          int32
-	mu                sync.Mutex
-	lgr               log.Logger
+	MaxLen   int32
+	mux      *p2p.PeerMuxer
+	db       *leveldb.DB
+	entries  map[string]*UpdateQueueItem
+	quitCh   chan struct{}
+	queue    []string
+	queueLen int32
+	mu       sync.Mutex
+	lgr      log.Logger
 }
 
 type UpdateQueueItem struct {
@@ -59,13 +58,12 @@ func (u *UpdateQueueItem) Dispose() {
 
 func NewUpdateQueue(mux *p2p.PeerMuxer, db *leveldb.DB) *UpdateQueue {
 	return &UpdateQueue{
-		MaxLen:            int32(config.DefaultConfig.Tuning.UpdateQueue.MaxLen),
-		MinUpdateInterval: config.ConvertDuration(config.DefaultConfig.Tuning.Timebank.MinUpdateIntervalMS, time.Millisecond),
-		mux:               mux,
-		db:                db,
-		entries:           make(map[string]*UpdateQueueItem),
-		quitCh:            make(chan struct{}),
-		lgr:               log.WithModule("update-queue"),
+		MaxLen:  int32(config.DefaultConfig.Tuning.UpdateQueue.MaxLen),
+		mux:     mux,
+		db:      db,
+		entries: make(map[string]*UpdateQueueItem),
+		quitCh:  make(chan struct{}),
+		lgr:     log.WithModule("update-queue"),
 	}
 }
 
@@ -110,13 +108,11 @@ func (u *UpdateQueue) Enqueue(peerID crypto.Hash, update *wire.Update) error {
 
 	// FIXME: epochHeight?
 	var storedSectorSize uint16
-	var headerReceivedAt time.Time
 	header, err := store.GetHeader(u.db, update.Name)
 	if err != nil && !errors.Is(err, leveldb.ErrNotFound) {
 		return errors.Wrap(err, "error getting name header")
 	} else if err == nil {
 		storedSectorSize = header.SectorSize
-		headerReceivedAt = header.ReceivedAt
 	}
 
 	if storedSectorSize > update.SectorSize {
@@ -125,10 +121,6 @@ func (u *UpdateQueue) Enqueue(peerID crypto.Hash, update *wire.Update) error {
 	if storedSectorSize == update.SectorSize {
 		return ErrUpdateQueueIdenticalTimestamp
 	}
-	if time.Now().Sub(headerReceivedAt) < u.MinUpdateInterval {
-		return ErrUpdateQueueThrottled
-	}
-
 	u.mu.Lock()
 	defer u.mu.Unlock()
 	entry := u.entries[update.Name]

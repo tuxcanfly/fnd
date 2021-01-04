@@ -118,19 +118,6 @@ func TestUpdateQueue_Enqueue_InvalidBeforeEnqueue(t *testing.T) {
 			},
 		},
 		{
-			"throttled",
-			signUpdate(t, &wire.Update{
-				Name:          throttledHeader.Name,
-				EpochHeight:   identicalHeader.EpochHeight,
-				SectorSize:    identicalHeader.SectorSize + 10,
-				SectorTipHash: throttledHeader.MerkleRoot,
-				ReservedRoot:  identicalHeader.ReservedRoot,
-			}),
-			func(t *testing.T, err error) {
-				require.Equal(t, ErrUpdateQueueThrottled, err)
-			},
-		},
-		{
 			"stale",
 			signUpdate(t, &wire.Update{
 				Name:          staleHeader.Name,

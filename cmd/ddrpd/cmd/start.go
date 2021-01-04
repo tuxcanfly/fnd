@@ -2,6 +2,14 @@ package cmd
 
 import (
 	"fmt"
+	"net/http"
+	_ "net/http/pprof"
+	"os"
+	"os/signal"
+	"runtime"
+	"syscall"
+	"time"
+
 	"github.com/ddrp-org/ddrp/blob"
 	"github.com/ddrp-org/ddrp/cli"
 	"github.com/ddrp-org/ddrp/config"
@@ -18,13 +26,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"github.com/syndtr/goleveldb/leveldb"
-	"net/http"
-	_ "net/http/pprof"
-	"os"
-	"os/signal"
-	"runtime"
-	"syscall"
-	"time"
 )
 
 var startCmd = &cobra.Command{
@@ -145,7 +146,6 @@ var startCmd = &cobra.Command{
 
 		updateQueue := protocol.NewUpdateQueue(mux, db)
 		updateQueue.MaxLen = int32(cfg.Tuning.UpdateQueue.MaxLen)
-		updateQueue.MinUpdateInterval = config.ConvertDuration(cfg.Tuning.Timebank.MinUpdateIntervalMS, time.Millisecond)
 
 		updater := protocol.NewUpdater(mux, db, updateQueue, nameLocker, bs)
 		updater.PollInterval = config.ConvertDuration(cfg.Tuning.Updater.PollIntervalMS, time.Millisecond)

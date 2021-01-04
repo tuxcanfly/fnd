@@ -85,6 +85,5 @@ func parseBlobInfoRes(res *apiv1.BlobInfoRes) (*store.BlobInfo, error) {
 		ReservedRoot: reservedRoot,
 		ReceivedAt:   time.Unix(int64(res.ReceivedAt), 0),
 		Signature:    sig,
-		Timebank:     int(res.Timebank),
 	}, nil
 }

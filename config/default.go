@@ -2,12 +2,13 @@ package config
 
 import (
 	"bytes"
-	"github.com/ddrp-org/ddrp/log"
-	"github.com/pkg/errors"
 	"io"
 	"os"
 	"path"
 	"text/template"
+
+	"github.com/ddrp-org/ddrp/log"
+	"github.com/pkg/errors"
 )
 
 var DefaultConfig = Config{
@@ -39,11 +40,6 @@ var DefaultConfig = Config{
 		APIKey:   "",
 	},
 	Tuning: TuningConfig{
-		Timebank: TimebankConfig{
-			PeriodMS:             86400 * 2,
-			MinUpdateIntervalMS:  120,
-			FullUpdatesPerPeriod: 2,
-		},
 		UpdateQueue: UpdateQueueConfig{
 			MaxLen:         1000,
 			ReapIntervalMS: 5000,
@@ -228,18 +224,6 @@ log_level = "{{.LogLevel}}"
     # Sets how long ddrpd will wait for a remote peers to return
     # tree base data before trying another peer.
     tree_base_response_timeout_ms = {{.Tuning.Syncer.TreeBaseResponseTimeoutMS}}
-
-  # Configures how ddrpd manages each name's timebank. The timebank is used
-  # to throttle blob updates. Changing these values after ddrpd has fully
-  # synced is undefined behavior.
-  [tuning.timebank]
-    # Sets how many complete blob updates (i.e., updates that change all 256
-    # sectors) ddrpd will allow per time period.
-    full_updates_per_period = {{.Tuning.Timebank.FullUpdatesPerPeriod}}
-    # Sets the minimum amount of time between updates ddrpd will accept.
-    min_update_interval_ms = {{.Tuning.Timebank.MinUpdateIntervalMS}}
-    # Sets the time period over which the timebank will be calculated.
-    period_ms = {{.Tuning.Timebank.PeriodMS}}
 
   # Configures how ddrpd enqueues blob updates.
   [tuning.update_queue]

@@ -5,7 +5,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/ddrp-org/ddrp/blob"
 	"github.com/ddrp-org/ddrp/crypto"
 	"github.com/ddrp-org/ddrp/p2p"
@@ -175,59 +174,6 @@ func TestUpdater(t *testing.T) {
 				err := UpdateBlob(cfg)
 				require.NotNil(t, err)
 				require.True(t, errors.Is(err, ErrNameLocked))
-			},
-		},
-		{
-			"aborts sync if there is insufficient time bank to support the update",
-			func(t *testing.T, setup *updaterTestSetup) {
-				ts := time.Now()
-				epochHeight := uint16(0)
-				sectorSize := uint16(0)
-				// insert the blob locally, ensuring that
-				// there will be enough time bank
-				mockapp.FillBlobRandom(
-					t,
-					setup.ls.DB,
-					setup.ls.BlobStore,
-					setup.tp.RemoteSigner,
-					name,
-					epochHeight,
-					sectorSize,
-					ts.Add(-12*time.Hour),
-				)
-				// create the new blob remotely
-				update := mockapp.FillBlobRandom(
-					t,
-					setup.rs.DB,
-					setup.rs.BlobStore,
-					setup.tp.RemoteSigner,
-					name,
-					epochHeight,
-					sectorSize+4096,
-					ts,
-				)
-				cfg := &UpdateConfig{
-					Mux:        setup.tp.LocalMux,
-					DB:         setup.ls.DB,
-					NameLocker: util.NewMultiLocker(),
-					BlobStore:  setup.ls.BlobStore,
-					Item: &UpdateQueueItem{
-						PeerIDs: NewPeerSet([]crypto.Hash{
-							crypto.HashPub(setup.tp.RemoteSigner.Pub()),
-						}),
-						Name:         name,
-						EpochHeight:  update.EpochHeight,
-						SectorSize:   update.SectorSize,
-						MerkleRoot:   update.SectorTipHash,
-						ReservedRoot: update.ReservedRoot,
-						Signature:    update.Signature,
-						Pub:          setup.tp.RemoteSigner.Pub(),
-					},
-				}
-				spew.Dump(cfg.Item.SectorSize)
-				err := UpdateBlob(cfg)
-				require.Error(t, err)
-				require.True(t, errors.Is(err, ErrInsufficientTimebank))
 			},
 		},
 		{

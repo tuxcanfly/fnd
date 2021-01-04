@@ -24,7 +24,6 @@ type Header struct {
 	Signature    crypto.Signature
 	ReservedRoot crypto.Hash
 	ReceivedAt   time.Time
-	Timebank     int
 }
 
 func (h *Header) MarshalJSON() ([]byte, error) {
@@ -36,7 +35,6 @@ func (h *Header) MarshalJSON() ([]byte, error) {
 		Signature    string    `json:"signature"`
 		ReservedRoot string    `json:"reserved_root"`
 		ReceivedAt   time.Time `json:"received_at"`
-		Timebank     int       `json:"timebank"`
 	}{
 		h.Name,
 		h.EpochHeight,
@@ -45,7 +43,6 @@ func (h *Header) MarshalJSON() ([]byte, error) {
 		h.Signature.String(),
 		h.ReservedRoot.String(),
 		h.ReceivedAt,
-		h.Timebank,
 	}
 
 	return json.Marshal(out)
@@ -60,7 +57,6 @@ func (h *Header) UnmarshalJSON(b []byte) error {
 		Signature    string    `json:"signature"`
 		ReservedRoot string    `json:"reserved_root"`
 		ReceivedAt   time.Time `json:"received_at"`
-		Timebank     int       `json:"timebank"`
 	}{}
 	if err := json.Unmarshal(b, in); err != nil {
 		return err
@@ -97,7 +93,6 @@ func (h *Header) UnmarshalJSON(b []byte) error {
 	h.Signature = sig
 	h.ReservedRoot = rr
 	h.ReceivedAt = in.ReceivedAt
-	h.Timebank = in.Timebank
 	return nil
 }
 
@@ -189,7 +184,6 @@ type BlobInfo struct {
 	Signature    crypto.Signature `json:"signature"`
 	ReservedRoot crypto.Hash      `json:"reserved_root"`
 	ReceivedAt   time.Time        `json:"received_at"`
-	Timebank     int              `json:"timebank"`
 }
 
 func (b *BlobInfo) MarshalJSON() ([]byte, error) {
@@ -203,7 +197,6 @@ func (b *BlobInfo) MarshalJSON() ([]byte, error) {
 		Signature    string    `json:"signature"`
 		ReservedRoot string    `json:"reserved_root"`
 		ReceivedAt   time.Time `json:"received_at"`
-		Timebank     int       `json:"timebank"`
 	}{
 		b.Name,
 		hex.EncodeToString(b.PublicKey.SerializeCompressed()),
@@ -214,7 +207,6 @@ func (b *BlobInfo) MarshalJSON() ([]byte, error) {
 		hex.EncodeToString(b.Signature[:]),
 		hex.EncodeToString(b.ReservedRoot[:]),
 		b.ReceivedAt,
-		b.Timebank,
 	}
 
 	return json.Marshal(jsonInfo)
@@ -246,7 +238,6 @@ func (bis *BlobInfoStream) Next() (*BlobInfo, error) {
 		Signature:    header.Signature,
 		ReservedRoot: header.ReservedRoot,
 		ReceivedAt:   header.ReceivedAt,
-		Timebank:     header.Timebank,
 	}, nil
 }
 

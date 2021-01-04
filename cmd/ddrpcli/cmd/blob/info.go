@@ -60,7 +60,6 @@ var infoCmd = &cobra.Command{
 				res.ReservedRoot.String(),
 				res.ReceivedAt.String(),
 				res.Signature.String(),
-				strconv.Itoa(res.Timebank),
 			})
 		}
 

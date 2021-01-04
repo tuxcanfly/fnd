@@ -20,7 +20,6 @@ var (
 	ErrUpdaterAlreadySynchronized = errors.New("updater already synchronized")
 	ErrUpdaterMerkleRootMismatch  = errors.New("updater merkle root mismatch")
 	ErrNameLocked                 = errors.New("name is locked")
-	ErrInsufficientTimebank       = errors.New("insufficient timebank")
 
 	updaterLogger = log.WithModule("updater")
 )
@@ -185,34 +184,17 @@ func UpdateBlob(cfg *UpdateConfig) error {
 	}
 
 	var sectorsNeeded uint16
-	var prevUpdateTime time.Time
-	var prevTimebank int
 
 	if header == nil {
 		sectorsNeeded = item.SectorSize
 	} else {
 		sectorsNeeded = item.SectorSize - header.SectorSize
-		prevUpdateTime = header.ReceivedAt
-		prevTimebank = header.Timebank
 	}
 	l.Debug(
 		"calculated needed sectors",
 		"total", sectorsNeeded,
 	)
 
-	newTimebank := CheckTimebank(&TimebankParams{
-		TimebankDuration:     48 * time.Hour,
-		MinUpdateInterval:    2 * time.Minute,
-		FullUpdatesPerPeriod: 2,
-	}, prevUpdateTime, prevTimebank, int(sectorsNeeded))
-	l.Debug(
-		"calculated new timebank",
-		"prev", prevTimebank,
-		"new", newTimebank,
-	)
-	if newTimebank == -1 {
-		return ErrInsufficientTimebank
-	}
 	err = store.WithTx(cfg.DB, func(tx *leveldb.Transaction) error {
 		return store.SetHeaderTx(tx, &store.Header{
 			Name:         item.Name,
@@ -222,7 +204,6 @@ func UpdateBlob(cfg *UpdateConfig) error {
 			Signature:    item.Signature,
 			ReservedRoot: item.ReservedRoot,
 			ReceivedAt:   time.Now(),
-			Timebank:     newTimebank,
 		}, blob.ZeroSectorHashes)
 	})
 	if err != nil {
