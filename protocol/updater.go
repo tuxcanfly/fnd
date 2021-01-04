@@ -176,7 +176,7 @@ func UpdateBlob(cfg *UpdateConfig) error {
 		}
 		return errors.Wrap(err, "error calculating new blob sector tip hash")
 	}
-	if tree.Root() != item.MerkleRoot {
+	if tree.Tip() != item.MerkleRoot {
 		if err := tx.Rollback(); err != nil {
 			updaterLogger.Error("error rolling back blob transaction", "err", err)
 		}

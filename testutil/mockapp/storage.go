@@ -55,14 +55,14 @@ func FillBlobReader(t *testing.T, db *leveldb.DB, bs blob.Store, signer crypto.S
 	require.NoError(t, err)
 	tree, err := blob.SerialHash(blob.NewReader(tx), blob.ZeroHash)
 	require.NoError(t, err)
-	sig, err := blob.SignSeal(signer, name, epochHeight, sectorSize, tree.Root(), crypto.ZeroHash)
+	sig, err := blob.SignSeal(signer, name, epochHeight, sectorSize, tree.Tip(), crypto.ZeroHash)
 	require.NoError(t, err)
 	require.NoError(t, store.WithTx(db, func(tx *leveldb.Transaction) error {
 		return store.SetHeaderTx(tx, &store.Header{
 			Name:         name,
 			EpochHeight:  epochHeight,
 			SectorSize:   sectorSize,
-			MerkleRoot:   tree.Root(),
+			MerkleRoot:   tree.Tip(),
 			Signature:    sig,
 			ReservedRoot: crypto.ZeroHash,
 			ReceivedAt:   receivedAt,
@@ -73,7 +73,7 @@ func FillBlobReader(t *testing.T, db *leveldb.DB, bs blob.Store, signer crypto.S
 		Name:          name,
 		EpochHeight:   epochHeight,
 		SectorSize:    sectorSize,
-		SectorTipHash: tree.Root(),
+		SectorTipHash: tree.Tip(),
 		ReservedRoot:  crypto.ZeroHash,
 		Signature:     sig,
 	}

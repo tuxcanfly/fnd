@@ -281,7 +281,7 @@ func (s *Server) PreCommit(ctx context.Context, req *apiv1.PreCommitReq) (*apiv1
 	}
 
 	return &apiv1.PreCommitRes{
-		MerkleRoot: mt.Root().Bytes(),
+		MerkleRoot: mt.Tip().Bytes(),
 	}, nil
 }
 
@@ -308,7 +308,7 @@ func (s *Server) Commit(ctx context.Context, req *apiv1.CommitReq) (*apiv1.Commi
 	// TODO: update grpc API to use epochHeight, sectorSize
 	epochHeight := uint16(0)
 	sectorSize := uint16(0)
-	h := blob.SealHash(name, epochHeight, sectorSize, mt.Root(), crypto.ZeroHash)
+	h := blob.SealHash(name, epochHeight, sectorSize, mt.Tip(), crypto.ZeroHash)
 	if !crypto.VerifySigPub(info.PublicKey, sig, h) {
 		return nil, errors.New("signature verification failed")
 	}
@@ -323,7 +323,7 @@ func (s *Server) Commit(ctx context.Context, req *apiv1.CommitReq) (*apiv1.Commi
 			Name:         name,
 			EpochHeight:  epochHeight,
 			SectorSize:   sectorSize,
-			MerkleRoot:   mt.Root(),
+			MerkleRoot:   mt.Tip(),
 			Signature:    sig,
 			ReservedRoot: crypto.ZeroHash,
 			ReceivedAt:   time.Now(),
@@ -347,7 +347,7 @@ func (s *Server) Commit(ctx context.Context, req *apiv1.CommitReq) (*apiv1.Commi
 			Name:          name,
 			EpochHeight:   0,
 			SectorSize:    0,
-			SectorTipHash: mt.Root(),
+			SectorTipHash: mt.Tip(),
 			Signature:     sig,
 		})
 	}

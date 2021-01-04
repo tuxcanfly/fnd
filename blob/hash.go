@@ -51,7 +51,7 @@ func (s SectorHashes) DiffWith(other SectorHashes) []uint8 {
 	return out
 }
 
-func (s SectorHashes) Root() crypto.Hash {
+func (s SectorHashes) Tip() crypto.Hash {
 	return s[SectorCount-1]
 }
 
@@ -68,16 +68,13 @@ func SerialHashSector(sector Sector, prevHash crypto.Hash) crypto.Hash {
 // SerialHash returns serial hash of the contents of the reader br
 func SerialHash(br io.Reader, prevHash crypto.Hash) (SectorHashes, error) {
 	var res SectorHashes
-	hasher, _ := blake2b.New256(nil)
+	var sector Sector
 	var hash crypto.Hash = prevHash
 	for i := 0; i < SectorCount; i++ {
-		res[i] = hash
-		hasher.Write(hash[:])
-		if _, err := io.CopyN(hasher, br, SectorLen); err != nil {
+		if _, err := br.Read(sector[:]); err != nil {
 			return ZeroSectorHashes, err
 		}
-		h := hasher.Sum(nil)
-		copy(hash[:], h)
+		hash = SerialHashSector(sector, hash)
 	}
 	return res, nil
 }
