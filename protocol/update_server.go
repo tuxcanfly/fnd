@@ -82,7 +82,7 @@ func (u *UpdateServer) UpdateReqHandler(peerID crypto.Hash, envelope *wire.Envel
 		Name:          msg.Name,
 		EpochHeight:   header.EpochHeight,
 		SectorSize:    header.SectorSize,
-		SectorTipHash: header.MerkleRoot,
+		SectorTipHash: header.SectorTipHash,
 		Signature:     header.Signature,
 	})
 	if err != nil {

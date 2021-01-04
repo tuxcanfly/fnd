@@ -17,13 +17,13 @@ import (
 )
 
 type Header struct {
-	Name         string
-	EpochHeight  uint16
-	SectorSize   uint16
-	MerkleRoot   crypto.Hash
-	Signature    crypto.Signature
-	ReservedRoot crypto.Hash
-	ReceivedAt   time.Time
+	Name          string
+	EpochHeight   uint16
+	SectorSize    uint16
+	SectorTipHash crypto.Hash
+	Signature     crypto.Signature
+	ReservedRoot  crypto.Hash
+	ReceivedAt    time.Time
 }
 
 func (h *Header) MarshalJSON() ([]byte, error) {
@@ -39,7 +39,7 @@ func (h *Header) MarshalJSON() ([]byte, error) {
 		h.Name,
 		h.EpochHeight,
 		h.SectorSize,
-		h.MerkleRoot.String(),
+		h.SectorTipHash.String(),
 		h.Signature.String(),
 		h.ReservedRoot.String(),
 		h.ReceivedAt,
@@ -89,7 +89,7 @@ func (h *Header) UnmarshalJSON(b []byte) error {
 	h.Name = in.Name
 	h.EpochHeight = in.EpochHeight
 	h.SectorSize = in.SectorSize
-	h.MerkleRoot = mr
+	h.SectorTipHash = mr
 	h.Signature = sig
 	h.ReservedRoot = rr
 	h.ReceivedAt = in.ReceivedAt
@@ -245,7 +245,7 @@ func (bis *BlobInfoStream) Next() (*BlobInfo, error) {
 		ImportHeight: nameInfo.ImportHeight,
 		EpochHeight:  header.EpochHeight,
 		SectorSize:   header.SectorSize,
-		MerkleRoot:   header.MerkleRoot,
+		MerkleRoot:   header.SectorTipHash,
 		Signature:    header.Signature,
 		ReservedRoot: header.ReservedRoot,
 		ReceivedAt:   header.ReceivedAt,

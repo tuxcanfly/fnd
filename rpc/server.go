@@ -323,7 +323,7 @@ func (s *Server) Commit(ctx context.Context, req *apiv1.CommitReq) (*apiv1.Commi
 			Name:         name,
 			EpochHeight:  epochHeight,
 			SectorSize:   sectorSize,
-			MerkleRoot:   mt.Tip(),
+			SectorTipHash:   mt.Tip(),
 			Signature:    sig,
 			ReservedRoot: crypto.ZeroHash,
 			ReceivedAt:   time.Now(),
@@ -406,7 +406,7 @@ func (s *Server) GetBlobInfo(_ context.Context, req *apiv1.BlobInfoReq) (*apiv1.
 		ImportHeight: uint32(info.ImportHeight),
 		EpochHeight:  uint32(header.EpochHeight),
 		SectorSize:   uint32(header.SectorSize),
-		MerkleRoot:   header.MerkleRoot[:],
+		MerkleRoot:   header.SectorTipHash[:],
 		ReservedRoot: header.ReservedRoot[:],
 		ReceivedAt:   uint64(header.ReceivedAt.Unix()),
 		Signature:    header.Signature[:],
@@ -455,7 +455,7 @@ func (s *Server) SendUpdate(_ context.Context, req *apiv1.SendUpdateReq) (*apiv1
 		Name:          req.Name,
 		EpochHeight:   header.EpochHeight,
 		SectorSize:    header.SectorSize,
-		SectorTipHash: header.MerkleRoot,
+		SectorTipHash: header.SectorTipHash,
 		Signature:     header.Signature,
 	})
 

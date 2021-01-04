@@ -121,7 +121,7 @@ func TestUpdateServer(t *testing.T) {
 						Name:        "valid",
 						EpochHeight: epochHeight,
 						SectorSize:  sectorSize,
-						MerkleRoot:  tree.Root(),
+						SectorTipHash:  tree.Root(),
 						Signature:   sig,
 					}, blob.ZeroSectorHashes)
 				}))
@@ -134,7 +134,7 @@ func TestUpdateServer(t *testing.T) {
 					Name:          header.Name,
 					EpochHeight:   header.EpochHeight,
 					SectorSize:    header.SectorSize,
-					SectorTipHash: header.MerkleRoot,
+					SectorTipHash: header.SectorTipHash,
 					Signature:     header.Signature,
 				}, envelope.Message)
 			},

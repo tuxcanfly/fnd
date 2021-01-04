@@ -130,7 +130,7 @@ func UpdateBlob(cfg *UpdateConfig) error {
 		epochHeight = header.EpochHeight
 		sectorSize = header.SectorSize
 		if sectorSize != 0 {
-			prevHash = header.MerkleRoot
+			prevHash = header.SectorTipHash
 		}
 	}
 
@@ -200,7 +200,7 @@ func UpdateBlob(cfg *UpdateConfig) error {
 			Name:         item.Name,
 			EpochHeight:  item.EpochHeight,
 			SectorSize:   item.SectorSize,
-			MerkleRoot:   item.MerkleRoot,
+			SectorTipHash:   item.MerkleRoot,
 			Signature:    item.Signature,
 			ReservedRoot: item.ReservedRoot,
 			ReceivedAt:   time.Now(),

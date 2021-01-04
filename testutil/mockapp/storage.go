@@ -62,7 +62,7 @@ func FillBlobReader(t *testing.T, db *leveldb.DB, bs blob.Store, signer crypto.S
 			Name:         name,
 			EpochHeight:  epochHeight,
 			SectorSize:   sectorSize,
-			MerkleRoot:   tree.Tip(),
+			SectorTipHash:   tree.Tip(),
 			Signature:    sig,
 			ReservedRoot: crypto.ZeroHash,
 			ReceivedAt:   receivedAt,

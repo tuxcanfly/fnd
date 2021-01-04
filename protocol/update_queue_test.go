@@ -95,7 +95,7 @@ func TestUpdateQueue_Enqueue_InvalidBeforeEnqueue(t *testing.T) {
 				Name:          identicalHeader.Name,
 				EpochHeight:   identicalHeader.EpochHeight,
 				SectorSize:    identicalHeader.SectorSize + 10,
-				SectorTipHash: identicalHeader.MerkleRoot,
+				SectorTipHash: identicalHeader.SectorTipHash,
 				ReservedRoot:  identicalHeader.ReservedRoot,
 				Signature:     identicalHeader.Signature,
 			},
@@ -109,7 +109,7 @@ func TestUpdateQueue_Enqueue_InvalidBeforeEnqueue(t *testing.T) {
 				Name:          identicalHeader.Name,
 				EpochHeight:   identicalHeader.EpochHeight,
 				SectorSize:    identicalHeader.SectorSize,
-				SectorTipHash: identicalHeader.MerkleRoot,
+				SectorTipHash: identicalHeader.SectorTipHash,
 				ReservedRoot:  identicalHeader.ReservedRoot,
 				Signature:     identicalHeader.Signature,
 			},
@@ -123,7 +123,7 @@ func TestUpdateQueue_Enqueue_InvalidBeforeEnqueue(t *testing.T) {
 				Name:          staleHeader.Name,
 				EpochHeight:   staleHeader.EpochHeight,
 				SectorSize:    staleHeader.SectorSize - 10,
-				SectorTipHash: throttledHeader.MerkleRoot,
+				SectorTipHash: throttledHeader.SectorTipHash,
 				ReservedRoot:  identicalHeader.ReservedRoot,
 			}),
 			func(t *testing.T, err error) {
@@ -237,7 +237,7 @@ func TestUpdateQueue_EnqueueDequeue(t *testing.T) {
 }
 
 func signHeader(t *testing.T, header *store.Header) *store.Header {
-	sig, err := blob.SignSeal(testcrypto.FixedSigner(t), header.Name, header.EpochHeight, header.SectorSize, header.MerkleRoot, header.ReservedRoot)
+	sig, err := blob.SignSeal(testcrypto.FixedSigner(t), header.Name, header.EpochHeight, header.SectorSize, header.SectorTipHash, header.ReservedRoot)
 	require.NoError(t, err)
 	header.Signature = sig
 	return header
