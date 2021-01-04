@@ -20,6 +20,7 @@ var (
 	ErrUpdaterAlreadySynchronized   = errors.New("updater already synchronized")
 	ErrUpdaterSectorTipHashMismatch = errors.New("updater sector tip hash mismatch")
 	ErrNameLocked                   = errors.New("name is locked")
+	ErrInvalidEpoch                 = errors.New("name epoch invalid")
 
 	updaterLogger = log.WithModule("updater")
 )
@@ -134,6 +135,11 @@ func UpdateBlob(cfg *UpdateConfig) error {
 		}
 	}
 
+	// TODO: other epoch checks
+	if header != nil && header.EpochHeight > CurrentEpoch(header.Name) {
+		return ErrInvalidEpoch
+	}
+
 	if !cfg.NameLocker.TryLock(item.Name) {
 		return ErrNameLocked
 	}
@@ -197,13 +203,13 @@ func UpdateBlob(cfg *UpdateConfig) error {
 
 	err = store.WithTx(cfg.DB, func(tx *leveldb.Transaction) error {
 		return store.SetHeaderTx(tx, &store.Header{
-			Name:         item.Name,
-			EpochHeight:  item.EpochHeight,
-			SectorSize:   item.SectorSize,
-			SectorTipHash:   item.SectorTipHash,
-			Signature:    item.Signature,
-			ReservedRoot: item.ReservedRoot,
-			ReceivedAt:   time.Now(),
+			Name:          item.Name,
+			EpochHeight:   item.EpochHeight,
+			SectorSize:    item.SectorSize,
+			SectorTipHash: item.SectorTipHash,
+			Signature:     item.Signature,
+			ReservedRoot:  item.ReservedRoot,
+			ReceivedAt:    time.Now(),
 		}, blob.ZeroSectorHashes)
 	})
 	if err != nil {
