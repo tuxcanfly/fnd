@@ -17,9 +17,9 @@ import (
 )
 
 var (
-	ErrUpdaterAlreadySynchronized = errors.New("updater already synchronized")
-	ErrUpdaterMerkleRootMismatch  = errors.New("updater merkle root mismatch")
-	ErrNameLocked                 = errors.New("name is locked")
+	ErrUpdaterAlreadySynchronized   = errors.New("updater already synchronized")
+	ErrUpdaterSectorTipHashMismatch = errors.New("updater sector tip hash mismatch")
+	ErrNameLocked                   = errors.New("name is locked")
 
 	updaterLogger = log.WithModule("updater")
 )
@@ -174,13 +174,13 @@ func UpdateBlob(cfg *UpdateConfig) error {
 		if err := tx.Rollback(); err != nil {
 			updaterLogger.Error("error rolling back blob transaction", "err", err)
 		}
-		return errors.Wrap(err, "error calculating new blob merkle root")
+		return errors.Wrap(err, "error calculating new blob sector tip hash")
 	}
 	if tree.Root() != item.MerkleRoot {
 		if err := tx.Rollback(); err != nil {
 			updaterLogger.Error("error rolling back blob transaction", "err", err)
 		}
-		return ErrUpdaterMerkleRootMismatch
+		return ErrUpdaterSectorTipHashMismatch
 	}
 
 	var sectorsNeeded uint16
