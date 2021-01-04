@@ -40,16 +40,16 @@ type UpdateQueue struct {
 }
 
 type UpdateQueueItem struct {
-	PeerIDs      *PeerSet
-	Name         string
-	EpochHeight  uint16
-	SectorSize   uint16
-	MerkleRoot   crypto.Hash
-	ReservedRoot crypto.Hash
-	Signature    crypto.Signature
-	Pub          *btcec.PublicKey
-	Height       int
-	Disposed     int32
+	PeerIDs       *PeerSet
+	Name          string
+	EpochHeight   uint16
+	SectorSize    uint16
+	SectorTipHash crypto.Hash
+	ReservedRoot  crypto.Hash
+	Signature     crypto.Signature
+	Pub           *btcec.PublicKey
+	Height        int
+	Disposed      int32
 }
 
 func (u *UpdateQueueItem) Dispose() {
@@ -126,15 +126,15 @@ func (u *UpdateQueue) Enqueue(peerID crypto.Hash, update *wire.Update) error {
 	entry := u.entries[update.Name]
 	if entry == nil || entry.SectorSize < update.SectorSize {
 		u.entries[update.Name] = &UpdateQueueItem{
-			PeerIDs:      NewPeerSet([]crypto.Hash{peerID}),
-			Name:         update.Name,
-			EpochHeight:  update.EpochHeight,
-			SectorSize:   update.SectorSize,
-			MerkleRoot:   update.SectorTipHash,
-			ReservedRoot: update.ReservedRoot,
-			Signature:    update.Signature,
-			Pub:          nameInfo.PublicKey,
-			Height:       nameInfo.ImportHeight,
+			PeerIDs:       NewPeerSet([]crypto.Hash{peerID}),
+			Name:          update.Name,
+			EpochHeight:   update.EpochHeight,
+			SectorSize:    update.SectorSize,
+			SectorTipHash: update.SectorTipHash,
+			ReservedRoot:  update.ReservedRoot,
+			Signature:     update.Signature,
+			Pub:           nameInfo.PublicKey,
+			Height:        nameInfo.ImportHeight,
 		}
 
 		if entry == nil {

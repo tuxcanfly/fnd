@@ -229,7 +229,7 @@ func TestUpdateQueue_EnqueueDequeue(t *testing.T) {
 	require.Equal(t, update.Name, item.Name)
 	require.Equal(t, update.EpochHeight, item.EpochHeight)
 	require.Equal(t, update.SectorSize, item.SectorSize)
-	require.Equal(t, update.SectorTipHash, item.MerkleRoot)
+	require.Equal(t, update.SectorTipHash, item.SectorTipHash)
 	require.Equal(t, update.ReservedRoot, item.ReservedRoot)
 	require.Equal(t, update.Signature, item.Signature)
 	require.True(t, pub.IsEqual(item.Pub))
