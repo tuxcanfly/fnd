@@ -135,27 +135,45 @@ func UpdateBlob(cfg *UpdateConfig) error {
 		}
 	}
 
+	// TODO: make sure header.sectorsize matches sectors on disk
+	// TODO: header.receivedat, header.bannedat - not part of wire, not signed
+
+	// TODO: if header.EpochHeight < item.EpochHeight { do epoch checks; epoch updated; set prevhash = zeroHash }
+	// TODO: if header.EpochHeight > item.EpochHeight { do not process; }
+	// TODO: if header.EpochHeight == item.EpochHeight { sync sectors; }
+	// TODO: set banned at when equivocation is received
 	// TODO: other epoch checks
-	if header != nil && header.EpochHeight > CurrentEpoch(header.Name) {
+	// TODO: bannedat uint16 - ban for current epoch and next
+	// FIXME
+	if item.EpochHeight > header.EpochHeight {
+		if header.Banned {
+			if time.Now().Before(header.BannedAt.Add(7 * 24 * time.Duration(time.Hour))) {
+				// TODO: when bannedat is uint16 - if item.epochHeight <= header.BannedAt+1 {
+				return ErrInvalidEpoch
+			}
+
+			if item.EpochHeight >= CurrentEpoch(header.Name) {
+				return ErrInvalidEpoch
+			}
+		}
+
+		if time.Now().Before(header.ReceivedAt.Add(7 * 24 * time.Duration(time.Hour))) {
+			if item.EpochHeight != CurrentEpoch(header.Name) {
+				return ErrInvalidEpoch
+			}
+		}
+		// TODO: epochupdated = true; header.ReceiveAt = time.Now() if write to disk
+	}
+
+	if item.EpochHeight > CurrentEpoch(header.Name) {
 		return ErrInvalidEpoch
 	}
 
-	// FIXME
-	if header.BannedAt.Sub(time.Now()) > 7*24*time.Duration(time.Hour) {
-		if header.EpochHeight+1 >= CurrentEpoch(header.Name) {
-			return ErrInvalidEpoch
-		}
-		if header.BannedAt.Sub(time.Now()) > 7*24*time.Duration(time.Hour) {
-			return ErrInvalidEpoch
-		}
-		//NOTE: Sector updates on the same epoch should also be banned
-	}
-
-	//Below this line, newHeader.epoch is lower than current epoch
-	// FIXME
-	if header.ReceivedAt.Sub(time.Now()) > 7*24*time.Duration(time.Hour) {
+	if item.EpochHeight < header.EpochHeight {
 		return ErrInvalidEpoch
 	}
+
+	// TODO: reset banned at back to zero when epoch update is successful
 
 	if !cfg.NameLocker.TryLock(item.Name) {
 		return ErrNameLocked
@@ -199,6 +217,8 @@ func UpdateBlob(cfg *UpdateConfig) error {
 		}
 		return errors.Wrap(err, "error calculating new blob sector tip hash")
 	}
+	// TODO: move this check to syncer before writing the sectors
+	// TODO: if mismatch; set bannedat = time.now
 	if tree.Tip() != item.SectorTipHash {
 		if err := tx.Rollback(); err != nil {
 			updaterLogger.Error("error rolling back blob transaction", "err", err)

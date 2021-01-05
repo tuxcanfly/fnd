@@ -23,8 +23,10 @@ type Header struct {
 	SectorTipHash crypto.Hash
 	Signature     crypto.Signature
 	ReservedRoot  crypto.Hash
-	ReceivedAt    time.Time
-	BannedAt      time.Time
+	// TODO: Remove from wire and signatures
+	ReceivedAt time.Time // FIXME: first seen new epoch update; set only on new epoch
+	Banned     bool
+	BannedAt   time.Time
 }
 
 func (h *Header) MarshalJSON() ([]byte, error) {
@@ -36,6 +38,7 @@ func (h *Header) MarshalJSON() ([]byte, error) {
 		Signature    string    `json:"signature"`
 		ReservedRoot string    `json:"reserved_root"`
 		ReceivedAt   time.Time `json:"received_at"`
+		Banned       bool      `json:"banned"`
 		BannedAt     time.Time `json:"banned_at"`
 	}{
 		h.Name,
@@ -45,6 +48,7 @@ func (h *Header) MarshalJSON() ([]byte, error) {
 		h.Signature.String(),
 		h.ReservedRoot.String(),
 		h.ReceivedAt,
+		h.Banned,
 		h.BannedAt,
 	}
 
@@ -60,6 +64,7 @@ func (h *Header) UnmarshalJSON(b []byte) error {
 		Signature    string    `json:"signature"`
 		ReservedRoot string    `json:"reserved_root"`
 		ReceivedAt   time.Time `json:"received_at"`
+		Banned       bool      `json:"banned"`
 		BannedAt     time.Time `json:"banned_at"`
 	}{}
 	if err := json.Unmarshal(b, in); err != nil {
@@ -97,6 +102,7 @@ func (h *Header) UnmarshalJSON(b []byte) error {
 	h.Signature = sig
 	h.ReservedRoot = rr
 	h.ReceivedAt = in.ReceivedAt
+	h.Banned = in.Banned
 	h.BannedAt = in.BannedAt
 	return nil
 }

@@ -86,6 +86,7 @@ func SyncSectors(opts *SyncSectorsOpts) error {
 					lgr.Trace("received unexpected payload size", "expected", blob.SectorCount-msg.PayloadPosition, len(msg.Payload))
 					continue
 				}
+				// FIXME: TODO: Check tip hash
 				for i := msg.PayloadPosition; int(i) < len(msg.Payload); i++ {
 					if _, err := opts.Tx.WriteAt(msg.Payload[i][:], int64(i)*blob.SectorLen); err != nil {
 						lgr.Error("failed to write sector", "sector_id", i, "err", err)
