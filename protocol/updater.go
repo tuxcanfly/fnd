@@ -140,6 +140,23 @@ func UpdateBlob(cfg *UpdateConfig) error {
 		return ErrInvalidEpoch
 	}
 
+	// FIXME
+	if header.BannedAt.Sub(time.Now()) > 7*24*time.Duration(time.Hour) {
+		if header.EpochHeight+1 >= CurrentEpoch(header.Name) {
+			return ErrInvalidEpoch
+		}
+		if header.BannedAt.Sub(time.Now()) > 7*24*time.Duration(time.Hour) {
+			return ErrInvalidEpoch
+		}
+		//NOTE: Sector updates on the same epoch should also be banned
+	}
+
+	//Below this line, newHeader.epoch is lower than current epoch
+	// FIXME
+	if header.ReceivedAt.Sub(time.Now()) > 7*24*time.Duration(time.Hour) {
+		return ErrInvalidEpoch
+	}
+
 	if !cfg.NameLocker.TryLock(item.Name) {
 		return ErrNameLocked
 	}

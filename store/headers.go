@@ -24,6 +24,7 @@ type Header struct {
 	Signature     crypto.Signature
 	ReservedRoot  crypto.Hash
 	ReceivedAt    time.Time
+	BannedAt      time.Time
 }
 
 func (h *Header) MarshalJSON() ([]byte, error) {
@@ -35,6 +36,7 @@ func (h *Header) MarshalJSON() ([]byte, error) {
 		Signature    string    `json:"signature"`
 		ReservedRoot string    `json:"reserved_root"`
 		ReceivedAt   time.Time `json:"received_at"`
+		BannedAt     time.Time `json:"banned_at"`
 	}{
 		h.Name,
 		h.EpochHeight,
@@ -43,6 +45,7 @@ func (h *Header) MarshalJSON() ([]byte, error) {
 		h.Signature.String(),
 		h.ReservedRoot.String(),
 		h.ReceivedAt,
+		h.BannedAt,
 	}
 
 	return json.Marshal(out)
@@ -57,6 +60,7 @@ func (h *Header) UnmarshalJSON(b []byte) error {
 		Signature    string    `json:"signature"`
 		ReservedRoot string    `json:"reserved_root"`
 		ReceivedAt   time.Time `json:"received_at"`
+		BannedAt     time.Time `json:"banned_at"`
 	}{}
 	if err := json.Unmarshal(b, in); err != nil {
 		return err
@@ -93,6 +97,7 @@ func (h *Header) UnmarshalJSON(b []byte) error {
 	h.Signature = sig
 	h.ReservedRoot = rr
 	h.ReceivedAt = in.ReceivedAt
+	h.BannedAt = in.BannedAt
 	return nil
 }
 
