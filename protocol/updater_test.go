@@ -68,7 +68,7 @@ func TestUpdater(t *testing.T) {
 			"syncs sectors when the local node has an older blob",
 			func(t *testing.T, setup *updaterTestSetup) {
 				ts := time.Now()
-				epochHeight := uint16(0)
+				epochHeight := CurrentEpoch(name)
 				sectorSize := uint16(0)
 				// insert the blob locally, ensuring that
 				// there will be enough time bank
@@ -119,7 +119,7 @@ func TestUpdater(t *testing.T) {
 			"aborts sync if the new timestamp is equal to the stored timestamp",
 			func(t *testing.T, setup *updaterTestSetup) {
 				ts := time.Now()
-				epochHeight := uint16(0)
+				epochHeight := CurrentEpoch(name)
 				sectorSize := uint16(0)
 				update := mockapp.FillBlobRandom(
 					t,
@@ -168,7 +168,8 @@ func TestUpdater(t *testing.T) {
 						PeerIDs: NewPeerSet([]crypto.Hash{
 							crypto.HashPub(setup.tp.RemoteSigner.Pub()),
 						}),
-						Name: name,
+						Name:        name,
+						EpochHeight: CurrentEpoch(name),
 					},
 				}
 				err := UpdateBlob(cfg)
@@ -183,7 +184,7 @@ func TestUpdater(t *testing.T) {
 					return store.SetLastNameImportHeightTx(tx, 100)
 				}))
 				ts := time.Now()
-				epochHeight := uint16(0)
+				epochHeight := CurrentEpoch(name)
 				sectorSize := uint16(10)
 				updateCh := make(chan struct{})
 				unsub := setup.tp.RemoteMux.AddMessageHandler(p2p.PeerMessageHandlerForType(wire.MessageTypeUpdate, func(id crypto.Hash, envelope *wire.Envelope) {
@@ -236,7 +237,7 @@ func TestUpdater(t *testing.T) {
 					return store.SetLastNameImportHeightTx(tx, 100)
 				}))
 				ts := time.Now()
-				epochHeight := uint16(0)
+				epochHeight := CurrentEpoch(name)
 				sectorSize := uint16(10)
 				updateCh := make(chan *wire.Envelope, 1)
 				unsub := setup.tp.RemoteMux.AddMessageHandler(p2p.PeerMessageHandlerForType(wire.MessageTypeUpdate, func(id crypto.Hash, envelope *wire.Envelope) {
