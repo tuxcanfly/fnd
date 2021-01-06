@@ -145,31 +145,31 @@ func UpdateBlob(cfg *UpdateConfig) error {
 	// TODO: other epoch checks
 	// TODO: bannedat uint16 - ban for current epoch and next
 	// FIXME
-	if item.EpochHeight > header.EpochHeight {
+	if item.EpochHeight > epochHeight {
 		if header.Banned {
 			if time.Now().Before(header.BannedAt.Add(7 * 24 * time.Duration(time.Hour))) {
 				// TODO: when bannedat is uint16 - if item.epochHeight <= header.BannedAt+1 {
 				return ErrInvalidEpoch
 			}
 
-			if item.EpochHeight >= CurrentEpoch(header.Name) {
+			if item.EpochHeight >= CurrentEpoch(item.Name) {
 				return ErrInvalidEpoch
 			}
 		}
 
 		if time.Now().Before(header.ReceivedAt.Add(7 * 24 * time.Duration(time.Hour))) {
-			if item.EpochHeight != CurrentEpoch(header.Name) {
+			if item.EpochHeight != CurrentEpoch(item.Name) {
 				return ErrInvalidEpoch
 			}
 		}
 		// TODO: epochupdated = true; header.ReceiveAt = time.Now() if write to disk
 	}
 
-	if item.EpochHeight > CurrentEpoch(header.Name) {
+	if item.EpochHeight > CurrentEpoch(item.Name) {
 		return ErrInvalidEpoch
 	}
 
-	if item.EpochHeight < header.EpochHeight {
+	if item.EpochHeight < epochHeight {
 		return ErrInvalidEpoch
 	}
 
