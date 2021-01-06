@@ -20,7 +20,11 @@ var (
 	ErrUpdaterAlreadySynchronized   = errors.New("updater already synchronized")
 	ErrUpdaterSectorTipHashMismatch = errors.New("updater sector tip hash mismatch")
 	ErrNameLocked                   = errors.New("name is locked")
+	ErrNameBanned                   = errors.New("name is banned")
 	ErrInvalidEpoch                 = errors.New("name epoch invalid")
+	ErrInvalidEpochOutdated         = errors.New("name epoch invalid outdated")
+	ErrInvalidEpochBackdated        = errors.New("name epoch invalid backdated")
+	ErrInvalidEpochFuturedated      = errors.New("name epoch invalid futuredated")
 
 	updaterLogger = log.WithModule("updater")
 )
@@ -140,18 +144,18 @@ func UpdateBlob(cfg *UpdateConfig) error {
 	// TODO: make sure header.sectorsize matches sectors on disk
 	// TODO: header.receivedat, header.bannedat - not part of wire, not signed
 
-	// TODO: if header.EpochHeight < item.EpochHeight { do epoch checks; epoch updated; set prevhash = zeroHash }
-	// TODO: if header.EpochHeight > item.EpochHeight { do not process; }
-	// TODO: if header.EpochHeight == item.EpochHeight { sync sectors; }
+	// TODO: if item.EpochHeight > header.EpochHeight { do epoch checks; epoch updated; set prevhash = zeroHash }
+	// TODO: if item.EpochHeight < header.EpochHeight { do not process; }
+	// TODO: if item.EpochHeight == item.EpochHeight { sync sectors; }
 	// TODO: set banned at when equivocation is received
 	// TODO: other epoch checks
 	// TODO: bannedat uint16 - ban for current epoch and next
 	// FIXME
 	if item.EpochHeight > epochHeight {
-		if header.Banned {
-			if time.Now().Before(header.BannedAt.Add(7 * 24 * time.Duration(time.Hour))) {
+		if header != nil && header.Banned {
+			if header.BannedAt.Add(7 * 24 * time.Duration(time.Hour)).After(time.Now()) {
 				// TODO: when bannedat is uint16 - if item.epochHeight <= header.BannedAt+1 {
-				return ErrInvalidEpoch
+				return ErrNameBanned
 			}
 
 			if item.EpochHeight >= CurrentEpoch(item.Name) {
@@ -159,20 +163,20 @@ func UpdateBlob(cfg *UpdateConfig) error {
 			}
 		}
 
-		if time.Now().Before(header.ReceivedAt.Add(7 * 24 * time.Duration(time.Hour))) {
+		if header != nil && time.Now().Before(header.ReceivedAt.Add(7*24*time.Duration(time.Hour))) {
 			if item.EpochHeight != CurrentEpoch(item.Name) {
-				return ErrInvalidEpoch
+				return ErrInvalidEpochOutdated
 			}
 		}
 		// TODO: epochupdated = true; header.ReceiveAt = time.Now() if write to disk
 	}
 
 	if item.EpochHeight > CurrentEpoch(item.Name) {
-		return ErrInvalidEpoch
+		return ErrInvalidEpochFuturedated
 	}
 
 	if item.EpochHeight < epochHeight {
-		return ErrInvalidEpoch
+		return ErrInvalidEpochBackdated
 	}
 
 	// TODO: reset banned at back to zero when epoch update is successful
