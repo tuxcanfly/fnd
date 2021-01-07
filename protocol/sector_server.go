@@ -58,6 +58,14 @@ func (s *SectorServer) onBlobReq(peerID crypto.Hash, envelope *wire.Envelope) {
 		return
 	}
 
+	header, err := store.GetHeader(s.db, reqMsg.Name)
+	if err != nil {
+		lgr.Error(
+			"failed to fetch header",
+			"err", err)
+		return
+	}
+
 	// FIXME: skip if sectorSize == 0; we know it will be ZeroHash
 	prevHash, err := store.GetSectorHash(s.db, reqMsg.Name, reqMsg.SectorSize)
 	if err != nil {
@@ -90,7 +98,7 @@ func (s *SectorServer) onBlobReq(peerID crypto.Hash, envelope *wire.Envelope) {
 		}
 	}()
 	var sectors []blob.Sector
-	for i := reqMsg.SectorSize; i < blob.SectorCount; i++ {
+	for i := reqMsg.SectorSize; i < header.SectorSize; i++ {
 		sector := &blob.Sector{}
 		_, err = bl.ReadAt(sector[:], int64(i)*blob.SectorLen)
 		if err != nil {

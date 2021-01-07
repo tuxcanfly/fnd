@@ -82,8 +82,8 @@ func SyncSectors(opts *SyncSectorsOpts) error {
 					lgr.Trace("received sector for extraneous name", "other_name", msg.Name)
 					continue
 				}
-				if int(msg.PayloadPosition)+len(msg.Payload) != blob.SectorCount {
-					lgr.Trace("received unexpected payload size", "expected", blob.SectorCount-msg.PayloadPosition, len(msg.Payload))
+				if uint16(len(msg.Payload)) != opts.SectorSize {
+					lgr.Trace("received unexpected payload size", "expected", opts.SectorSize, "got", len(msg.Payload))
 					continue
 				}
 				// FIXME: TODO: Check tip hash

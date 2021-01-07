@@ -69,10 +69,10 @@ func TestUpdater(t *testing.T) {
 			func(t *testing.T, setup *updaterTestSetup) {
 				ts := time.Now()
 				epochHeight := CurrentEpoch(name)
-				sectorSize := uint16(0)
+				sectorSize := uint16(10)
 				// insert the blob locally, ensuring that
 				// there will be enough time bank
-				mockapp.FillBlobRandom(
+				mockapp.FillBlobReader(
 					t,
 					setup.ls.DB,
 					setup.ls.BlobStore,
@@ -81,17 +81,19 @@ func TestUpdater(t *testing.T) {
 					epochHeight,
 					sectorSize,
 					ts.Add(-48*time.Hour),
+					mockapp.NullReader,
 				)
 				// create the new blob remotely
-				update := mockapp.FillBlobRandom(
+				update := mockapp.FillBlobReader(
 					t,
 					setup.rs.DB,
 					setup.rs.BlobStore,
 					setup.tp.RemoteSigner,
 					name,
 					epochHeight,
-					sectorSize+100,
+					sectorSize+10,
 					ts,
+					mockapp.NullReader,
 				)
 				cfg := &UpdateConfig{
 					Mux:        setup.tp.LocalMux,
