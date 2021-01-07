@@ -36,7 +36,7 @@ func TestEpoch(t *testing.T) {
 					setup.rs.BlobStore,
 					setup.tp.RemoteSigner,
 					name,
-					CurrentEpoch(name),
+					0,
 					blob.SectorCount,
 					ts,
 				)
@@ -80,7 +80,7 @@ func TestEpoch(t *testing.T) {
 				require.NoError(t, store.WithTx(setup.ls.DB, func(tx *leveldb.Transaction) error {
 					return store.SetHeaderTx(tx, &store.Header{
 						Name:        name,
-						EpochHeight: CurrentEpoch(name),
+						EpochHeight: 0,
 						SectorSize:  10,
 						Banned:      true,
 						BannedAt:    time.Now().Add(-1 * 24 * time.Duration(time.Hour)),
@@ -101,7 +101,7 @@ func TestEpoch(t *testing.T) {
 					setup.rs.BlobStore,
 					setup.tp.RemoteSigner,
 					name,
-					CurrentEpoch(name),
+					0,
 					blob.SectorCount,
 					ts,
 				)
@@ -126,7 +126,7 @@ func TestEpoch(t *testing.T) {
 				require.NoError(t, store.WithTx(setup.ls.DB, func(tx *leveldb.Transaction) error {
 					return store.SetHeaderTx(tx, &store.Header{
 						Name:        name,
-						EpochHeight: CurrentEpoch(name),
+						EpochHeight: 0,
 						SectorSize:  0,
 						Banned:      true,
 						BannedAt:    time.Now().Add(-8 * 24 * time.Duration(time.Hour)),
@@ -154,7 +154,7 @@ func TestEpoch(t *testing.T) {
 				require.NoError(t, store.WithTx(setup.ls.DB, func(tx *leveldb.Transaction) error {
 					return store.SetHeaderTx(tx, &store.Header{
 						Name:        name,
-						EpochHeight: CurrentEpoch(name),
+						EpochHeight: 0,
 						SectorSize:  10,
 						ReceivedAt:  time.Now(),
 					}, blob.ZeroSectorHashes)
@@ -179,6 +179,15 @@ func TestEpoch(t *testing.T) {
 						EpochHeight: 0,
 					},
 				}
+				require.NoError(t, store.WithTx(setup.ls.DB, func(tx *leveldb.Transaction) error {
+					return store.SetHeaderTx(tx, &store.Header{
+						Name:        name,
+						EpochHeight: CurrentEpoch(name),
+						SectorSize:  10,
+						Banned:      true,
+						BannedAt:    time.Now().Add(-1 * 24 * time.Duration(time.Hour)),
+					}, blob.ZeroSectorHashes)
+				}))
 				err := UpdateBlob(cfg)
 				require.NotNil(t, err)
 				require.True(t, errors.Is(err, ErrInvalidEpochBackdated))
