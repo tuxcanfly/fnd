@@ -161,7 +161,7 @@ func TestEpoch(t *testing.T) {
 				}))
 				err := UpdateBlob(cfg)
 				require.NotNil(t, err)
-				require.True(t, errors.Is(err, ErrInvalidEpochOutdated))
+				require.True(t, errors.Is(err, ErrInvalidEpochThrottled))
 			},
 		},
 		{
