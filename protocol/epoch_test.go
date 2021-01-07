@@ -27,7 +27,7 @@ func TestEpoch(t *testing.T) {
 		run  func(t *testing.T, setup *epochTestSetup)
 	}{
 		{
-			"syncs sectors when the local node has never seen the name ",
+			"syncs sectors when the local node has never seen the name before",
 			func(t *testing.T, setup *epochTestSetup) {
 				ts := time.Now()
 				update := mockapp.FillBlobRandom(

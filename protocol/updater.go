@@ -149,6 +149,11 @@ func UpdateBlob(cfg *UpdateConfig) error {
 	// TODO: other epoch checks
 	// TODO: bannedat uint16 - ban for current epoch and next
 	// FIXME
+
+	if item.EpochHeight < epochHeight {
+		return ErrInvalidEpochBackdated
+	}
+
 	if item.EpochHeight > epochHeight {
 		if header != nil && header.Banned {
 			if header.BannedAt.Add(7 * 24 * time.Duration(time.Hour)).After(time.Now()) {
@@ -166,16 +171,13 @@ func UpdateBlob(cfg *UpdateConfig) error {
 				return ErrInvalidEpochThrottled
 			}
 		}
-		// TODO: epochupdated = true; header.ReceiveAt = time.Now() if write to disk
-		// TODO: reset banned at back to zero when epoch update is successful
-	}
-
-	if item.EpochHeight > CurrentEpoch(item.Name) {
-		return ErrInvalidEpochFuturedated
-	}
-
-	if item.EpochHeight < epochHeight {
-		return ErrInvalidEpochBackdated
+		if item.EpochHeight > CurrentEpoch(item.Name) {
+			return ErrInvalidEpochFuturedated
+		}
+		// TODO: epochupdated = true;
+		// TODO: after all checks, atomically:
+		// TODO: * header.ReceiveAt = time.Now() if write to disk
+		// TODO: * reset banned at back to zero when epoch update is successful
 	}
 
 	if !cfg.NameLocker.TryLock(item.Name) {
