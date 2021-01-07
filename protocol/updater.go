@@ -215,7 +215,7 @@ func UpdateBlob(cfg *UpdateConfig) error {
 		}
 		return errors.Wrap(err, "error during sync")
 	}
-	tree, err := blob.SerialHash(blob.NewReader(tx), prevHash)
+	tree, err := blob.SerialHash(blob.NewReader(tx), prevHash, item.SectorSize)
 	if err != nil {
 		if err := tx.Rollback(); err != nil {
 			updaterLogger.Error("error rolling back blob transaction", "err", err)

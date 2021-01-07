@@ -275,7 +275,7 @@ func (s *Server) PreCommit(ctx context.Context, req *apiv1.PreCommitReq) (*apiv1
 	}
 
 	tx := awaiting.(*awaitingTx).tx
-	mt, err := blob.SerialHash(blob.NewReader(tx), blob.ZeroHash)
+	mt, err := blob.SerialHash(blob.NewReader(tx), blob.ZeroHash, uint16(0))
 	if err != nil {
 		return nil, errors.Wrap(err, "error generating blob merkle root")
 	}
@@ -298,7 +298,7 @@ func (s *Server) Commit(ctx context.Context, req *apiv1.CommitReq) (*apiv1.Commi
 	if err != nil {
 		return nil, errors.Wrap(err, "error getting name info")
 	}
-	mt, err := blob.SerialHash(blob.NewReader(tx), blob.ZeroHash)
+	mt, err := blob.SerialHash(blob.NewReader(tx), blob.ZeroHash, uint16(0))
 	if err != nil {
 		return nil, errors.Wrap(err, "error generating blob merkle root")
 	}
@@ -320,13 +320,13 @@ func (s *Server) Commit(ctx context.Context, req *apiv1.CommitReq) (*apiv1.Commi
 
 	err = store.WithTx(s.db, func(tx *leveldb.Transaction) error {
 		return store.SetHeaderTx(tx, &store.Header{
-			Name:         name,
-			EpochHeight:  epochHeight,
-			SectorSize:   sectorSize,
-			SectorTipHash:   mt.Tip(),
-			Signature:    sig,
-			ReservedRoot: crypto.ZeroHash,
-			ReceivedAt:   time.Now(),
+			Name:          name,
+			EpochHeight:   epochHeight,
+			SectorSize:    sectorSize,
+			SectorTipHash: mt.Tip(),
+			Signature:     sig,
+			ReservedRoot:  crypto.ZeroHash,
+			ReceivedAt:    time.Now(),
 		}, blob.ZeroSectorHashes)
 	})
 	if err != nil {
