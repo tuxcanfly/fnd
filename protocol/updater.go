@@ -21,7 +21,7 @@ var (
 	ErrUpdaterSectorTipHashMismatch = errors.New("updater sector tip hash mismatch")
 	ErrNameLocked                   = errors.New("name is locked")
 	ErrNameBanned                   = errors.New("name is banned")
-	ErrInvalidEpoch                 = errors.New("name epoch invalid")
+	ErrInvalidEpochCurrent          = errors.New("name epoch invalid current")
 	ErrInvalidEpochThrottled        = errors.New("name epoch invalid throttled")
 	ErrInvalidEpochBackdated        = errors.New("name epoch invalid backdated")
 	ErrInvalidEpochFuturedated      = errors.New("name epoch invalid futuredated")
@@ -157,7 +157,7 @@ func UpdateBlob(cfg *UpdateConfig) error {
 			}
 
 			if item.EpochHeight >= CurrentEpoch(item.Name) {
-				return ErrInvalidEpoch
+				return ErrInvalidEpochCurrent
 			}
 		}
 
