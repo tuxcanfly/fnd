@@ -27,7 +27,7 @@ func TestEpoch(t *testing.T) {
 		run  func(t *testing.T, setup *epochTestSetup)
 	}{
 		{
-			"syncs sectors when the epoch is current",
+			"syncs sectors when the local node has never seen the name ",
 			func(t *testing.T, setup *epochTestSetup) {
 				ts := time.Now()
 				update := mockapp.FillBlobRandom(
@@ -137,7 +137,7 @@ func TestEpoch(t *testing.T) {
 			},
 		},
 		{
-			"aborts sync if the epoch is outdated",
+			"aborts sync if the epoch is throttled",
 			func(t *testing.T, setup *epochTestSetup) {
 				cfg := &UpdateConfig{
 					Mux:       setup.tp.LocalMux,
