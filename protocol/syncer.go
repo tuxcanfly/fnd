@@ -82,6 +82,10 @@ func SyncSectors(opts *SyncSectorsOpts) error {
 					lgr.Trace("received sector for extraneous name", "other_name", msg.Name)
 					continue
 				}
+				if opts.SectorSize != msg.PayloadPosition {
+					lgr.Trace("received unexpected payload position", "sector_size", opts.SectorSize, "payload_position", msg.PayloadPosition)
+					continue
+				}
 				// FIXME: TODO: Check tip hash
 				for i := msg.PayloadPosition; int(i) < len(msg.Payload); i++ {
 					if _, err := opts.Tx.WriteAt(msg.Payload[i][:], int64(i)*blob.SectorLen); err != nil {
