@@ -131,6 +131,7 @@ func UpdateBlob(cfg *UpdateConfig) error {
 
 	var prevHash crypto.Hash = blob.ZeroHash
 	var epochHeight, sectorSize uint16
+	var epochUpdated bool
 	if header != nil {
 		epochHeight = header.EpochHeight
 		sectorSize = header.SectorSize
@@ -166,7 +167,7 @@ func UpdateBlob(cfg *UpdateConfig) error {
 			}
 		}
 
-		if header != nil && time.Now().Before(header.ReceivedAt.Add(7*24*time.Duration(time.Hour))) {
+		if header != nil && time.Now().Before(header.EpochStartAt.Add(7*24*time.Duration(time.Hour))) {
 			if item.EpochHeight != CurrentEpoch(item.Name) {
 				return ErrInvalidEpochThrottled
 			}
@@ -174,10 +175,15 @@ func UpdateBlob(cfg *UpdateConfig) error {
 		if item.EpochHeight > CurrentEpoch(item.Name) {
 			return ErrInvalidEpochFuturedated
 		}
+
 		// TODO: epochupdated = true;
 		// TODO: after all checks, atomically:
 		// TODO: * header.ReceiveAt = time.Now() if write to disk
 		// TODO: * reset banned at back to zero when epoch update is successful
+
+		// Sync the entire blob on epoch rollover
+		epochUpdated = true
+		sectorSize = 0
 	}
 
 	if !cfg.NameLocker.TryLock(item.Name) {
@@ -243,6 +249,11 @@ func UpdateBlob(cfg *UpdateConfig) error {
 		"total", sectorsNeeded,
 	)
 
+	var epochStart time.Time
+	if epochUpdated {
+		epochStart = time.Now()
+	}
+
 	err = store.WithTx(cfg.DB, func(tx *leveldb.Transaction) error {
 		return store.SetHeaderTx(tx, &store.Header{
 			Name:          item.Name,
@@ -251,7 +262,7 @@ func UpdateBlob(cfg *UpdateConfig) error {
 			SectorTipHash: item.SectorTipHash,
 			Signature:     item.Signature,
 			ReservedRoot:  item.ReservedRoot,
-			ReceivedAt:    time.Now(),
+			EpochStartAt:  epochStart,
 		}, blob.ZeroSectorHashes)
 	})
 	if err != nil {

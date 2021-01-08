@@ -23,19 +23,19 @@ func TestUpdateQueue_Enqueue_InvalidBeforeEnqueue(t *testing.T) {
 		Name:        "identical",
 		EpochHeight: uint16(0),
 		SectorSize:  uint16(1),
-		ReceivedAt:  time.Unix(1, 0),
+		EpochStartAt:  time.Unix(1, 0),
 	})
 	throttledHeader := signHeader(t, &store.Header{
 		Name:        "throttled",
 		EpochHeight: uint16(0),
 		SectorSize:  uint16(1),
-		ReceivedAt:  time.Now(),
+		EpochStartAt:  time.Now(),
 	})
 	staleHeader := signHeader(t, &store.Header{
 		Name:        "stale",
 		EpochHeight: uint16(0),
 		SectorSize:  uint16(100),
-		ReceivedAt:  time.Unix(1, 0),
+		EpochStartAt:  time.Unix(1, 0),
 	})
 
 	headers := []*store.Header{
@@ -147,7 +147,7 @@ func TestUpdateQueue_Enqueue_InvalidAfterEnqueue(t *testing.T) {
 		Name:        "somename",
 		EpochHeight: uint16(0),
 		SectorSize:  uint16(100),
-		ReceivedAt:  time.Unix(1, 0),
+		EpochStartAt:  time.Unix(1, 0),
 	})
 
 	_, pub := testcrypto.FixedKey(t)
@@ -191,7 +191,7 @@ func TestUpdateQueue_EnqueueDequeue(t *testing.T) {
 		Name:        "somename",
 		EpochHeight: uint16(0),
 		SectorSize:  uint16(100),
-		ReceivedAt:  time.Unix(1, 0),
+		EpochStartAt:  time.Unix(1, 0),
 	})
 
 	_, pub := testcrypto.FixedKey(t)

@@ -153,10 +153,10 @@ func TestEpoch(t *testing.T) {
 				}
 				require.NoError(t, store.WithTx(setup.ls.DB, func(tx *leveldb.Transaction) error {
 					return store.SetHeaderTx(tx, &store.Header{
-						Name:        name,
-						EpochHeight: 0,
-						SectorSize:  10,
-						ReceivedAt:  time.Now(),
+						Name:         name,
+						EpochHeight:  0,
+						SectorSize:   10,
+						EpochStartAt: time.Now(),
 					}, blob.ZeroSectorHashes)
 				}))
 				err := UpdateBlob(cfg)
@@ -211,6 +211,49 @@ func TestEpoch(t *testing.T) {
 				err := UpdateBlob(cfg)
 				require.NotNil(t, err)
 				require.True(t, errors.Is(err, ErrInvalidEpochFuturedated))
+			},
+		},
+		{
+			"rewrites partial blob with new blob on epoch rollover",
+			func(t *testing.T, setup *epochTestSetup) {
+				ts := time.Now()
+				update := mockapp.FillBlobRandom(
+					t,
+					setup.rs.DB,
+					setup.rs.BlobStore,
+					setup.tp.RemoteSigner,
+					name,
+					CurrentEpoch(name),
+					blob.SectorCount,
+					ts,
+				)
+				cfg := &UpdateConfig{
+					Mux:        setup.tp.LocalMux,
+					DB:         setup.ls.DB,
+					NameLocker: util.NewMultiLocker(),
+					BlobStore:  setup.ls.BlobStore,
+					Item: &UpdateQueueItem{
+						PeerIDs: NewPeerSet([]crypto.Hash{
+							crypto.HashPub(setup.tp.RemoteSigner.Pub()),
+						}),
+						Name:          name,
+						EpochHeight:   update.EpochHeight,
+						SectorSize:    update.SectorSize,
+						SectorTipHash: update.SectorTipHash,
+						ReservedRoot:  update.ReservedRoot,
+						Signature:     update.Signature,
+						Pub:           setup.tp.RemoteSigner.Pub(),
+					},
+				}
+				require.NoError(t, store.WithTx(setup.ls.DB, func(tx *leveldb.Transaction) error {
+					return store.SetHeaderTx(tx, &store.Header{
+						Name:        name,
+						EpochHeight: CurrentEpoch(name) - 1,
+						SectorSize:  10,
+					}, blob.ZeroSectorHashes)
+				}))
+				require.NoError(t, UpdateBlob(cfg))
+				mockapp.RequireBlobsEqual(t, setup.ls.BlobStore, setup.rs.BlobStore, name)
 			},
 		},
 	}

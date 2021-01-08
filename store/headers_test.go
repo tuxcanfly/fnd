@@ -29,7 +29,7 @@ func TestHeaders_GetSet(t *testing.T) {
 		SectorTipHash:   crypto.Rand32(),
 		Signature:    sig,
 		ReservedRoot: crypto.Rand32(),
-		ReceivedAt:   time.Unix(11, 0),
+		EpochStartAt:   time.Unix(11, 0),
 	}
 	_, err = GetHeader(db, "foo")
 	require.Error(t, err)
@@ -44,7 +44,7 @@ func TestHeaders_GetSet(t *testing.T) {
 	require.Equal(t, expHeader.SectorTipHash, actHeader.SectorTipHash)
 	require.Equal(t, expHeader.Signature, actHeader.Signature)
 	require.Equal(t, expHeader.ReservedRoot, actHeader.ReservedRoot)
-	require.Equal(t, expHeader.ReceivedAt.Unix(), actHeader.ReceivedAt.Unix())
+	require.Equal(t, expHeader.EpochStartAt.Unix(), actHeader.EpochStartAt.Unix())
 	actMB, err := GetSectorHashes(db, "foo")
 	require.NoError(t, err)
 	require.Equal(t, expMB, actMB)

@@ -65,7 +65,7 @@ func FillBlobReader(t *testing.T, db *leveldb.DB, bs blob.Store, signer crypto.S
 			SectorTipHash: tree.Tip(),
 			Signature:     sig,
 			ReservedRoot:  crypto.ZeroHash,
-			ReceivedAt:    receivedAt,
+			EpochStartAt:    receivedAt,
 		}, tree)
 	}))
 	require.NoError(t, tx.Commit())

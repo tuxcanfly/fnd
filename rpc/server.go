@@ -326,7 +326,7 @@ func (s *Server) Commit(ctx context.Context, req *apiv1.CommitReq) (*apiv1.Commi
 			SectorTipHash: mt.Tip(),
 			Signature:     sig,
 			ReservedRoot:  crypto.ZeroHash,
-			ReceivedAt:    time.Now(),
+			EpochStartAt:    time.Now(),
 		}, blob.ZeroSectorHashes)
 	})
 	if err != nil {
@@ -408,7 +408,7 @@ func (s *Server) GetBlobInfo(_ context.Context, req *apiv1.BlobInfoReq) (*apiv1.
 		SectorSize:   uint32(header.SectorSize),
 		MerkleRoot:   header.SectorTipHash[:],
 		ReservedRoot: header.ReservedRoot[:],
-		ReceivedAt:   uint64(header.ReceivedAt.Unix()),
+		ReceivedAt:   uint64(header.EpochStartAt.Unix()),
 		Signature:    header.Signature[:],
 	}, nil
 }

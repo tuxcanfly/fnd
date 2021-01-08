@@ -24,9 +24,9 @@ type Header struct {
 	Signature     crypto.Signature
 	ReservedRoot  crypto.Hash
 	// TODO: Remove from wire and signatures
-	ReceivedAt time.Time // FIXME: first seen new epoch update; set only on new epoch
-	Banned     bool
-	BannedAt   time.Time
+	EpochStartAt time.Time // FIXME: first seen new epoch update; set only on new epoch
+	Banned       bool
+	BannedAt     time.Time
 }
 
 func (h *Header) MarshalJSON() ([]byte, error) {
@@ -47,7 +47,7 @@ func (h *Header) MarshalJSON() ([]byte, error) {
 		h.SectorTipHash.String(),
 		h.Signature.String(),
 		h.ReservedRoot.String(),
-		h.ReceivedAt,
+		h.EpochStartAt,
 		h.Banned,
 		h.BannedAt,
 	}
@@ -101,7 +101,7 @@ func (h *Header) UnmarshalJSON(b []byte) error {
 	h.SectorTipHash = mr
 	h.Signature = sig
 	h.ReservedRoot = rr
-	h.ReceivedAt = in.ReceivedAt
+	h.EpochStartAt = in.ReceivedAt
 	h.Banned = in.Banned
 	h.BannedAt = in.BannedAt
 	return nil
@@ -259,7 +259,7 @@ func (bis *BlobInfoStream) Next() (*BlobInfo, error) {
 		MerkleRoot:   header.SectorTipHash,
 		Signature:    header.Signature,
 		ReservedRoot: header.ReservedRoot,
-		ReceivedAt:   header.ReceivedAt,
+		ReceivedAt:   header.EpochStartAt,
 	}, nil
 }
 
