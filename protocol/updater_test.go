@@ -118,7 +118,7 @@ func TestUpdater(t *testing.T) {
 			},
 		},
 		{
-			"aborts sync if the new timestamp is equal to the stored timestamp",
+			"aborts sync if the new sector size is equal to the stored sector size",
 			func(t *testing.T, setup *updaterTestSetup) {
 				ts := time.Now()
 				epochHeight := CurrentEpoch(name)
@@ -151,6 +151,13 @@ func TestUpdater(t *testing.T) {
 						Pub:           setup.tp.RemoteSigner.Pub(),
 					},
 				}
+				require.NoError(t, store.WithTx(setup.ls.DB, func(tx *leveldb.Transaction) error {
+					return store.SetHeaderTx(tx, &store.Header{
+						Name:        name,
+						EpochHeight: epochHeight,
+						SectorSize:  sectorSize,
+					}, blob.ZeroSectorHashes)
+				}))
 				err := UpdateBlob(cfg)
 				require.NotNil(t, err)
 				require.True(t, errors.Is(err, ErrUpdaterAlreadySynchronized))
@@ -187,7 +194,7 @@ func TestUpdater(t *testing.T) {
 				}))
 				ts := time.Now()
 				epochHeight := CurrentEpoch(name)
-				sectorSize := uint16(10)
+				sectorSize := uint16(0)
 				updateCh := make(chan struct{})
 				unsub := setup.tp.RemoteMux.AddMessageHandler(p2p.PeerMessageHandlerForType(wire.MessageTypeUpdate, func(id crypto.Hash, envelope *wire.Envelope) {
 					updateCh <- struct{}{}
@@ -240,7 +247,7 @@ func TestUpdater(t *testing.T) {
 				}))
 				ts := time.Now()
 				epochHeight := CurrentEpoch(name)
-				sectorSize := uint16(10)
+				sectorSize := uint16(0)
 				updateCh := make(chan *wire.Envelope, 1)
 				unsub := setup.tp.RemoteMux.AddMessageHandler(p2p.PeerMessageHandlerForType(wire.MessageTypeUpdate, func(id crypto.Hash, envelope *wire.Envelope) {
 					updateCh <- envelope

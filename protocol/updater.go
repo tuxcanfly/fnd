@@ -125,7 +125,7 @@ func UpdateBlob(cfg *UpdateConfig) error {
 	if err != nil && !errors.Is(err, leveldb.ErrNotFound) {
 		return errors.Wrap(err, "error getting header")
 	}
-	if header != nil && header.SectorSize == item.SectorSize {
+	if header != nil && header.EpochHeight == item.EpochHeight && header.SectorSize == item.SectorSize {
 		return ErrUpdaterAlreadySynchronized
 	}
 
@@ -207,13 +207,15 @@ func UpdateBlob(cfg *UpdateConfig) error {
 	}
 
 	err = SyncSectors(&SyncSectorsOpts{
-		Timeout:     DefaultSyncerBlobResTimeout,
-		Mux:         cfg.Mux,
-		Tx:          tx,
-		Peers:       item.PeerIDs,
-		EpochHeight: epochHeight,
-		SectorSize:  sectorSize,
-		Name:        item.Name,
+		Timeout:       DefaultSyncerBlobResTimeout,
+		Mux:           cfg.Mux,
+		Tx:            tx,
+		Peers:         item.PeerIDs,
+		EpochHeight:   epochHeight,
+		SectorSize:    sectorSize,
+		PrevHash:      prevHash,
+		SectorTipHash: item.SectorTipHash,
+		Name:          item.Name,
 	})
 	if err != nil {
 		if err := tx.Rollback(); err != nil {

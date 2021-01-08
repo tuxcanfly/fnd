@@ -21,13 +21,15 @@ var (
 )
 
 type SyncSectorsOpts struct {
-	Timeout     time.Duration
-	Mux         *p2p.PeerMuxer
-	Tx          blob.Transaction
-	Peers       *PeerSet
-	EpochHeight uint16
-	SectorSize  uint16
-	Name        string
+	Timeout       time.Duration
+	Mux           *p2p.PeerMuxer
+	Tx            blob.Transaction
+	Peers         *PeerSet
+	EpochHeight   uint16
+	SectorSize    uint16
+	PrevHash      crypto.Hash
+	SectorTipHash crypto.Hash
+	Name          string
 }
 
 type sectorRes struct {
@@ -86,7 +88,15 @@ func SyncSectors(opts *SyncSectorsOpts) error {
 					lgr.Trace("received unexpected payload position", "sector_size", opts.SectorSize, "payload_position", msg.PayloadPosition)
 					continue
 				}
-				// FIXME: TODO: Check tip hash
+				var sectorTipHash crypto.Hash = opts.PrevHash
+				for i := msg.PayloadPosition; int(i) < len(msg.Payload); i++ {
+					sectorTipHash = blob.SerialHashSector(msg.Payload[i], sectorTipHash)
+				}
+				if sectorTipHash != opts.SectorTipHash {
+					// FIXME: failing test case
+					lgr.Trace("sector tip hash mismatch", "sector_tip_hash", sectorTipHash, "expected_sector_tip_hash", opts.SectorSize)
+					continue
+				}
 				for i := msg.PayloadPosition; int(i) < len(msg.Payload); i++ {
 					if _, err := opts.Tx.WriteAt(msg.Payload[i][:], int64(i)*blob.SectorLen); err != nil {
 						lgr.Error("failed to write sector", "sector_id", i, "err", err)
