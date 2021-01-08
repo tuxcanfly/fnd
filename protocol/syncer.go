@@ -92,8 +92,9 @@ func SyncSectors(opts *SyncSectorsOpts) error {
 				for i := msg.PayloadPosition; int(i) < len(msg.Payload); i++ {
 					sectorTipHash = blob.SerialHashSector(msg.Payload[i], sectorTipHash)
 				}
+				// TODO: handle equivocation proof
+				// TODO: if mismatch; set bannedat = time.now
 				if sectorTipHash != opts.SectorTipHash {
-					// FIXME: failing test case
 					lgr.Trace("sector tip hash mismatch", "sector_tip_hash", sectorTipHash, "expected_sector_tip_hash", opts.SectorSize)
 					continue
 				}

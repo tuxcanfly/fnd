@@ -24,7 +24,7 @@ type Header struct {
 	Signature     crypto.Signature
 	ReservedRoot  crypto.Hash
 	// TODO: Remove from wire and signatures
-	EpochStartAt time.Time // FIXME: first seen new epoch update; set only on new epoch
+	EpochStartAt time.Time
 	Banned       bool
 	BannedAt     time.Time
 }

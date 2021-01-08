@@ -230,8 +230,6 @@ func UpdateBlob(cfg *UpdateConfig) error {
 		}
 		return errors.Wrap(err, "error calculating new blob sector tip hash")
 	}
-	// TODO: move this check to syncer before writing the sectors
-	// TODO: if mismatch; set bannedat = time.now
 	if tree.Tip() != item.SectorTipHash {
 		if err := tx.Rollback(); err != nil {
 			updaterLogger.Error("error rolling back blob transaction", "err", err)
