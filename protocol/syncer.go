@@ -84,6 +84,7 @@ func SyncSectors(opts *SyncSectorsOpts) error {
 					lgr.Trace("received sector for extraneous name", "other_name", msg.Name)
 					continue
 				}
+				// TODO: restore awaiting sector - i.e peerid/sectorid checks
 				// TODO: if payloadposition = 0xff, handle equivocation proof
 				if opts.SectorSize != msg.PayloadPosition {
 					lgr.Trace("received unexpected payload position", "sector_size", opts.SectorSize, "payload_position", msg.PayloadPosition)
