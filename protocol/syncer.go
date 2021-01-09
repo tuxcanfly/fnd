@@ -84,21 +84,22 @@ func SyncSectors(opts *SyncSectorsOpts) error {
 					lgr.Trace("received sector for extraneous name", "other_name", msg.Name)
 					continue
 				}
+				// TODO: if payloadposition = 0xff, handle equivocation proof
 				if opts.SectorSize != msg.PayloadPosition {
 					lgr.Trace("received unexpected payload position", "sector_size", opts.SectorSize, "payload_position", msg.PayloadPosition)
 					continue
 				}
-				var sectorTipHash crypto.Hash = opts.PrevHash
-				for i := msg.PayloadPosition; int(i) < len(msg.Payload); i++ {
+				var sectorTipHash crypto.Hash = msg.PrevHash
+				for i := 0; int(i) < len(msg.Payload); i++ {
 					sectorTipHash = blob.SerialHashSector(msg.Payload[i], sectorTipHash)
 				}
-				// TODO: handle equivocation proof
 				// TODO: if mismatch; set bannedat = time.now
+				// TODO: generate equivocation proof
 				if sectorTipHash != opts.SectorTipHash {
 					lgr.Trace("sector tip hash mismatch", "sector_tip_hash", sectorTipHash, "expected_sector_tip_hash", opts.SectorSize)
 					continue
 				}
-				for i := msg.PayloadPosition; int(i) < len(msg.Payload); i++ {
+				for i := 0; int(i) < len(msg.Payload); i++ {
 					if _, err := opts.Tx.WriteAt(msg.Payload[i][:], int64(i)*blob.SectorLen); err != nil {
 						lgr.Error("failed to write sector", "sector_id", i, "err", err)
 						continue

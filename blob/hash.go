@@ -37,22 +37,31 @@ func (s *SectorHashes) Decode(r io.Reader) error {
 	return nil
 }
 
-func (s SectorHashes) DiffWith(other SectorHashes) []uint8 {
+func (s SectorHashes) DiffWith(other SectorHashes) int {
 	if s == other {
-		return nil
+		return -1
 	}
 
-	var out []uint8
-	for i := 0; i < len(s); i++ {
+	var i int
+	for i = 0; i < len(s); i++ {
 		if s[i] != other[i] {
-			out = append(out, uint8(i))
+			break
 		}
 	}
-	return out
+	return i
 }
 
 func (s SectorHashes) Tip() crypto.Hash {
-	return s[SectorCount-1]
+	var i int
+	for i = 0; i < SectorCount; i++ {
+		if s[i] == ZeroHash {
+			break
+		}
+	}
+	if i == 0 {
+		return crypto.ZeroHash
+	}
+	return s[i-1]
 }
 
 func SerialHashSector(sector Sector, prevHash crypto.Hash) crypto.Hash {

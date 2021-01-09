@@ -135,9 +135,6 @@ func UpdateBlob(cfg *UpdateConfig) error {
 	if header != nil {
 		epochHeight = header.EpochHeight
 		sectorSize = header.SectorSize
-		if sectorSize != 0 {
-			prevHash = header.SectorTipHash
-		}
 	}
 
 	// TODO: make sure header.sectorsize matches sectors on disk
@@ -213,7 +210,6 @@ func UpdateBlob(cfg *UpdateConfig) error {
 		Peers:         item.PeerIDs,
 		EpochHeight:   epochHeight,
 		SectorSize:    sectorSize,
-		PrevHash:      prevHash,
 		SectorTipHash: item.SectorTipHash,
 		Name:          item.Name,
 	})

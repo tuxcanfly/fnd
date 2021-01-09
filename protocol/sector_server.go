@@ -67,7 +67,7 @@ func (s *SectorServer) onBlobReq(peerID crypto.Hash, envelope *wire.Envelope) {
 	}
 
 	// FIXME: skip if sectorSize == 0; we know it will be ZeroHash
-	prevHash, err := store.GetSectorHash(s.db, reqMsg.Name, reqMsg.SectorSize)
+	prevHash, err := store.GetSectorHash(s.db, reqMsg.Name, reqMsg.SectorSize-1)
 	if err != nil {
 		lgr.Error(
 			"failed to fetch sector hash",
