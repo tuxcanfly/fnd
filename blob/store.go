@@ -50,6 +50,7 @@ func NewInStorePath(blobsPath string, name string) (Blob, error) {
 	if err != nil {
 		return nil, err
 	}
+	// TODO: Open in append-only mode (O_APPEND)
 	if exists {
 		f, err = os.OpenFile(blobFile, os.O_RDWR, 0666)
 	} else {
