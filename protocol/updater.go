@@ -138,13 +138,8 @@ func UpdateBlob(cfg *UpdateConfig) error {
 	}
 
 	// TODO: make sure header.sectorsize matches sectors on disk
-	// TODO: header.receivedat, header.bannedat - not part of wire, not signed
 
-	// TODO: if item.EpochHeight > header.EpochHeight { do epoch checks; epoch updated; set prevhash = zeroHash }
-	// TODO: if item.EpochHeight < header.EpochHeight { do not process; }
-	// TODO: if item.EpochHeight == item.EpochHeight { sync sectors; }
 	// TODO: set banned at when equivocation is received
-	// TODO: other epoch checks
 	// TODO: bannedat uint16 - ban for current epoch and next
 	// FIXME
 

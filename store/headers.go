@@ -23,10 +23,9 @@ type Header struct {
 	SectorTipHash crypto.Hash
 	Signature     crypto.Signature
 	ReservedRoot  crypto.Hash
-	// TODO: Remove from wire and signatures
-	EpochStartAt time.Time
-	Banned       bool
-	BannedAt     time.Time
+	EpochStartAt  time.Time
+	Banned        bool
+	BannedAt      time.Time
 }
 
 func (h *Header) MarshalJSON() ([]byte, error) {
@@ -37,7 +36,7 @@ func (h *Header) MarshalJSON() ([]byte, error) {
 		MerkleRoot   string    `json:"merkle_root"`
 		Signature    string    `json:"signature"`
 		ReservedRoot string    `json:"reserved_root"`
-		ReceivedAt   time.Time `json:"received_at"`
+		EpochStartAt time.Time `json:"epoch_start_at"`
 		Banned       bool      `json:"banned"`
 		BannedAt     time.Time `json:"banned_at"`
 	}{
@@ -63,7 +62,7 @@ func (h *Header) UnmarshalJSON(b []byte) error {
 		MerkleRoot   string    `json:"merkle_root"`
 		Signature    string    `json:"signature"`
 		ReservedRoot string    `json:"reserved_root"`
-		ReceivedAt   time.Time `json:"received_at"`
+		EpochStartAt time.Time `json:"epoch_start_at"`
 		Banned       bool      `json:"banned"`
 		BannedAt     time.Time `json:"banned_at"`
 	}{}
@@ -101,7 +100,7 @@ func (h *Header) UnmarshalJSON(b []byte) error {
 	h.SectorTipHash = mr
 	h.Signature = sig
 	h.ReservedRoot = rr
-	h.EpochStartAt = in.ReceivedAt
+	h.EpochStartAt = in.EpochStartAt
 	h.Banned = in.Banned
 	h.BannedAt = in.BannedAt
 	return nil
