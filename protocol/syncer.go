@@ -99,10 +99,17 @@ func SyncSectors(opts *SyncSectorsOpts) error {
 				for i := 0; int(i) < len(msg.Payload); i++ {
 					sectorTipHash = blob.SerialHashSector(msg.Payload[i], sectorTipHash)
 				}
-				// TODO: if mismatch; set bannedat = time.now
-				// TODO: generate equivocation proof
 				if sectorTipHash != opts.SectorTipHash {
 					lgr.Trace("payload tip hash mismatch", "payload_tip_hash", sectorTipHash, "expected_payload_tip_hash", opts.SectorTipHash)
+					peer, err := opts.Mux.PeerByID(peerID)
+					if err != nil {
+						lgr.Trace("error fetching peer", "peer_id", peerID)
+					}
+					// TODO: set header.bannedat = time.now for this name
+					if err := peer.Close(); err != nil {
+						lgr.Trace("error banning peer", "peer_id", peerID)
+					}
+					// TODO: generate equivocation proof
 					continue
 				}
 				for i := 0; int(i) < len(msg.Payload); i++ {

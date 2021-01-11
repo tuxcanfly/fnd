@@ -1,6 +1,7 @@
 package protocol
 
 import (
+	"crypto/rand"
 	"errors"
 	"testing"
 	"time"
@@ -70,8 +71,6 @@ func TestUpdater(t *testing.T) {
 				ts := time.Now()
 				epochHeight := CurrentEpoch(name)
 				sectorSize := uint16(10)
-				// insert the blob locally, ensuring that
-				// there will be enough time bank
 				mockapp.FillBlobReader(
 					t,
 					setup.ls.DB,
@@ -115,6 +114,58 @@ func TestUpdater(t *testing.T) {
 				}
 				require.NoError(t, UpdateBlob(cfg))
 				mockapp.RequireBlobsEqual(t, setup.ls.BlobStore, setup.rs.BlobStore, name)
+			},
+		},
+		{
+			"aborts sync when there is a sector tip hash mismatch",
+			func(t *testing.T, setup *updaterTestSetup) {
+				ts := time.Now()
+				epochHeight := CurrentEpoch(name)
+				sectorSize := uint16(10)
+				mockapp.FillBlobReader(
+					t,
+					setup.ls.DB,
+					setup.ls.BlobStore,
+					setup.tp.RemoteSigner,
+					name,
+					epochHeight,
+					sectorSize,
+					ts.Add(-48*time.Hour),
+					rand.Reader,
+				)
+				// create the new blob remotely
+				update := mockapp.FillBlobReader(
+					t,
+					setup.rs.DB,
+					setup.rs.BlobStore,
+					setup.tp.RemoteSigner,
+					name,
+					epochHeight,
+					sectorSize+10,
+					ts,
+					rand.Reader,
+				)
+				cfg := &UpdateConfig{
+					Mux:        setup.tp.LocalMux,
+					DB:         setup.ls.DB,
+					NameLocker: util.NewMultiLocker(),
+					BlobStore:  setup.ls.BlobStore,
+					Item: &UpdateQueueItem{
+						PeerIDs: NewPeerSet([]crypto.Hash{
+							crypto.HashPub(setup.tp.RemoteSigner.Pub()),
+						}),
+						Name:          name,
+						EpochHeight:   update.EpochHeight,
+						SectorSize:    update.SectorSize,
+						SectorTipHash: update.SectorTipHash,
+						ReservedRoot:  update.ReservedRoot,
+						Signature:     update.Signature,
+						Pub:           setup.tp.RemoteSigner.Pub(),
+					},
+				}
+				err := UpdateBlob(cfg)
+				require.NotNil(t, err)
+				require.True(t, errors.Is(err, ErrUpdaterSectorTipHashMismatch))
 			},
 		},
 		{
