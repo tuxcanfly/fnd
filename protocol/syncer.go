@@ -32,25 +32,26 @@ type SyncSectorsOpts struct {
 	Name          string
 }
 
-type sectorRes struct {
+type payloadRes struct {
 	peerID crypto.Hash
 	msg    *wire.BlobRes
 }
 
 func SyncSectors(opts *SyncSectorsOpts) error {
-	lgr := log.WithModule("sector-syncer").Sub("name", opts.Name)
-	// Implement sector hash based sync
-	sectorResCh := make(chan *sectorRes)
-	sectorProcessedCh := make(chan struct{}, 1)
+	lgr := log.WithModule("payload-syncer").Sub("name", opts.Name)
+	// Implement payload hash based sync
+	payloadResCh := make(chan *payloadRes)
+	payloadProcessedCh := make(chan struct{}, 1)
 	doneCh := make(chan struct{})
 	unsubRes := opts.Mux.AddMessageHandler(p2p.PeerMessageHandlerForType(wire.MessageTypeBlobRes, func(peerID crypto.Hash, envelope *wire.Envelope) {
-		sectorResCh <- &sectorRes{
+		payloadResCh <- &payloadRes{
 			peerID: peerID,
 			msg:    envelope.Message.(*wire.BlobRes),
 		}
 	}))
 
 	go func() {
+		receivedPayloads := make(map[uint16]bool)
 		for {
 			iter := opts.Peers.Iterator()
 			var sendCount int
@@ -68,26 +69,30 @@ func SyncSectors(opts *SyncSectorsOpts) error {
 					SectorSize:  opts.SectorSize,
 				})
 				if err != nil {
-					lgr.Warn("error fetching sector from peer, trying another", "peer_id", peerID, "err", err)
+					lgr.Warn("error fetching payload from peer, trying another", "peer_id", peerID, "err", err)
 					continue
 				}
 				lgr.Debug(
-					"requested sector from peer",
+					"requested payload from peer",
 					"peer_id", peerID,
 				)
 				sendCount++
 			}
 			select {
-			case res := <-sectorResCh:
+			case res := <-payloadResCh:
 				msg := res.msg
+				peerID := res.peerID
 				if msg.Name != opts.Name {
-					lgr.Trace("received sector for extraneous name", "other_name", msg.Name)
+					lgr.Trace("received payload for extraneous name", "other_name", msg.Name)
 					continue
 				}
-				// TODO: restore awaiting sector - i.e peerid/sectorid checks
+				if receivedPayloads[msg.PayloadPosition] {
+					lgr.Trace("already processed this payload", "payload_position", msg.PayloadPosition, "peer_id", peerID)
+					continue
+				}
 				// TODO: if payloadposition = 0xff, handle equivocation proof
 				if opts.SectorSize != msg.PayloadPosition {
-					lgr.Trace("received unexpected payload position", "sector_size", opts.SectorSize, "payload_position", msg.PayloadPosition)
+					lgr.Trace("received unexpected payload position", "payload_size", opts.SectorSize, "payload_position", msg.PayloadPosition)
 					continue
 				}
 				var sectorTipHash crypto.Hash = msg.PrevHash
@@ -97,32 +102,33 @@ func SyncSectors(opts *SyncSectorsOpts) error {
 				// TODO: if mismatch; set bannedat = time.now
 				// TODO: generate equivocation proof
 				if sectorTipHash != opts.SectorTipHash {
-					lgr.Trace("sector tip hash mismatch", "sector_tip_hash", sectorTipHash, "expected_sector_tip_hash", opts.SectorSize)
+					lgr.Trace("payload tip hash mismatch", "payload_tip_hash", sectorTipHash, "expected_payload_tip_hash", opts.SectorTipHash)
 					continue
 				}
 				for i := 0; int(i) < len(msg.Payload); i++ {
 					if _, err := opts.Tx.WriteAt(msg.Payload[i][:], int64(i)*blob.SectorLen); err != nil {
-						lgr.Error("failed to write sector", "sector_id", i, "err", err)
+						lgr.Error("failed to write payload", "payload_id", i, "err", err)
 						continue
 					}
 				}
-				sectorProcessedCh <- struct{}{}
+				receivedPayloads[msg.PayloadPosition] = true
+				payloadProcessedCh <- struct{}{}
 			case <-doneCh:
 				return
 			}
 		}
 	}()
 
-sectorLoop:
+payloadLoop:
 	for {
-		lgr.Debug("requesting sector")
+		lgr.Debug("requesting payload")
 		select {
-		case <-sectorProcessedCh:
-			lgr.Debug("sector processed")
-			break sectorLoop
+		case <-payloadProcessedCh:
+			lgr.Debug("payload processed")
+			break payloadLoop
 		case <-time.NewTimer(opts.Timeout).C:
-			lgr.Warn("sector request timed out")
-			break sectorLoop
+			lgr.Warn("payload request timed out")
+			break payloadLoop
 		}
 	}
 
