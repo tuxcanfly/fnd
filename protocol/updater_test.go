@@ -166,6 +166,8 @@ func TestUpdater(t *testing.T) {
 				err := UpdateBlob(cfg)
 				require.NotNil(t, err)
 				require.True(t, errors.Is(err, ErrUpdaterSectorTipHashMismatch))
+				header, err := store.GetHeader(setup.ls.DB, name)
+				require.True(t, header.Banned)
 			},
 		},
 		{

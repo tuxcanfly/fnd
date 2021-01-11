@@ -137,12 +137,6 @@ func UpdateBlob(cfg *UpdateConfig) error {
 		sectorSize = header.SectorSize
 	}
 
-	// TODO: make sure header.sectorsize matches sectors on disk
-
-	// TODO: set banned at when equivocation is received
-	// TODO: bannedat uint16 - ban for current epoch and next
-	// FIXME
-
 	if item.EpochHeight < epochHeight {
 		return ErrInvalidEpochBackdated
 	}
@@ -150,7 +144,6 @@ func UpdateBlob(cfg *UpdateConfig) error {
 	if item.EpochHeight > epochHeight {
 		if header != nil && header.Banned {
 			if header.BannedAt.Add(7 * 24 * time.Duration(time.Hour)).After(time.Now()) {
-				// TODO: when bannedat is uint16 - if item.epochHeight <= header.BannedAt+1 {
 				return ErrNameBanned
 			}
 
@@ -167,11 +160,6 @@ func UpdateBlob(cfg *UpdateConfig) error {
 		if item.EpochHeight > CurrentEpoch(item.Name) {
 			return ErrInvalidEpochFuturedated
 		}
-
-		// TODO: epochupdated = true;
-		// TODO: after all checks, atomically:
-		// TODO: * header.ReceiveAt = time.Now() if write to disk
-		// TODO: * reset banned at back to zero when epoch update is successful
 
 		// Sync the entire blob on epoch rollover
 		epochUpdated = true
@@ -225,6 +213,18 @@ func UpdateBlob(cfg *UpdateConfig) error {
 		if err := tx.Rollback(); err != nil {
 			updaterLogger.Error("error rolling back blob transaction", "err", err)
 		}
+		err = store.WithTx(cfg.DB, func(tx *leveldb.Transaction) error {
+			return store.SetHeaderTx(tx, &store.Header{
+				Name:          item.Name,
+				EpochHeight:   item.EpochHeight,
+				SectorSize:    item.SectorSize,
+				SectorTipHash: item.SectorTipHash,
+				Signature:     item.Signature,
+				ReservedRoot:  item.ReservedRoot,
+				Banned:        true,
+				BannedAt:      time.Now(),
+			}, blob.ZeroSectorHashes)
+		})
 		return ErrUpdaterSectorTipHashMismatch
 	}
 
@@ -254,7 +254,7 @@ func UpdateBlob(cfg *UpdateConfig) error {
 			Signature:     item.Signature,
 			ReservedRoot:  item.ReservedRoot,
 			EpochStartAt:  epochStart,
-		}, blob.ZeroSectorHashes)
+		}, blob.ZeroSectorHashes) // FIXME: Should be sector hashes
 	})
 	if err != nil {
 		if err := tx.Rollback(); err != nil {
