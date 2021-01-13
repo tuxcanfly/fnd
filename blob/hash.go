@@ -78,13 +78,12 @@ func SerialHashSector(sector Sector, prevHash crypto.Hash) crypto.Hash {
 func SerialHash(br io.Reader, prevHash crypto.Hash, sectorSize uint16) (SectorHashes, error) {
 	var res SectorHashes
 	var sector Sector
-	var hash crypto.Hash = prevHash
 	for i := 0; i < int(sectorSize); i++ {
 		if _, err := br.Read(sector[:]); err != nil {
 			return ZeroSectorHashes, err
 		}
-		hash = SerialHashSector(sector, hash)
-		res[i] = hash
+		res[i] = SerialHashSector(sector, prevHash)
+		prevHash = res[i]
 	}
 	return res, nil
 }
