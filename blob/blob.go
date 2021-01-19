@@ -23,7 +23,6 @@ type Blob interface {
 	Readable
 	Transaction() (Transaction, error)
 	Seek(uint16)
-	At() uint16
 }
 
 type blobImpl struct {
@@ -46,10 +45,6 @@ func (b *blobImpl) Name() string {
 
 func (b *blobImpl) Seek(sectorSize uint16) {
 	b.sectorSize = sectorSize
-}
-
-func (b *blobImpl) At() uint16 {
-	return b.sectorSize
 }
 
 func (b *blobImpl) ReadSector(id uint8) (Sector, error) {
