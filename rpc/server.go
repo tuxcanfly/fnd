@@ -11,13 +11,15 @@ import (
 	"fnd/store"
 	"fnd/util"
 	"fnd/wire"
-	"github.com/pkg/errors"
-	"github.com/syndtr/goleveldb/leveldb"
-	"google.golang.org/grpc"
+	"io"
 	"net"
 	"strconv"
 	"sync/atomic"
 	"time"
+
+	"github.com/pkg/errors"
+	"github.com/syndtr/goleveldb/leveldb"
+	"google.golang.org/grpc"
 )
 
 const (
@@ -233,8 +235,6 @@ func (s *Server) Checkout(ctx context.Context, req *apiv1.CheckoutReq) (*apiv1.C
 		sectorTipHash = header.SectorTipHash
 	}
 
-	bl.Seek(sectorSize)
-
 	tx, err := bl.Transaction()
 	if err != nil {
 		return nil, err
@@ -251,6 +251,26 @@ func (s *Server) Checkout(ctx context.Context, req *apiv1.CheckoutReq) (*apiv1.C
 		SectorSize:    uint32(sectorSize),
 		SectorTipHash: sectorTipHash.Bytes(),
 	}, nil
+}
+
+func (s *Server) Write(ctx context.Context, req *apiv1.WriteReq) (*apiv1.WriteRes, error) {
+	awaiting := s.txStore.Get(strconv.FormatUint(uint64(req.TxID), 32)).(*awaitingTx)
+	if awaiting == nil {
+		return nil, errors.New("transaction ID not found")
+	}
+	tx := awaiting.tx
+	// we want clients to handle partial writes
+	res := &apiv1.WriteRes{}
+	offset, err := tx.Seek(0, io.SeekEnd)
+	if err != nil {
+		res.WriteErr = err.Error()
+	}
+	n, err := tx.WriteAt(req.Data, offset)
+	if err != nil {
+		res.WriteErr = err.Error()
+	}
+	res.N = uint32(n)
+	return res, nil
 }
 
 func (s *Server) WriteSector(ctx context.Context, req *apiv1.WriteSectorReq) (*apiv1.WriteSectorRes, error) {

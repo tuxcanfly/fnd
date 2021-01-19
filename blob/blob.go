@@ -22,7 +22,6 @@ type Blob interface {
 	io.Closer
 	Readable
 	Transaction() (Transaction, error)
-	Seek(uint16)
 }
 
 type blobImpl struct {
@@ -32,19 +31,16 @@ type blobImpl struct {
 	mu         sync.Mutex
 }
 
-func newFromFile(name string, f *os.File) Blob {
+func newFromFile(name string, f *os.File, sectorSize uint16) Blob {
 	return &blobImpl{
 		name: name,
 		f:    f,
+		sectorSize: sectorSize,
 	}
 }
 
 func (b *blobImpl) Name() string {
 	return b.name
-}
-
-func (b *blobImpl) Seek(sectorSize uint16) {
-	b.sectorSize = sectorSize
 }
 
 func (b *blobImpl) ReadSector(id uint8) (Sector, error) {

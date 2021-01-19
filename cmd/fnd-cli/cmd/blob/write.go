@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
-	"fnd/blob"
 	"fnd/cli"
 	"fnd/rpc"
 	apiv1 "fnd/rpc/v1"
@@ -53,22 +52,14 @@ var writeCmd = &cobra.Command{
 		} else {
 			rd = bufio.NewReader(bytes.NewReader([]byte(args[1])))
 		}
-		var sector blob.Sector
-		for i := 0; i < blob.SectorCount; i++ {
-			if _, err := rd.Read(sector[:]); err != nil {
-				if err == io.EOF {
-					break
-				}
-				return err
-			}
-			wr.WriteSector(sector[:])
+		if _, err := io.Copy(wr, rd); err != nil {
+			return err
 		}
-		sectorTipHash, err := wr.Commit(broadcast)
-		if err != nil {
+		if _, err := wr.Commit(broadcast); err != nil {
 			return err
 		}
 
-		fmt.Printf("Success. Hash: %v\n", sectorTipHash)
+		fmt.Println("Success.")
 		return nil
 	},
 }

@@ -5,8 +5,9 @@ import (
 	"fnd/blob"
 	"fnd/crypto"
 	apiv1 "fnd/rpc/v1"
-	"github.com/pkg/errors"
 	"time"
+
+	"github.com/pkg/errors"
 )
 
 type BlobWriter struct {
@@ -52,6 +53,37 @@ func (b *BlobWriter) Open() error {
 	b.sectorTipHash = sectorTipHash
 	b.opened = true
 	return nil
+}
+
+func (b *BlobWriter) Write(p []byte) (int, error) {
+	if !b.opened {
+		panic("writer not open")
+	}
+	if b.committed {
+		panic("writer committed")
+	}
+	if len(p) == 0 {
+		return 0, nil
+	}
+
+	var sector blob.Sector
+	copy(sector[:], p)
+
+	res, err := b.client.Write(context.Background(), &apiv1.WriteReq{
+		TxID: b.txID,
+		Data: p,
+	})
+	if err != nil {
+		return 0, errors.Wrap(err, "error writing blob")
+	}
+	if res.WriteErr != "" {
+		return 0, errors.Wrap(errors.New(res.WriteErr), "error writing blob")
+	}
+
+	b.sectorSize++
+	b.sectorTipHash = blob.SerialHashSector(sector, b.sectorTipHash)
+
+	return int(res.N), nil
 }
 
 func (b *BlobWriter) WriteSector(p []byte) (crypto.Hash, error) {

@@ -10,6 +10,7 @@ service Footnotev1 {
     rpc ListPeers (ListPeersReq) returns (stream ListPeersRes);
 
     rpc Checkout (CheckoutReq) returns (CheckoutRes);
+    rpc Write (WriteReq) returns (WriteRes);
     rpc WriteSector (WriteSectorReq) returns (WriteSectorRes);
     rpc Commit (CommitReq) returns (CommitRes);
 
@@ -79,6 +80,16 @@ message CheckoutRes {
     uint32 epochHeight = 2;
     uint32 sectorSize = 3;
     bytes sectorTipHash = 4;
+}
+
+message WriteReq {
+    uint32 txID = 1;
+    bytes data = 2;
+}
+
+message WriteRes {
+    string writeErr = 1;
+    uint32 n = 2;
 }
 
 message WriteSectorReq {

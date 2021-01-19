@@ -1,11 +1,12 @@
 package blob
 
 import (
-	"github.com/pkg/errors"
 	"io"
 	"io/ioutil"
 	"os"
 	"sync"
+
+	"github.com/pkg/errors"
 )
 
 var (
@@ -16,6 +17,7 @@ var (
 type Transaction interface {
 	Readable
 	io.WriterAt
+	io.Seeker
 	WriteSector(sector Sector) error
 	Truncate() error
 	Commit() error
@@ -38,10 +40,6 @@ type txImpl struct {
 
 func (t *txImpl) Name() string {
 	return t.name
-}
-
-func (t *txImpl) SectorSize() uint16 {
-	return t.sectorSize
 }
 
 func (t *txImpl) ReadSector(id uint8) (Sector, error) {
@@ -72,6 +70,23 @@ func (t *txImpl) ReadAt(p []byte, off int64) (int, error) {
 		return 0, errors.Wrap(err, "error initializing transaction")
 	}
 	return ReadBlobAt(t.f, p, off)
+}
+
+func (t *txImpl) Seek(offset int64, whence int) (int64, error) {
+	switch whence {
+	case io.SeekCurrent:
+		return 0, errors.New("error cannot seek from current")
+	case io.SeekStart:
+		return 0, errors.New("error cannot seek from start")
+	case io.SeekEnd:
+		if offset != 0 {
+			return 0, errors.New("error cannot seek before end")
+		}
+		t.f.Seek(0, io.SeekEnd)
+		return int64(t.sectorSize) * 256, nil
+	default:
+		panic("invalid whence")
+	}
 }
 
 func (t *txImpl) WriteSector(sector Sector) error {

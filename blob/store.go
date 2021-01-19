@@ -62,11 +62,12 @@ func NewInStorePath(blobsPath string, name string) (Blob, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := f.Truncate(Size); err != nil {
+	info, err := f.Stat()
+	if err != nil {
 		return nil, err
 	}
-
-	return newFromFile(name, f), nil
+	sectorSize := uint16(info.Size() / 256)
+	return newFromFile(name, f, sectorSize), nil
 }
 
 func fileExists(f string) (bool, error) {
@@ -90,10 +91,6 @@ type wrappedBlob struct {
 
 func (w *wrappedBlob) Name() string {
 	return w.blob.Name()
-}
-
-func (w *wrappedBlob) Seek(sectorSize uint16) {
-	w.blob.Seek(sectorSize)
 }
 
 func (w *wrappedBlob) ReadAt(p []byte, off int64) (n int, err error) {
