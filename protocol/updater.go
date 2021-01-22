@@ -287,6 +287,8 @@ func UpdateBlob(cfg *UpdateConfig) error {
 		EpochHeight:   item.EpochHeight,
 		SectorSize:    item.SectorSize,
 		SectorTipHash: item.SectorTipHash,
+		ReservedRoot:  item.ReservedRoot,
+		Signature:     item.Signature,
 	}
 	p2p.GossipAll(cfg.Mux, update)
 	return nil

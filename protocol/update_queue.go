@@ -1,7 +1,7 @@
 package protocol
 
 import (
-	"github.com/btcsuite/btcd/btcec"
+	"fmt"
 	"fnd/blob"
 	"fnd/config"
 	"fnd/crypto"
@@ -9,12 +9,14 @@ import (
 	"fnd/p2p"
 	"fnd/store"
 	"fnd/wire"
-	"fnd.localhost/handshake/primitives"
-	"github.com/pkg/errors"
-	"github.com/syndtr/goleveldb/leveldb"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"fnd.localhost/handshake/primitives"
+	"github.com/btcsuite/btcd/btcec"
+	"github.com/pkg/errors"
+	"github.com/syndtr/goleveldb/leveldb"
 )
 
 var (
@@ -102,6 +104,7 @@ func (u *UpdateQueue) Enqueue(peerID crypto.Hash, update *wire.Update) error {
 
 	nameInfo, err := u.validateUpdate(update.Name, update.EpochHeight, update.SectorSize, update.SectorTipHash, update.ReservedRoot, update.Signature)
 	if err != nil {
+		fmt.Println("update.Name", update.Name, "update.EpochHeight", update.EpochHeight, "update.SectorSize", update.SectorSize, "update.SectorTipHash", update.SectorTipHash, "update.ReservedRoot", update.ReservedRoot, "update.Signature", update.Signature)
 		return errors.Wrap(err, "name failed validation")
 	}
 
