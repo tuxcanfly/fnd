@@ -10,6 +10,7 @@ require (
 	fnd.localhost/dwire v1.0.1
 	fnd.localhost/handshake v0.0.0-20200428084808-2c986090302e
 	github.com/btcsuite/btcd v0.20.1-beta
+	github.com/davecgh/go-spew v1.1.1
 	github.com/golang/protobuf v1.4.2
 	github.com/golang/snappy v0.0.1 // indirect
 	github.com/konsorten/go-windows-terminal-sequences v1.0.2 // indirect

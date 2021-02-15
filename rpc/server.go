@@ -17,6 +17,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/pkg/errors"
 	"github.com/syndtr/goleveldb/leveldb"
 	"google.golang.org/grpc"
@@ -394,6 +395,7 @@ func (s *Server) GetBlobInfo(_ context.Context, req *apiv1.BlobInfoReq) (*apiv1.
 	if err != nil {
 		return nil, err
 	}
+	spew.Dump(header)
 	info, err := store.GetNameInfo(s.db, req.Name)
 	if err != nil {
 		return nil, err
