@@ -4,15 +4,16 @@ import (
 	"bytes"
 	"encoding/hex"
 	"encoding/json"
-	"github.com/btcsuite/btcd/btcec"
 	"fnd/blob"
 	"fnd/crypto"
+	"sync"
+	"time"
+
+	"github.com/btcsuite/btcd/btcec"
 	"github.com/pkg/errors"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/iterator"
 	"github.com/syndtr/goleveldb/leveldb/util"
-	"sync"
-	"time"
 )
 
 type Header struct {
@@ -29,15 +30,15 @@ type Header struct {
 
 func (h *Header) MarshalJSON() ([]byte, error) {
 	out := &struct {
-		Name         string    `json:"name"`
-		EpochHeight  uint16    `json:"epoch_height"`
-		SectorSize   uint16    `json:"sector_size"`
-		SectorTipHash   string    `json:"sector_tip_hash"`
-		Signature    string    `json:"signature"`
-		ReservedRoot string    `json:"reserved_root"`
-		EpochStartAt time.Time `json:"epoch_start_at"`
-		Banned       bool      `json:"banned"`
-		BannedAt     time.Time `json:"banned_at"`
+		Name          string    `json:"name"`
+		EpochHeight   uint16    `json:"epoch_height"`
+		SectorSize    uint16    `json:"sector_size"`
+		SectorTipHash string    `json:"sector_tip_hash"`
+		Signature     string    `json:"signature"`
+		ReservedRoot  string    `json:"reserved_root"`
+		EpochStartAt  time.Time `json:"epoch_start_at"`
+		Banned        bool      `json:"banned"`
+		BannedAt      time.Time `json:"banned_at"`
 	}{
 		h.Name,
 		h.EpochHeight,
@@ -55,15 +56,15 @@ func (h *Header) MarshalJSON() ([]byte, error) {
 
 func (h *Header) UnmarshalJSON(b []byte) error {
 	in := &struct {
-		Name         string    `json:"name"`
-		EpochHeight  uint16    `json:"epoch_height"`
-		SectorSize   uint16    `json:"sector_size"`
-		SectorTipHash   string    `json:"sector_tip_hash"`
-		Signature    string    `json:"signature"`
-		ReservedRoot string    `json:"reserved_root"`
-		EpochStartAt time.Time `json:"epoch_start_at"`
-		Banned       bool      `json:"banned"`
-		BannedAt     time.Time `json:"banned_at"`
+		Name          string    `json:"name"`
+		EpochHeight   uint16    `json:"epoch_height"`
+		SectorSize    uint16    `json:"sector_size"`
+		SectorTipHash string    `json:"sector_tip_hash"`
+		Signature     string    `json:"signature"`
+		ReservedRoot  string    `json:"reserved_root"`
+		EpochStartAt  time.Time `json:"epoch_start_at"`
+		Banned        bool      `json:"banned"`
+		BannedAt      time.Time `json:"banned_at"`
 	}{}
 	if err := json.Unmarshal(b, in); err != nil {
 		return err
@@ -195,28 +196,30 @@ func SetHeaderTx(tx *leveldb.Transaction, header *Header, sectorHashes blob.Sect
 }
 
 type BlobInfo struct {
-	Name         string           `json:"name"`
-	PublicKey    *btcec.PublicKey `json:"public_key"`
-	ImportHeight int              `json:"import_height"`
-	EpochHeight  uint16           `json:"epoch_height"`
-	SectorSize   uint16           `json:"sector_size"`
-	SectorTipHash   crypto.Hash      `json:"sector_tip_hash"`
-	Signature    crypto.Signature `json:"signature"`
-	ReservedRoot crypto.Hash      `json:"reserved_root"`
-	ReceivedAt   time.Time        `json:"received_at"`
+	Name          string           `json:"name"`
+	PublicKey     *btcec.PublicKey `json:"public_key"`
+	ImportHeight  int              `json:"import_height"`
+	EpochHeight   uint16           `json:"epoch_height"`
+	SectorSize    uint16           `json:"sector_size"`
+	SectorTipHash crypto.Hash      `json:"sector_tip_hash"`
+	Signature     crypto.Signature `json:"signature"`
+	ReservedRoot  crypto.Hash      `json:"reserved_root"`
+	ReceivedAt    time.Time        `json:"received_at"`
+	Banned        bool             `json:"banned"`
 }
 
 func (b *BlobInfo) MarshalJSON() ([]byte, error) {
 	jsonInfo := struct {
-		Name         string    `json:"name"`
-		PublicKey    string    `json:"public_key"`
-		ImportHeight int       `json:"import_height"`
-		EpochHeight  uint16    `json:"epoch_height"`
-		SectorSize   uint16    `json:"sector_size"`
-		SectorTipHash   string    `json:"sector_tip_hash"`
-		Signature    string    `json:"signature"`
-		ReservedRoot string    `json:"reserved_root"`
-		ReceivedAt   time.Time `json:"received_at"`
+		Name          string    `json:"name"`
+		PublicKey     string    `json:"public_key"`
+		ImportHeight  int       `json:"import_height"`
+		EpochHeight   uint16    `json:"epoch_height"`
+		SectorSize    uint16    `json:"sector_size"`
+		SectorTipHash string    `json:"sector_tip_hash"`
+		Signature     string    `json:"signature"`
+		ReservedRoot  string    `json:"reserved_root"`
+		ReceivedAt    time.Time `json:"received_at"`
+		Banned        bool      `json:"banned"`
 	}{
 		b.Name,
 		hex.EncodeToString(b.PublicKey.SerializeCompressed()),
@@ -227,6 +230,7 @@ func (b *BlobInfo) MarshalJSON() ([]byte, error) {
 		hex.EncodeToString(b.Signature[:]),
 		hex.EncodeToString(b.ReservedRoot[:]),
 		b.ReceivedAt,
+		b.Banned,
 	}
 
 	return json.Marshal(jsonInfo)
@@ -249,15 +253,15 @@ func (bis *BlobInfoStream) Next() (*BlobInfo, error) {
 		return nil, errors.Wrap(err, "error getting name info")
 	}
 	return &BlobInfo{
-		Name:         header.Name,
-		PublicKey:    nameInfo.PublicKey,
-		ImportHeight: nameInfo.ImportHeight,
-		EpochHeight:  header.EpochHeight,
-		SectorSize:   header.SectorSize,
-		SectorTipHash:   header.SectorTipHash,
-		Signature:    header.Signature,
-		ReservedRoot: header.ReservedRoot,
-		ReceivedAt:   header.EpochStartAt,
+		Name:          header.Name,
+		PublicKey:     nameInfo.PublicKey,
+		ImportHeight:  nameInfo.ImportHeight,
+		EpochHeight:   header.EpochHeight,
+		SectorSize:    header.SectorSize,
+		SectorTipHash: header.SectorTipHash,
+		Signature:     header.Signature,
+		ReservedRoot:  header.ReservedRoot,
+		ReceivedAt:    header.EpochStartAt,
 	}, nil
 }
 

@@ -6,13 +6,14 @@ import (
 	"fnd/cli"
 	"fnd/rpc"
 	apiv1 "fnd/rpc/v1"
+	"os"
+	"strconv"
+	"strings"
+
 	"fnd.localhost/handshake/primitives"
 	"github.com/olekukonko/tablewriter"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
-	"os"
-	"strconv"
-	"strings"
 )
 
 var infoCmd = &cobra.Command{
@@ -59,6 +60,7 @@ var infoCmd = &cobra.Command{
 				res.ReservedRoot.String(),
 				res.ReceivedAt.String(),
 				res.Signature.String(),
+				strconv.FormatBool(res.Banned),
 			})
 		}
 
