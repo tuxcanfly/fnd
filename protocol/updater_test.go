@@ -115,7 +115,7 @@ func TestUpdater(t *testing.T) {
 					if err := store.SetInitialImportCompleteTx(tx); err != nil {
 						return err
 					}
-					if err := store.SetNameInfoTx(tx, name, setup.tp.RemoteSigner.Pub(), 10); err != nil {
+					if err := store.SetNameInfoTx(tx, name, setup.tp.RemoteSigner.Pub(), 10, false); err != nil {
 						return err
 					}
 					return nil
@@ -193,7 +193,7 @@ func TestUpdater(t *testing.T) {
 				// above), so it generates an invalid signature.
 				require.NoError(t, store.WithTx(setup.ls.DB, func(tx *leveldb.Transaction) error {
 					// TODO: ideally setup a fake signer
-					if err := store.SetNameInfoTx(tx, name, setup.tp.LocalSigner.Pub(), 10); err != nil {
+					if err := store.SetNameInfoTx(tx, name, setup.tp.LocalSigner.Pub(), 10, false); err != nil {
 						return err
 					}
 					return nil
@@ -386,7 +386,7 @@ func TestUpdater(t *testing.T) {
 				if err := store.SetInitialImportCompleteTx(tx); err != nil {
 					return err
 				}
-				if err := store.SetNameInfoTx(tx, name, testPeers.RemoteSigner.Pub(), 10); err != nil {
+				if err := store.SetNameInfoTx(tx, name, testPeers.RemoteSigner.Pub(), 10, false); err != nil {
 					return err
 				}
 				return nil
@@ -655,7 +655,7 @@ func TestEpoch(t *testing.T) {
 				if err := store.SetInitialImportCompleteTx(tx); err != nil {
 					return err
 				}
-				if err := store.SetNameInfoTx(tx, name, testPeers.RemoteSigner.Pub(), 10); err != nil {
+				if err := store.SetNameInfoTx(tx, name, testPeers.RemoteSigner.Pub(), 10, false); err != nil {
 					return err
 				}
 				return nil
