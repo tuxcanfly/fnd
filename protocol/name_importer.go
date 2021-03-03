@@ -2,21 +2,22 @@ package protocol
 
 import (
 	"bytes"
-	"encoding/hex"
 	"encoding/base64"
+	"encoding/hex"
 	"fmt"
-	"github.com/btcsuite/btcd/btcec"
 	"fnd/config"
 	"fnd/log"
 	"fnd/store"
-	"fnd.localhost/handshake/client"
-	"fnd.localhost/handshake/dns"
-	"fnd.localhost/handshake/primitives"
-	"github.com/pkg/errors"
-	"github.com/syndtr/goleveldb/leveldb"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"fnd.localhost/handshake/client"
+	"fnd.localhost/handshake/dns"
+	"fnd.localhost/handshake/primitives"
+	"github.com/btcsuite/btcd/btcec"
+	"github.com/pkg/errors"
+	"github.com/syndtr/goleveldb/leveldb"
 )
 
 type NameImporter struct {
@@ -136,7 +137,7 @@ func (n *NameImporter) doSync() {
 
 			err := store.WithTx(n.db, func(tx *leveldb.Transaction) error {
 				for i, record := range records {
-					if err := store.SetNameInfoTx(tx, names[i], record.PublicKey, blockHeight); err != nil {
+					if err := store.SetNameInfoTx(tx, names[i], record.PublicKey, blockHeight, record.TxIndex, record.OutputIndex); err != nil {
 						return errors.Wrap(err, "error inserting name info")
 					}
 				}
@@ -197,15 +198,17 @@ func (n *NameImporter) fetchBlocks(start int, count int) ([]*primitives.Block, e
 }
 
 type FNRecord struct {
-	NameHash  string
-	PublicKey *btcec.PublicKey
+	NameHash    string
+	PublicKey   *btcec.PublicKey
+	TxIndex     int
+	OutputIndex int
 }
 
 func ExtractTXTRecordsBlock(block *primitives.Block) []*FNRecord {
 	uniqRecords := make(map[string]*FNRecord)
 	var order []string
-	for _, tx := range block.Transactions {
-		records := ExtractTXTRecordsTx(tx)
+	for i, tx := range block.Transactions {
+		records := ExtractTXTRecordsTx(tx, i)
 		for _, rec := range records {
 			if _, ok := uniqRecords[rec.NameHash]; !ok {
 				order = append(order, rec.NameHash)
@@ -220,9 +223,9 @@ func ExtractTXTRecordsBlock(block *primitives.Block) []*FNRecord {
 	return out
 }
 
-func ExtractTXTRecordsTx(tx *primitives.Transaction) []*FNRecord {
+func ExtractTXTRecordsTx(tx *primitives.Transaction, index int) []*FNRecord {
 	var out []*FNRecord
-	for _, vOut := range tx.Outputs {
+	for i, vOut := range tx.Outputs {
 		covenant := vOut.Covenant
 		var resource *dns.Resource
 		var nh []byte
@@ -268,8 +271,10 @@ func ExtractTXTRecordsTx(tx *primitives.Transaction) []*FNRecord {
 		}
 
 		out = append(out, &FNRecord{
-			NameHash:  hex.EncodeToString(nh),
-			PublicKey: pub,
+			NameHash:    hex.EncodeToString(nh),
+			PublicKey:   pub,
+			TxIndex:     index,
+			OutputIndex: i,
 		})
 	}
 	return out

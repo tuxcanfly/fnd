@@ -52,11 +52,11 @@ func TestUpdateQueue_Enqueue_InvalidBeforeEnqueue(t *testing.T) {
 		if err := store.BanName(tx, "banned"); err != nil {
 			return err
 		}
-		if err := store.SetNameInfoTx(tx, "banned", pub, 10); err != nil {
+		if err := store.SetNameInfoTx(tx, "banned", pub, 10, 0, 0); err != nil {
 			return err
 		}
 		for _, header := range headers {
-			if err := store.SetNameInfoTx(tx, header.Name, pub, 10); err != nil {
+			if err := store.SetNameInfoTx(tx, header.Name, pub, 10, 0, 0); err != nil {
 				return err
 			}
 			if err := store.SetHeaderTx(tx, header, blob.ZeroSectorHashes); err != nil {
@@ -129,7 +129,7 @@ func TestUpdateQueue_Enqueue_InvalidAfterEnqueue(t *testing.T) {
 		if err := store.SetInitialImportCompleteTx(tx); err != nil {
 			return err
 		}
-		if err := store.SetNameInfoTx(tx, header.Name, pub, 10); err != nil {
+		if err := store.SetNameInfoTx(tx, header.Name, pub, 10, 0, 0); err != nil {
 			return err
 		}
 		if err := store.SetHeaderTx(tx, header, blob.ZeroSectorHashes); err != nil {
@@ -167,7 +167,7 @@ func TestUpdateQueue_EnqueueDequeue(t *testing.T) {
 		if err := store.SetInitialImportCompleteTx(tx); err != nil {
 			return err
 		}
-		if err := store.SetNameInfoTx(tx, header.Name, pub, 10); err != nil {
+		if err := store.SetNameInfoTx(tx, header.Name, pub, 10, 0, 0); err != nil {
 			return err
 		}
 		if err := store.SetHeaderTx(tx, header, blob.ZeroSectorHashes); err != nil {
