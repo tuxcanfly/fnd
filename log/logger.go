@@ -95,7 +95,7 @@ func SetLevel(level Level) {
 }
 
 func SetOutput(filename string) error {
-	f, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE, 0755)
+	f, err := os.OpenFile(filename, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0755)
 	if err != nil {
 	}
 	rootLogger.backend.(*logrus.Logger).SetOutput(f)

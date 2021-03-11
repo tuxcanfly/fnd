@@ -39,10 +39,12 @@ import (
 )
 
 var (
+	initialize        bool
 	name              string
 	connection        *grpc.ClientConn
 	configuredHomeDir string
 	pubkey            string
+	lgr               log.Logger
 )
 
 var rootCmd = &cobra.Command{
@@ -53,6 +55,7 @@ var rootCmd = &cobra.Command{
 		cfg, err := config.ReadConfigFile(configuredHomeDir)
 		var perr *os.PathError
 		if errors.As(err, &perr) && os.IsNotExist(perr) {
+			initialize = true
 			if err := config.InitHomeDir(configuredHomeDir); err != nil {
 				return errors.Wrap(err, "error ensuring home directory")
 			}
@@ -79,7 +82,7 @@ var rootCmd = &cobra.Command{
 		}
 		log.SetLevel(logLevel)
 		log.SetOutput(path.Join(configuredHomeDir, "debug.log"))
-		lgr := log.WithModule("main")
+		lgr = log.WithModule("main")
 
 		lgr.Info("starting fnd", "git_commit", version.GitCommit, "git_tag", version.GitTag)
 		lgr.Info("opening home directory", "path", configuredHomeDir)
@@ -282,12 +285,12 @@ var rootCmd = &cobra.Command{
 
 		connection, err = cli.DialRPC()
 		if err != nil {
-			log.WithModule("fnd").Fatal(err.Error())
+			lgr.Fatal(err.Error())
 		}
 
 		g, err := gocui.NewGui(gocui.OutputNormal)
 		if err != nil {
-			log.WithModule("fnd").Fatal(err.Error())
+			lgr.Fatal(err.Error())
 		}
 		defer g.Close()
 
@@ -295,6 +298,9 @@ var rootCmd = &cobra.Command{
 		g.SetKeybinding("name", gocui.KeyEnter, gocui.ModNone, Connect)
 		g.SetKeybinding("input", gocui.KeyEnter, gocui.ModNone, Send)
 		g.SetKeybinding("", gocui.KeyCtrlC, gocui.ModNone, Disconnect)
+		if !initialize {
+			g.Update(sync)
+		}
 		g.MainLoop()
 
 		sig := <-sigs
@@ -331,7 +337,7 @@ func Layout(g *gocui.Gui) error {
 		if err != gocui.ErrUnknownView {
 			return err
 		}
-		input.Title = " send: "
+		input.Title = fmt.Sprintf(" [ %s ] send: ", name)
 		input.Autoscroll = false
 		input.Wrap = true
 		input.Editable = true
@@ -346,15 +352,19 @@ func Layout(g *gocui.Gui) error {
 		users.Wrap = true
 	}
 
-	if name, err := g.SetView("name", maxX/2-10, maxY/2-1, maxX/2+10, maxY/2+1); err != nil {
-		if err != gocui.ErrUnknownView {
-			return err
+	if initialize {
+		if name, err := g.SetView("name", maxX/2-10, maxY/2-1, maxX/2+10, maxY/2+1); err != nil {
+			if err != gocui.ErrUnknownView {
+				return err
+			}
+			g.SetCurrentView("name")
+			name.Title = " name: "
+			name.Autoscroll = false
+			name.Wrap = true
+			name.Editable = true
 		}
-		g.SetCurrentView("name")
-		name.Title = " name: "
-		name.Autoscroll = false
-		name.Wrap = true
-		name.Editable = true
+	} else {
+		g.SetCurrentView("input")
 	}
 	return nil
 }
@@ -369,13 +379,14 @@ func Disconnect(g *gocui.Gui, v *gocui.View) error {
 func Send(g *gocui.Gui, v *gocui.View) error {
 	signer, err := cli.GetSigner(configuredHomeDir)
 	if err != nil {
-		log.WithModule("fnd").Fatal(err.Error())
+		lgr.Fatal(err.Error())
 	}
 
+	lgr.Debug("name", name)
 	writer := rpc.NewBlobWriter(apiv1.NewFootnotev1Client(connection), signer, name)
 
 	if err := writer.Open(); err != nil {
-		log.WithModule("fnd").Fatal(err.Error())
+		lgr.Fatal(err.Error())
 	}
 
 	ts := []byte("\n" + strconv.FormatInt(time.Now().UTC().Unix(), 10) + ": ")
@@ -387,13 +398,13 @@ func Send(g *gocui.Gui, v *gocui.View) error {
 			if err == io.EOF {
 				break
 			}
-			log.WithModule("fnd").Fatal(err.Error())
+			lgr.Fatal(err.Error())
 		}
 		writer.WriteSector(sector[:])
 	}
 	_, err = writer.Commit(true)
 	if err != nil {
-		log.WithModule("fnd").Fatal(err.Error())
+		lgr.Fatal(err.Error())
 	}
 
 	g.Update(func(g *gocui.Gui) error {
@@ -414,10 +425,26 @@ func Connect(g *gocui.Gui, v *gocui.View) error {
 	g.SetViewOnTop("identity")
 	g.SetCurrentView("input")
 
+	name = strings.TrimSpace(v.Buffer())
+	err := config.WriteName(configuredHomeDir, name)
+	lgr.Error(err.Error())
+
+	sync(g)
+	return nil
+}
+
+func sync(g *gocui.Gui) error {
+	var err error
+	name, err = config.ReadName(configuredHomeDir)
+
+	if err != nil {
+		return err
+	}
 	identityView, _ := g.View("identity")
 	fmt.Fprintln(identityView, pubkey)
 
-	name = strings.TrimSpace(v.Buffer())
+	inputView, _ := g.View("input")
+	inputView.Title = fmt.Sprintf(" [ %s ] send: ", name)
 
 	go func() {
 		for {
@@ -437,7 +464,7 @@ func Connect(g *gocui.Gui, v *gocui.View) error {
 				buffer := make([]byte, blob.SectorBytes*info.SectorSize)
 				_, err := reader.Read(buffer)
 				if err != nil && err != io.EOF {
-					log.WithModule("fnd").Fatal(err.Error())
+					lgr.Fatal(err.Error())
 				}
 				msg := string(buffer)
 				g.Update(func(g *gocui.Gui) error {
@@ -449,7 +476,7 @@ func Connect(g *gocui.Gui, v *gocui.View) error {
 				return true
 			})
 			if err != nil {
-				log.WithModule("fnd").Fatal(err.Error())
+				lgr.Fatal(err.Error())
 			}
 
 			g.Update(func(g *gocui.Gui) error {
@@ -460,7 +487,6 @@ func Connect(g *gocui.Gui, v *gocui.View) error {
 			})
 		}
 	}()
-
 	return nil
 }
 

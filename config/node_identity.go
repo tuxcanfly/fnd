@@ -1,14 +1,16 @@
 package config
 
 import (
-	"github.com/btcsuite/btcd/btcec"
-	"github.com/pkg/errors"
 	"io/ioutil"
 	"path"
+
+	"github.com/btcsuite/btcd/btcec"
+	"github.com/pkg/errors"
 )
 
 const (
 	IdentityFilename = "identity"
+	NameFilename     = "name"
 )
 
 type Identity struct {
@@ -46,6 +48,11 @@ func WriteIdentity(homePath string, id *Identity) error {
 	return ioutil.WriteFile(idPath, data, 0644)
 }
 
+func WriteName(homePath string, name string) error {
+	namePath := path.Join(homePath, NameFilename)
+	return ioutil.WriteFile(namePath, []byte(name), 0644)
+}
+
 func ReadNodeIdentity(homePath string) (*Identity, error) {
 	idPath := path.Join(homePath, IdentityFilename)
 	data, err := ioutil.ReadFile(idPath)
@@ -56,4 +63,13 @@ func ReadNodeIdentity(homePath string) (*Identity, error) {
 	id := &Identity{}
 	err = id.UnmarshalBinary(data)
 	return id, err
+}
+
+func ReadName(homePath string) (string, error) {
+	namePath := path.Join(homePath, NameFilename)
+	data, err := ioutil.ReadFile(namePath)
+	if err != nil {
+		return "", err
+	}
+	return string(data), err
 }
