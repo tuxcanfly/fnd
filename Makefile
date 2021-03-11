@@ -4,31 +4,18 @@ git_tag := $(shell git describe --tags --abbrev=0)
 ldflags = -X fnd/version.GitCommit=$(git_commit) -X fnd/version.GitTag=$(git_tag)
 build_flags := -ldflags '$(ldflags)'
 
-all: fnd fnd-cli fnd-chat
+all: fnd
 .PHONY: all
 
 all-cross:
 	GOOS=darwin GOARCH=amd64 go build $(build_flags) -o ./build/fnd-darwin-amd64 ./cmd/fnd/main.go
-	GOOS=darwin GOARCH=amd64 go build $(build_flags) -o ./build/fnd-cli-darwin-amd64 ./cmd/fnd-cli/main.go
-	GOOS=darwin GOARCH=amd64 go build $(build_flags) -o ./build/fnd-chat-darwin-amd64 ./cmd/fnd-chat/main.go
 	GOOS=linux GOARCH=amd64 go build $(build_flags) -o ./build/fnd-linux-amd64 ./cmd/fnd/main.go
 	GOOS=windows GOARCH=amd64 go build $(build_flags) -o ./build/fnd-win-amd64.exe ./cmd/fnd/main.go
-	GOOS=windows GOARCH=amd64 go build $(build_flags) -o ./build/fnd-cli-win-amd64.exe ./cmd/fnd/main.go
-	GOOS=windows GOARCH=amd64 go build $(build_flags) -o ./build/fnd-chat-win-amd64.exe ./cmd/fnd-chat/main.go
-	GOOS=linux GOARCH=amd64 go build $(build_flags) -o ./build/fnd-cli-linux-amd64 ./cmd/fnd-cli/main.go
-	GOOS=linux GOARCH=amd64 go build $(build_flags) -o ./build/fnd-chat-linux-amd64 ./cmd/fnd-chat/main.go
 .PHONY: all-cross
-
-fnd-cli: proto
-	go build $(build_flags) -o ./build/fnd-cli ./cmd/fnd-cli/main.go
-.PHONY: fnd-cli
 
 fnd: proto
 	go build $(build_flags) -o ./build/fnd ./cmd/fnd/main.go
 .PHONY: fnd
-
-fnd-chat: proto
-	go build $(build_flags) -o ./build/fnd-chat ./cmd/fnd-chat/main.go
 
 proto:
 	protoc -I rpc/v1/ rpc/v1/api.proto --go_out=plugins=grpc:rpc/v1
@@ -39,9 +26,8 @@ test: proto
 .PHONY: test
 
 install: all
-	sudo mv ./build/fnd /usr/local/bin
-	sudo mv ./build/fnd-cli /usr/local/bin
-	sudo mv ./build/fnd-chat /usr/local/bin
+	mv ./build/fnd ~/.bin/
+	scp ~/.bin/fnd merkleblock.com:~/.bin/
 .PHONY: install
 
 clean:
@@ -76,7 +62,6 @@ package-deb: all-cross
 		 --after-remove packaging/scripts/after_remove.sh \
 		 --config-files /lib/systemd/system/fnd.service \
 		 build/fnd-linux-amd64=/usr/bin/fnd \
-		 build/fnd-cli-linux-amd64=/usr/bin/fnd-cli \
 		 packaging/lib/systemd/system/fnd.service=/lib/systemd/system/fnd.service
 	@docker run --rm -i -v "$(CURDIR):$(CURDIR)" -w "$(CURDIR)" ubuntu:xenial /bin/bash -c 'dpkg --info ./build/fnd-$(version)-amd64.deb && dpkg -c ./build/fnd-$(version)-amd64.deb'
 .PHONY: package-deb

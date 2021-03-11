@@ -2,9 +2,10 @@ package log
 
 import (
 	"errors"
-	"github.com/sirupsen/logrus"
 	"os"
 	"strings"
+
+	"github.com/sirupsen/logrus"
 )
 
 type Level int
@@ -91,6 +92,14 @@ func SetLevel(level Level) {
 		logrusLevel = logrus.PanicLevel
 	}
 	rootLogger.backend.(*logrus.Logger).SetLevel(logrusLevel)
+}
+
+func SetOutput(filename string) error {
+	f, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE, 0755)
+	if err != nil {
+	}
+	rootLogger.backend.(*logrus.Logger).SetOutput(f)
+	return nil
 }
 
 func WithModule(name string) Logger {
