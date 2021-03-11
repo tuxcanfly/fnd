@@ -275,7 +275,7 @@ var rootCmd = &cobra.Command{
 		sigs := make(chan os.Signal, 1)
 		signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 
-		connection, err = cli.DialRPC(rootCmd)
+		connection, err = cli.DialRPC()
 		if err != nil {
 			log.WithModule("fnd").Fatal(err.Error())
 		}

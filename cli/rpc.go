@@ -1,14 +1,14 @@
 package cli
 
 import (
-	"github.com/spf13/cobra"
-	"google.golang.org/grpc"
 	"net"
 	"strconv"
+
+	"google.golang.org/grpc"
 )
 
-func DialRPC(cmd *cobra.Command) (*grpc.ClientConn, error) {
-	rpcHost, _ := cmd.Flags().GetString(FlagRPCHost)
-	rpcPort, _ := cmd.Flags().GetInt(FlagRPCPort)
+func DialRPC() (*grpc.ClientConn, error) {
+	rpcHost := "127.0.0.1"
+	rpcPort := 9098
 	return grpc.Dial(net.JoinHostPort(rpcHost, strconv.Itoa(rpcPort)), grpc.WithInsecure())
 }
