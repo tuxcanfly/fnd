@@ -285,12 +285,12 @@ var rootCmd = &cobra.Command{
 
 		connection, err = cli.DialRPC()
 		if err != nil {
-			lgr.Fatal(err.Error())
+			lgr.Warn(err.Error())
 		}
 
 		g, err := gocui.NewGui(gocui.OutputNormal)
 		if err != nil {
-			lgr.Fatal(err.Error())
+			lgr.Warn(err.Error())
 		}
 		defer g.Close()
 
@@ -321,6 +321,16 @@ func Layout(g *gocui.Gui) error {
 		messages.Title = " messages: "
 		messages.Autoscroll = true
 		messages.Wrap = true
+	}
+
+	if status, err := g.SetView("status", 0, maxY-15, maxX-20, maxY-12); err != nil {
+		if err != gocui.ErrUnknownView {
+			return err
+		}
+		status.Title = " status: "
+		status.Autoscroll = false
+		status.Wrap = true
+		status.Editable = false
 	}
 
 	if identity, err := g.SetView("identity", 0, maxY-10, maxX-20, maxY-8); err != nil {
@@ -377,16 +387,20 @@ func Disconnect(g *gocui.Gui, v *gocui.View) error {
 
 // Send message
 func Send(g *gocui.Gui, v *gocui.View) error {
+	statusView, _ := g.View("status")
+
 	signer, err := cli.GetSigner(configuredHomeDir)
 	if err != nil {
-		lgr.Fatal(err.Error())
+		lgr.Warn(err.Error())
+		fmt.Fprintln(statusView, err)
 	}
 
 	lgr.Debug("name", name)
 	writer := rpc.NewBlobWriter(apiv1.NewFootnotev1Client(connection), signer, name)
 
 	if err := writer.Open(); err != nil {
-		lgr.Fatal(err.Error())
+		lgr.Warn(err.Error())
+		fmt.Fprintln(statusView, err)
 	}
 
 	ts := []byte("\n" + strconv.FormatInt(time.Now().UTC().Unix(), 10) + ": ")
@@ -398,13 +412,15 @@ func Send(g *gocui.Gui, v *gocui.View) error {
 			if err == io.EOF {
 				break
 			}
-			lgr.Fatal(err.Error())
+			lgr.Warn(err.Error())
+			fmt.Fprintln(statusView, err)
 		}
 		writer.WriteSector(sector[:])
 	}
 	_, err = writer.Commit(true)
 	if err != nil {
-		lgr.Fatal(err.Error())
+		lgr.Warn(err.Error())
+		fmt.Fprintln(statusView, err)
 	}
 
 	g.Update(func(g *gocui.Gui) error {
@@ -421,13 +437,16 @@ func Connect(g *gocui.Gui, v *gocui.View) error {
 	// Some UI changes
 	g.SetViewOnTop("messages")
 	g.SetViewOnTop("users")
-	g.SetViewOnTop("input")
+	g.SetViewOnTop("status")
 	g.SetViewOnTop("identity")
+	g.SetViewOnTop("input")
 	g.SetCurrentView("input")
 
 	name = strings.TrimSpace(v.Buffer())
 	err := config.WriteName(configuredHomeDir, name)
-	lgr.Error(err.Error())
+
+	statusView, _ := g.View("status")
+	fmt.Fprintln(statusView, err)
 
 	sync(g)
 	return nil
@@ -445,6 +464,8 @@ func sync(g *gocui.Gui) error {
 
 	inputView, _ := g.View("input")
 	inputView.Title = fmt.Sprintf(" [ %s ] send: ", name)
+
+	statusView, _ := g.View("status")
 
 	go func() {
 		for {
@@ -464,7 +485,8 @@ func sync(g *gocui.Gui) error {
 				buffer := make([]byte, blob.SectorBytes*info.SectorSize)
 				_, err := reader.Read(buffer)
 				if err != nil && err != io.EOF {
-					lgr.Fatal(err.Error())
+					lgr.Warn(err.Error())
+					fmt.Fprintln(statusView, err)
 				}
 				msg := string(buffer)
 				g.Update(func(g *gocui.Gui) error {
@@ -476,7 +498,8 @@ func sync(g *gocui.Gui) error {
 				return true
 			})
 			if err != nil {
-				lgr.Fatal(err.Error())
+				lgr.Warn(err.Error())
+				fmt.Fprintln(statusView, err)
 			}
 
 			g.Update(func(g *gocui.Gui) error {
