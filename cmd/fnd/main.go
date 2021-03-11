@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"encoding/base64"
 	"fmt"
 	"fnd/blob"
 	"fnd/cli"
@@ -41,6 +42,7 @@ var (
 	name              string
 	connection        *grpc.ClientConn
 	configuredHomeDir string
+	pubkey            string
 )
 
 var rootCmd = &cobra.Command{
@@ -61,6 +63,13 @@ var rootCmd = &cobra.Command{
 		} else if err != nil {
 			return errors.Wrap(err, "error reading config file")
 		}
+		signer, err := cli.GetSigner(configuredHomeDir)
+		if err != nil {
+			return errors.Wrap(err, "error opening home directory")
+		}
+
+		pubkey = base64.StdEncoding.EncodeToString(signer.Pub().SerializeCompressed())
+
 		rpcHost := cfg.RPC.Host
 		rpcPort := cfg.RPC.Port
 		p2pHost := cfg.P2P.Host
@@ -74,10 +83,6 @@ var rootCmd = &cobra.Command{
 
 		lgr.Info("starting fnd", "git_commit", version.GitCommit, "git_tag", version.GitTag)
 		lgr.Info("opening home directory", "path", configuredHomeDir)
-		signer, err := cli.GetSigner(configuredHomeDir)
-		if err != nil {
-			return errors.Wrap(err, "error opening home directory")
-		}
 
 		dbPath := config.ExpandDBPath(configuredHomeDir)
 		lgr.Info("opening db", "path", dbPath)
@@ -312,7 +317,17 @@ func Layout(g *gocui.Gui) error {
 		messages.Wrap = true
 	}
 
-	if input, err := g.SetView("input", 0, maxY-5, maxX-20, maxY-1); err != nil {
+	if identity, err := g.SetView("identity", 0, maxY-10, maxX-20, maxY-8); err != nil {
+		if err != gocui.ErrUnknownView {
+			return err
+		}
+		identity.Title = " identity: "
+		identity.Autoscroll = false
+		identity.Wrap = true
+		identity.Editable = false
+	}
+
+	if input, err := g.SetView("input", 0, maxY-5, maxX-20, maxY-2); err != nil {
 		if err != gocui.ErrUnknownView {
 			return err
 		}
@@ -396,7 +411,11 @@ func Connect(g *gocui.Gui, v *gocui.View) error {
 	g.SetViewOnTop("messages")
 	g.SetViewOnTop("users")
 	g.SetViewOnTop("input")
+	g.SetViewOnTop("identity")
 	g.SetCurrentView("input")
+
+	identityView, _ := g.View("identity")
+	fmt.Fprintln(identityView, pubkey)
 
 	name = strings.TrimSpace(v.Buffer())
 
