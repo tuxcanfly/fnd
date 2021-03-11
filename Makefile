@@ -4,16 +4,19 @@ git_tag := $(shell git describe --tags --abbrev=0)
 ldflags = -X fnd/version.GitCommit=$(git_commit) -X fnd/version.GitTag=$(git_tag)
 build_flags := -ldflags '$(ldflags)'
 
-all: fnd fnd-cli
+all: fnd fnd-cli fnd-chat
 .PHONY: all
 
 all-cross:
 	GOOS=darwin GOARCH=amd64 go build $(build_flags) -o ./build/fnd-darwin-amd64 ./cmd/fnd/main.go
 	GOOS=darwin GOARCH=amd64 go build $(build_flags) -o ./build/fnd-cli-darwin-amd64 ./cmd/fnd-cli/main.go
+	GOOS=darwin GOARCH=amd64 go build $(build_flags) -o ./build/fnd-chat-darwin-amd64 ./cmd/fnd-chat/main.go
 	GOOS=linux GOARCH=amd64 go build $(build_flags) -o ./build/fnd-linux-amd64 ./cmd/fnd/main.go
 	GOOS=windows GOARCH=amd64 go build $(build_flags) -o ./build/fnd-win-amd64.exe ./cmd/fnd/main.go
 	GOOS=windows GOARCH=amd64 go build $(build_flags) -o ./build/fnd-cli-win-amd64.exe ./cmd/fnd/main.go
+	GOOS=windows GOARCH=amd64 go build $(build_flags) -o ./build/fnd-chat-win-amd64.exe ./cmd/fnd-chat/main.go
 	GOOS=linux GOARCH=amd64 go build $(build_flags) -o ./build/fnd-cli-linux-amd64 ./cmd/fnd-cli/main.go
+	GOOS=linux GOARCH=amd64 go build $(build_flags) -o ./build/fnd-chat-linux-amd64 ./cmd/fnd-chat/main.go
 .PHONY: all-cross
 
 fnd-cli: proto
@@ -23,6 +26,9 @@ fnd-cli: proto
 fnd: proto
 	go build $(build_flags) -o ./build/fnd ./cmd/fnd/main.go
 .PHONY: fnd
+
+fnd-chat: proto
+	go build $(build_flags) -o ./build/fnd-chat ./cmd/fnd-chat/main.go
 
 proto:
 	protoc -I rpc/v1/ rpc/v1/api.proto --go_out=plugins=grpc:rpc/v1
@@ -35,6 +41,7 @@ test: proto
 install: all
 	sudo mv ./build/fnd /usr/local/bin
 	sudo mv ./build/fnd-cli /usr/local/bin
+	sudo mv ./build/fnd-chat /usr/local/bin
 .PHONY: install
 
 clean:
