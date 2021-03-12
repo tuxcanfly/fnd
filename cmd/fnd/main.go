@@ -283,6 +283,11 @@ var rootCmd = &cobra.Command{
 		sigs := make(chan os.Signal, 1)
 		signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 
+		go func() {
+			sig := <-sigs
+			lgr.Info("shutting down", "signal", sig)
+		}()
+
 		connection, err = cli.DialRPC()
 		if err != nil {
 			lgr.Warn(err.Error())
@@ -303,8 +308,6 @@ var rootCmd = &cobra.Command{
 		}
 		g.MainLoop()
 
-		sig := <-sigs
-		lgr.Info("shutting down", "signal", sig)
 		return nil
 	},
 }
