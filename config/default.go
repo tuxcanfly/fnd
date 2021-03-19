@@ -3,11 +3,12 @@ package config
 import (
 	"bytes"
 	"fnd/log"
-	"github.com/pkg/errors"
 	"io"
 	"os"
 	"path"
 	"text/template"
+
+	"github.com/pkg/errors"
 )
 
 var DefaultConfig = Config{
@@ -19,12 +20,9 @@ var DefaultConfig = Config{
 		URL:     "",
 	},
 	P2P: P2PConfig{
-		Host: "0.0.0.0",
-		DNSSeeds: []string{},
-		FixedSeeds:          []string{
-			"3b755ceafc5811f0a50e102c96169b062ad1295edea0adf675e8647963acf89e@64.225.89.142",
-			"e3c8cfea75ff146db0b93c51cf8967242c43170dac702aec268ed566f4aa6f4b@45.55.99.2",
-		},
+		Host:                "0.0.0.0",
+		DNSSeeds:            []string{"seeds-test.merkleblock.com"},
+		FixedSeeds:          []string{},
 		MaxInboundPeers:     117,
 		MaxOutboundPeers:    8,
 		ConnectionTimeoutMS: 5000,
