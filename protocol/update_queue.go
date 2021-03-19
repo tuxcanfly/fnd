@@ -163,10 +163,12 @@ func (u *UpdateQueue) Enqueue(peerID crypto.Hash, update *wire.Update) error {
 		return nil
 	}
 
+	// Ignore updates for epochs below ours, if entry already exists
 	if entry.EpochHeight > update.EpochHeight {
 		return ErrUpdateQueueEpochUpdated
 	}
 
+	// Ignore updates for sectors below ours, if entry already exists
 	if entry.EpochHeight == update.EpochHeight {
 		if entry.SectorSize > update.SectorSize {
 			return ErrUpdateQueueStaleSector
