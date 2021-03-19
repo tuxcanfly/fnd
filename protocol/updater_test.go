@@ -8,6 +8,7 @@ import (
 	"fnd/store"
 	"fnd/testutil/mockapp"
 	"fnd/util"
+	"io"
 	"testing"
 	"time"
 
@@ -75,8 +76,12 @@ func TestUpdater(t *testing.T) {
 					epochHeight,
 					sectorSize,
 					ts.Add(-48*time.Hour),
-					mockapp.NullReader,
+					mockapp.LoremIpsumReader,
 				)
+				// Seek the reader to the start so that the update does not equivocate
+				// i.e. it generates an update on top of the local blob
+				_, err := mockapp.LoremIpsumReader.Seek(0, io.SeekStart)
+				require.NoError(t, err)
 				// create the new blob remotely
 				update := mockapp.FillBlobReader(
 					t,
@@ -87,7 +92,7 @@ func TestUpdater(t *testing.T) {
 					epochHeight,
 					sectorSize+10,
 					ts,
-					mockapp.NullReader,
+					mockapp.LoremIpsumReader,
 				)
 				cfg := &UpdateConfig{
 					Mux:        setup.tp.LocalMux,
@@ -123,7 +128,7 @@ func TestUpdater(t *testing.T) {
 					epochHeight,
 					sectorSize,
 					ts.Add(-48*time.Hour),
-					mockapp.NullReader,
+					mockapp.LoremIpsumReader,
 				)
 				// create the new blob remotely
 				update := mockapp.FillBlobReader(
@@ -135,7 +140,7 @@ func TestUpdater(t *testing.T) {
 					epochHeight+1,
 					sectorSize,
 					ts,
-					mockapp.NullReader,
+					mockapp.LoremIpsumReader,
 				)
 				cfg := &UpdateConfig{
 					Mux:        setup.tp.LocalMux,
@@ -233,12 +238,11 @@ func TestUpdater(t *testing.T) {
 					epochHeight,
 					sectorSize,
 					ts.Add(-48*time.Hour),
-					mockapp.NullReader,
+					mockapp.LoremIpsumReader,
 				)
-				// The sectors are generated from null reader, so there won't
-				// be an equivocation, however we use local signer on the
-				// remote (instead of remote signer like other test cases
-				// above), so it generates an invalid signature.
+				// Use local signer on the remote (instead of remote signer
+				// like other test cases above), so it generates an invalid
+				// signature.
 				require.NoError(t, store.WithTx(setup.ls.DB, func(tx *leveldb.Transaction) error {
 					// TODO: ideally setup a fake signer
 					if err := store.SetNameInfoTx(tx, name, setup.tp.LocalSigner.Pub(), 10); err != nil {
@@ -255,7 +259,7 @@ func TestUpdater(t *testing.T) {
 					epochHeight,
 					sectorSize+10,
 					ts,
-					mockapp.NullReader,
+					mockapp.LoremIpsumReader,
 				)
 				cfg := &UpdateConfig{
 					Mux:        setup.tp.LocalMux,
