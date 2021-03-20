@@ -3,11 +3,12 @@ package config
 import (
 	"bytes"
 	"fnd/log"
-	"github.com/pkg/errors"
 	"io"
 	"os"
 	"path"
 	"text/template"
+
+	"github.com/pkg/errors"
 )
 
 var DefaultConfig = Config{
@@ -19,12 +20,9 @@ var DefaultConfig = Config{
 		URL:     "",
 	},
 	P2P: P2PConfig{
-		Host: "0.0.0.0",
-		DNSSeeds: []string{},
-		FixedSeeds:          []string{
-			"3b755ceafc5811f0a50e102c96169b062ad1295edea0adf675e8647963acf89e@64.225.89.142",
-			"e3c8cfea75ff146db0b93c51cf8967242c43170dac702aec268ed566f4aa6f4b@45.55.99.2",
-		},
+		Host:                "0.0.0.0",
+		DNSSeeds:            []string{"seeds-test.merkleblock.com"},
+		FixedSeeds:          []string{},
 		MaxInboundPeers:     117,
 		MaxOutboundPeers:    8,
 		ConnectionTimeoutMS: 5000,
@@ -35,7 +33,7 @@ var DefaultConfig = Config{
 	},
 	HNSResolver: HNSResolverConfig{
 		Host:     "http://127.0.0.1",
-		Port:     12037,
+		Port:     15037,
 		BasePath: "",
 		APIKey:   "",
 	},
@@ -128,7 +126,7 @@ log_level = "{{.LogLevel}}"
   # Sets the set of domain names to query for seed nodes.
   # A records belonging to nodes in this list will be
   # connected to during node startup.
-  dns_seeds = []
+  dns_seeds = ["{{index .P2P.DNSSeeds 0}}"]
   # Sets the IP this node should listen on. Should be set to 0.0.0.0
   # for all Internet-accessible nodes.
   host = "{{.P2P.Host}}"
@@ -141,7 +139,7 @@ log_level = "{{.LogLevel}}"
   # default of 8 was chosen to match Bitcoin.
   max_outbound_peers = {{.P2P.MaxOutboundPeers}}
   # Sets a list of fixed seed peers. Items should be formatted as <peer-id>@<ip>.
-  seed_peers = ["{{index .P2P.FixedSeeds 0}}", "{{index .P2P.FixedSeeds 1}}"]
+  seed_peers = []
 
 # Configures the behavior of this node's RPC server.
 [rpc]
