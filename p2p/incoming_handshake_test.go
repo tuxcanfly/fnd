@@ -65,8 +65,9 @@ func TestHandleIncomingHandshake_InvalidHelloSig(t *testing.T) {
 		doneCh <- struct{}{}
 	}()
 	<-doneCh
-	setup.Close(t)
+	require.NoError(t, setup.inPeer.Close())
 	<-doneCh
+	require.NoError(t, setup.outPeer.Close())
 }
 
 func TestHandleIncomingHandshake_InvalidHelloAckNonce(t *testing.T) {
