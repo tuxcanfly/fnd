@@ -24,10 +24,11 @@ const (
 	MessageTypeNilUpdate
 	MessageTypeBlobReq
 	MessageTypeBlobRes
+	MessageTypeNameReq
+	MessageTypeNameRes
 	MessageTypePeerReq
 	MessageTypePeerRes
 	MessageTypeUpdateReq
-	MessageTypeNameRes
 	MessageTypeEquivocationProof
 )
 
@@ -47,14 +48,16 @@ func (t MessageType) String() string {
 		return "BlobReq"
 	case MessageTypeBlobRes:
 		return "BlobRes"
+	case MessageTypeNameReq:
+		return "NameReq"
+	case MessageTypeNameRes:
+		return "NameRes"
 	case MessageTypePeerReq:
 		return "PeerReq"
 	case MessageTypePeerRes:
 		return "PeerRes"
 	case MessageTypeUpdateReq:
 		return "UpdateReq"
-	case MessageTypeNameRes:
-		return "NameRes"
 	case MessageTypeEquivocationProof:
 		return "EquivocationProof"
 	default:

@@ -8,11 +8,12 @@ import (
 	"fnd/store"
 	"fnd/util"
 	"fnd/wire"
-	"github.com/pkg/errors"
-	"github.com/syndtr/goleveldb/leveldb"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/pkg/errors"
+	"github.com/syndtr/goleveldb/leveldb"
 )
 
 var (
@@ -28,14 +29,14 @@ type NameSyncer struct {
 	mux                   *p2p.PeerMuxer
 	db                    *leveldb.DB
 	nameLocker            util.MultiLocker
-	updater               *Updater
+	updater               *BlobUpdater
 	obs                   *util.Observable
 	lgr                   log.Logger
 	doneCh                chan struct{}
 	once                  sync.Once
 }
 
-func NewNameSyncer(mux *p2p.PeerMuxer, db *leveldb.DB, nameLocker util.MultiLocker, updater *Updater) *NameSyncer {
+func NewNameSyncer(mux *p2p.PeerMuxer, db *leveldb.DB, nameLocker util.MultiLocker, updater *BlobUpdater) *NameSyncer {
 	return &NameSyncer{
 		Workers:               config.DefaultConfig.Tuning.NameSyncer.Workers,
 		SampleSize:            config.DefaultConfig.Tuning.NameSyncer.SampleSize,
@@ -197,9 +198,9 @@ func (ns *NameSyncer) syncName(info *store.NameInfo) {
 	})
 
 	recips, _ := p2p.BroadcastRandom(ns.mux, ns.SampleSize, &wire.UpdateReq{
-		Name:      name,
+		Name:        name,
 		EpochHeight: epochHeight,
-		SectorSize: sectorSize,
+		SectorSize:  sectorSize,
 	})
 	sampleSize := len(recips)
 
@@ -251,7 +252,7 @@ func (ns *NameSyncer) awaitSyncCompletion(name string, receiptCount int, sampleS
 
 	var once sync.Once
 	errCh := make(chan error)
-	unsub := ns.updater.OnUpdateProcessed(func(item *UpdateQueueItem, err error) {
+	unsub := ns.updater.OnUpdateProcessed(func(item *BlobUpdateQueueItem, err error) {
 		if item.Name != name {
 			return
 		}

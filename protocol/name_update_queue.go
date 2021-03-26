@@ -19,20 +19,20 @@ import (
 )
 
 var (
-	ErrUpdateQueueMaxLen        = errors.New("update queue is at max length")
-	ErrUpdateQueueEpochUpdated  = errors.New("epoch already updated")
-	ErrUpdateQueueSectorUpdated = errors.New("sector already updated")
-	ErrUpdateQueueThrottled     = errors.New("update is throttled")
-	ErrUpdateQueueStaleSector   = errors.New("sector is stale")
-	ErrUpdateQueueSpltBrain     = errors.New("split brain")
-	ErrInitialImportIncomplete  = errors.New("initial import incomplete")
+	ErrNameUpdateQueueMaxLen        = errors.New("update queue is at max length")
+	ErrNameUpdateQueueEpochUpdated  = errors.New("epoch already updated")
+	ErrNameUpdateQueueSectorUpdated = errors.New("sector already updated")
+	ErrNameUpdateQueueThrottled     = errors.New("update is throttled")
+	ErrNameUpdateQueueStaleSector   = errors.New("sector is stale")
+	ErrNameUpdateQueueSpltBrain     = errors.New("split brain")
+	ErrNameInitialImportIncomplete  = errors.New("initial import incomplete")
 )
 
-type UpdateQueue struct {
+type NameUpdateQueue struct {
 	MaxLen   int32
 	mux      *p2p.PeerMuxer
 	db       *leveldb.DB
-	entries  map[string]*UpdateQueueItem
+	entries  map[string]*NameUpdateQueueItem
 	quitCh   chan struct{}
 	queue    []string
 	queueLen int32
@@ -40,7 +40,7 @@ type UpdateQueue struct {
 	lgr      log.Logger
 }
 
-type UpdateQueueItem struct {
+type NameUpdateQueueItem struct {
 	PeerIDs     *PeerSet
 	Name        string
 	EpochHeight uint16
@@ -50,22 +50,22 @@ type UpdateQueueItem struct {
 	Disposed    int32
 }
 
-func (u *UpdateQueueItem) Dispose() {
+func (u *NameUpdateQueueItem) Dispose() {
 	atomic.StoreInt32(&u.Disposed, 1)
 }
 
-func NewUpdateQueue(mux *p2p.PeerMuxer, db *leveldb.DB) *UpdateQueue {
-	return &UpdateQueue{
+func NewNameUpdateQueue(mux *p2p.PeerMuxer, db *leveldb.DB) *NameUpdateQueue {
+	return &NameUpdateQueue{
 		MaxLen:  int32(config.DefaultConfig.Tuning.UpdateQueue.MaxLen),
 		mux:     mux,
 		db:      db,
-		entries: make(map[string]*UpdateQueueItem),
+		entries: make(map[string]*NameUpdateQueueItem),
 		quitCh:  make(chan struct{}),
 		lgr:     log.WithModule("update-queue"),
 	}
 }
 
-func (u *UpdateQueue) Start() error {
+func (u *NameUpdateQueue) Start() error {
 	u.mux.AddMessageHandler(p2p.PeerMessageHandlerForType(wire.MessageTypeUpdate, u.onUpdate))
 	timer := time.NewTicker(5 * time.Second)
 	for {
@@ -78,18 +78,18 @@ func (u *UpdateQueue) Start() error {
 	}
 }
 
-func (u *UpdateQueue) Stop() error {
+func (u *NameUpdateQueue) Stop() error {
 	close(u.quitCh)
 	return nil
 }
 
 // TODO: prioritize equivocations first, then higher epochs and sector sizes
-func (u *UpdateQueue) Enqueue(peerID crypto.Hash, update *wire.Update) error {
+func (u *NameUpdateQueue) Enqueue(peerID crypto.Hash, update *wire.Update) error {
 	// use atomic below to prevent having to lock mu
 	// during expensive name validation calls when
 	// we can cheaply check for the queue size.
 	if atomic.LoadInt32(&u.queueLen) >= u.MaxLen {
-		return ErrUpdateQueueMaxLen
+		return ErrNameUpdateQueueMaxLen
 	}
 
 	initialImportComplete, err := store.GetInitialImportComplete(u.db)
@@ -97,16 +97,9 @@ func (u *UpdateQueue) Enqueue(peerID crypto.Hash, update *wire.Update) error {
 		return errors.Wrap(err, "error getting initial import complete")
 	}
 	if !initialImportComplete {
-		return ErrInitialImportIncomplete
+		return ErrNameInitialImportIncomplete
 	}
 
-	// An Update with SectorSize zero is a special case i.e.
-	// A Equivocation Notification Update. We need to resolve this
-	// by requesting an Equivocation Proof by using the special
-	// BlobReq Message with SectorSize MaxSectors and handling the
-	// subsequent BlobRes (which contains the Equivocation Proof).
-	// NOTE: In normal cases, Update with SectorSize zero
-	// and BlobReq with SectorSize MaxSectors doesn't make sense.
 	if update.SectorSize == 0 {
 		err := u.mux.Send(peerID, &wire.BlobReq{
 			Name:        update.Name,
@@ -136,16 +129,16 @@ func (u *UpdateQueue) Enqueue(peerID crypto.Hash, update *wire.Update) error {
 
 	// Ignore updates for epochs below ours
 	if epochHeight > update.EpochHeight {
-		return ErrUpdateQueueEpochUpdated
+		return ErrNameUpdateQueueEpochUpdated
 	}
 
 	// Ignore updates for sectors below ours, same epoch
 	if epochHeight == update.EpochHeight {
 		if sectorSize > update.SectorSize {
-			return ErrUpdateQueueStaleSector
+			return ErrNameUpdateQueueStaleSector
 		}
 		if sectorSize == update.SectorSize {
-			return ErrUpdateQueueSectorUpdated
+			return ErrNameUpdateQueueSectorUpdated
 		}
 	}
 
@@ -153,7 +146,7 @@ func (u *UpdateQueue) Enqueue(peerID crypto.Hash, update *wire.Update) error {
 	defer u.mu.Unlock()
 	entry := u.entries[update.Name]
 	if entry == nil || entry.SectorSize < update.SectorSize {
-		u.entries[update.Name] = &UpdateQueueItem{
+		u.entries[update.Name] = &NameUpdateQueueItem{
 			PeerIDs:     NewPeerSet([]crypto.Hash{peerID}),
 			Name:        update.Name,
 			EpochHeight: update.EpochHeight,
@@ -172,13 +165,13 @@ func (u *UpdateQueue) Enqueue(peerID crypto.Hash, update *wire.Update) error {
 
 	// Ignore updates for epochs below ours, if entry already exists
 	if entry.EpochHeight > update.EpochHeight {
-		return ErrUpdateQueueEpochUpdated
+		return ErrNameUpdateQueueEpochUpdated
 	}
 
 	// Ignore updates for sectors below ours, if entry already exists
 	if entry.EpochHeight == update.EpochHeight {
 		if entry.SectorSize > update.SectorSize {
-			return ErrUpdateQueueStaleSector
+			return ErrNameUpdateQueueStaleSector
 		}
 	}
 
@@ -187,7 +180,7 @@ func (u *UpdateQueue) Enqueue(peerID crypto.Hash, update *wire.Update) error {
 	return nil
 }
 
-func (u *UpdateQueue) Dequeue() *UpdateQueueItem {
+func (u *NameUpdateQueue) Dequeue() *NameUpdateQueueItem {
 	u.mu.Lock()
 	defer u.mu.Unlock()
 	if len(u.queue) == 0 {
@@ -202,14 +195,14 @@ func (u *UpdateQueue) Dequeue() *UpdateQueueItem {
 	return ret
 }
 
-func (u *UpdateQueue) onUpdate(peerID crypto.Hash, envelope *wire.Envelope) {
+func (u *NameUpdateQueue) onUpdate(peerID crypto.Hash, envelope *wire.Envelope) {
 	update := envelope.Message.(*wire.Update)
 	if err := u.Enqueue(peerID, update); err != nil {
 		u.lgr.Info("update rejected", "name", update.Name, "reason", err)
 	}
 }
 
-func (u *UpdateQueue) validateUpdate(name string) error {
+func (u *NameUpdateQueue) validateUpdate(name string) error {
 	if err := primitives.ValidateName(name); err != nil {
 		return errors.Wrap(err, "update name is invalid")
 	}
@@ -230,7 +223,7 @@ func (u *UpdateQueue) validateUpdate(name string) error {
 	return nil
 }
 
-func (u *UpdateQueue) reapDequeuedUpdates() {
+func (u *NameUpdateQueue) reapDequeuedUpdates() {
 	u.mu.Lock()
 	defer u.mu.Unlock()
 	var toDelete []string

@@ -14,10 +14,6 @@ import (
 	"fnd/store"
 	"fnd/util"
 	"fnd/version"
-	"fnd.localhost/handshake/client"
-	"github.com/pkg/errors"
-	"github.com/spf13/cobra"
-	"github.com/syndtr/goleveldb/leveldb"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
@@ -25,6 +21,11 @@ import (
 	"runtime"
 	"syscall"
 	"time"
+
+	"fnd.localhost/handshake/client"
+	"github.com/pkg/errors"
+	"github.com/spf13/cobra"
+	"github.com/syndtr/goleveldb/leveldb"
 )
 
 var startCmd = &cobra.Command{
@@ -143,12 +144,19 @@ var startCmd = &cobra.Command{
 		importer.Workers = cfg.Tuning.NameImporter.Workers
 		importer.VerificationThreshold = cfg.Tuning.NameImporter.VerificationThreshold
 
-		updateQueue := protocol.NewUpdateQueue(mux, db)
-		updateQueue.MaxLen = int32(cfg.Tuning.UpdateQueue.MaxLen)
+		nameUpdateQueue := protocol.NewNameUpdateQueue(mux, db)
+		nameUpdateQueue.MaxLen = int32(cfg.Tuning.UpdateQueue.MaxLen)
 
-		updater := protocol.NewUpdater(mux, db, updateQueue, nameLocker, bs)
-		updater.PollInterval = config.ConvertDuration(cfg.Tuning.Updater.PollIntervalMS, time.Millisecond)
-		updater.Workers = cfg.Tuning.Updater.Workers
+		blobUpdateQueue := protocol.NewBlobUpdateQueue(mux, db)
+		blobUpdateQueue.MaxLen = int32(cfg.Tuning.UpdateQueue.MaxLen)
+
+		nameUpdater := protocol.NewNameUpdater(mux, db, nameUpdateQueue, nameLocker, bs)
+		nameUpdater.PollInterval = config.ConvertDuration(cfg.Tuning.Updater.PollIntervalMS, time.Millisecond)
+		nameUpdater.Workers = cfg.Tuning.Updater.Workers
+
+		blobUpdater := protocol.NewBlobUpdater(mux, db, blobUpdateQueue, nameLocker, bs)
+		blobUpdater.PollInterval = config.ConvertDuration(cfg.Tuning.Updater.PollIntervalMS, time.Millisecond)
+		blobUpdater.Workers = cfg.Tuning.Updater.Workers
 
 		pinger := protocol.NewPinger(mux)
 
@@ -162,7 +170,7 @@ var startCmd = &cobra.Command{
 		peerExchanger.ResponseTimeout = config.ConvertDuration(cfg.Tuning.PeerExchanger.ResponseTimeoutMS, time.Millisecond)
 		peerExchanger.RequestInterval = config.ConvertDuration(cfg.Tuning.PeerExchanger.RequestIntervalMS, time.Millisecond)
 
-		nameSyncer := protocol.NewNameSyncer(mux, db, nameLocker, updater)
+		nameSyncer := protocol.NewNameSyncer(mux, db, nameLocker, blobUpdater)
 		nameSyncer.Workers = cfg.Tuning.NameSyncer.Workers
 		nameSyncer.SampleSize = cfg.Tuning.NameSyncer.SampleSize
 		nameSyncer.UpdateResponseTimeout = config.ConvertDuration(cfg.Tuning.NameSyncer.UpdateResponseTimeoutMS, time.Millisecond)
@@ -181,8 +189,10 @@ var startCmd = &cobra.Command{
 		})
 		services = append(services, []service.Service{
 			importer,
-			updateQueue,
-			updater,
+			nameUpdateQueue,
+			blobUpdateQueue,
+			nameUpdater,
+			blobUpdater,
 			pinger,
 			sectorServer,
 			updateServer,
