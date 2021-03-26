@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"context"
+	"fmt"
 	"fnd/blob"
 	"fnd/crypto"
 	"fnd/log"
@@ -469,23 +470,41 @@ func (s *Server) AddSubdomain(_ context.Context, req *apiv1.AddSubdomainReq) (*a
 		return nil, err
 	}
 
-	header, err := store.GetHeader(s.db, req.Name)
-	if err != nil {
-		return nil, err
-	}
-
-	subdomains, err := store.GetSubdomains(s.db, req.Name)
-	if err != nil {
-		return nil, err
-	}
-
-	subdomains = append(subdomains, blob.Subdomain{
+	subdomain := blob.Subdomain{
 		//ID:          req.ID,
 		Name:      req.Subdomain,
 		PublicKey: pubkey,
 		Size:      uint8(req.Size),
 		//EpochHeight: req.EpochHeight,
+	}
+
+	header, err := store.GetHeader(s.db, req.Name)
+	if err != nil {
+		return nil, err
+	}
+
+	info, err := store.GetNameInfo(s.db, req.Name)
+	if err != nil {
+		return nil, err
+	}
+	subdomains, err := store.GetSubdomains(s.db, req.Name)
+	if err != nil {
+		return nil, err
+	}
+
+	subdomains = append(subdomains, subdomain)
+
+	name := fmt.Sprintf("%s.%s", req.Name, subdomain.Name)
+	err = store.WithTx(s.db, func(tx *leveldb.Transaction) error {
+		if err := store.SetNameInfoTx(tx, name, pubkey, info.ImportHeight); err != nil {
+			return errors.Wrap(err, "error inserting name info")
+		}
+		return nil
 	})
+
+	if err != nil {
+		return nil, errors.Wrap(err, "error storing subdomain name info")
+	}
 
 	err = store.WithTx(s.db, func(tx *leveldb.Transaction) error {
 		return store.SetSubdomainTx(tx, &store.Header{
