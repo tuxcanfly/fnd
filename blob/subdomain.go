@@ -1,15 +1,17 @@
 package blob
 
 import (
+	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
 	"fnd/crypto"
+	"io"
 
 	"github.com/btcsuite/btcd/btcec"
 )
 
 type Subdomain struct {
-	ID           int              `json:"id"`
+	ID           uint8            `json:"id"`
 	Name         string           `json:"name"`
 	EpochHeight  uint16           `json:"epoch_height"`
 	Size         uint8            `json:"size"`
@@ -19,7 +21,7 @@ type Subdomain struct {
 
 func (s *Subdomain) MarshalJSON() ([]byte, error) {
 	out := &struct {
-		ID           int    `json:"id"`
+		ID           uint8  `json:"id"`
 		Name         string `json:"name"`
 		EpochHeight  uint16 `json:"epoch_height"`
 		Size         uint8  `json:"sector_size"`
@@ -39,7 +41,7 @@ func (s *Subdomain) MarshalJSON() ([]byte, error) {
 
 func (s *Subdomain) UnmarshalJSON(b []byte) error {
 	in := &struct {
-		ID           int    `json:"id"`
+		ID           uint8  `json:"id"`
 		Name         string `json:"name"`
 		EpochHeight  uint16 `json:"epoch_height"`
 		Size         uint8  `json:"size"`
@@ -77,4 +79,77 @@ func mustDecodePublicKey(in string) *btcec.PublicKey {
 		panic(err)
 	}
 	return pub
+}
+
+func (s Subdomain) Encode(w io.Writer) error {
+	err := binary.Write(w, binary.BigEndian, s.ID)
+	if err != nil {
+		return err
+	}
+	err = binary.Write(w, binary.BigEndian, uint8(len(s.Name)))
+	if err != nil {
+		return err
+	}
+	err = binary.Write(w, binary.BigEndian, []byte(s.Name))
+	if err != nil {
+		return err
+	}
+	err = binary.Write(w, binary.BigEndian, s.EpochHeight)
+	if err != nil {
+		return err
+	}
+	err = binary.Write(w, binary.BigEndian, s.Size)
+	if err != nil {
+		return err
+	}
+	err = binary.Write(w, binary.BigEndian, s.PublicKey.SerializeCompressed())
+	if err != nil {
+		return err
+	}
+	err = binary.Write(w, binary.BigEndian, s.ReservedRoot)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *Subdomain) Decode(r io.Reader) error {
+	err := binary.Read(r, binary.BigEndian, &s.ID)
+	if err != nil {
+		return err
+	}
+	var nameLength uint8
+	err = binary.Read(r, binary.BigEndian, &nameLength)
+	if err != nil {
+		return err
+	}
+	nameBytes := make([]byte, nameLength)
+	err = binary.Read(r, binary.BigEndian, &nameBytes)
+	if err != nil {
+		return err
+	}
+	s.Name = string(nameBytes)
+	err = binary.Read(r, binary.BigEndian, &s.EpochHeight)
+	if err != nil {
+		return err
+	}
+	err = binary.Read(r, binary.BigEndian, &s.Size)
+	if err != nil {
+		return err
+	}
+	publicKeyBytes := make([]byte, 33)
+	err = binary.Read(r, binary.BigEndian, publicKeyBytes)
+	if err != nil {
+		return err
+	}
+	publicKey, err := btcec.ParsePubKey(publicKeyBytes, btcec.S256())
+	if err != nil {
+		return err
+	}
+	s.PublicKey = publicKey
+	err = binary.Read(r, binary.BigEndian, &s.ReservedRoot)
+	if err != nil {
+		return err
+	}
+	return nil
 }
