@@ -97,12 +97,13 @@ func (h *Header) UnmarshalJSON(b []byte) error {
 }
 
 var (
-	headersPrefix            = Prefixer("headers")
-	headerCountKey           = Prefixer(string(headersPrefix("count")))()
-	headerSubdomainsPrefix   = Prefixer(string(headersPrefix("subdomains")))
-	headerSectorHashesPrefix = Prefixer(string(headersPrefix("sector-hashes")))
-	headerBanPrefix          = Prefixer(string(headersPrefix("banned")))
-	headerDataPrefix         = Prefixer(string(headersPrefix("header")))
+	headersPrefix              = Prefixer("headers")
+	headerCountKey             = Prefixer(string(headersPrefix("count")))()
+	headerSubdomainsPrefix     = Prefixer(string(headersPrefix("subdomains")))
+	headerSubdomainCountPrefix = Prefixer(string(headersPrefix("subdomain-count")))
+	headerSectorHashesPrefix   = Prefixer(string(headersPrefix("sector-hashes")))
+	headerBanPrefix            = Prefixer(string(headersPrefix("banned")))
+	headerDataPrefix           = Prefixer(string(headersPrefix("header")))
 )
 
 func GetHeaderCount(db *leveldb.DB) (int, error) {
@@ -237,6 +238,11 @@ func GetSubdomains(db *leveldb.DB, name string) ([]blob.Subdomain, error) {
 	if err != nil {
 		return base, errors.Wrap(err, "error getting subdomains")
 	}
+	count, err := db.Get(headerSubdomainCountPrefix(name), nil)
+	if err != nil {
+		return base, errors.Wrap(err, "error getting subdomain count")
+	}
+	base = make([]blob.Subdomain, mustDecodeInt(count))
 	for _, b := range base {
 		if err := b.Decode(bytes.NewReader(baseB)); err != nil {
 			panic(err)
@@ -251,6 +257,9 @@ func SetSubdomainTx(tx *leveldb.Transaction, name string, subdomains []blob.Subd
 		if err := s.Encode(&buf); err != nil {
 			return errors.Wrap(err, "error encoding subdomains")
 		}
+	}
+	if err := tx.Put(headerSubdomainCountPrefix(name), mustEncodeInt(len(subdomains)), nil); err != nil {
+		return errors.Wrap(err, "error writing subdomain count")
 	}
 	if err := tx.Put(headerSubdomainsPrefix(name), buf.Bytes(), nil); err != nil {
 		return errors.Wrap(err, "error writing subdomains")
