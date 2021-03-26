@@ -79,8 +79,10 @@ func (e *Envelope) Decode(r io.Reader) error {
 		msg = &HelloAck{}
 	case MessageTypePing:
 		msg = &Ping{}
-	case MessageTypeUpdate:
-		msg = &Update{}
+	case MessageTypeNameUpdate:
+		msg = &NameUpdate{}
+	case MessageTypeBlobUpdate:
+		msg = &BlobUpdate{}
 	case MessageTypeNilUpdate:
 		msg = &NilUpdate{}
 	case MessageTypeBlobReq:
@@ -91,8 +93,10 @@ func (e *Envelope) Decode(r io.Reader) error {
 		msg = &PeerReq{}
 	case MessageTypePeerRes:
 		msg = &PeerRes{}
-	case MessageTypeUpdateReq:
-		msg = &UpdateReq{}
+	case MessageTypeNameUpdateReq:
+		msg = &NameUpdateReq{}
+	case MessageTypeBlobUpdateReq:
+		msg = &BlobUpdateReq{}
 	case MessageTypeEquivocationProof:
 		msg = &EquivocationProof{}
 	default:

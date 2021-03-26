@@ -358,7 +358,7 @@ func (s *Server) Commit(ctx context.Context, req *apiv1.CommitReq) (*apiv1.Commi
 
 	var recips []crypto.Hash
 	if req.Broadcast {
-		recips, _ = p2p.GossipAll(s.mux, &wire.Update{
+		recips, _ = p2p.GossipAll(s.mux, &wire.BlobUpdate{
 			Name:        name,
 			EpochHeight: epochHeight,
 			SectorSize:  sectorSize,
@@ -465,7 +465,7 @@ func (s *Server) SendUpdate(_ context.Context, req *apiv1.SendUpdateReq) (*apiv1
 		return nil, err
 	}
 
-	recips, _ := p2p.GossipAll(s.mux, &wire.Update{
+	recips, _ := p2p.GossipAll(s.mux, &wire.BlobUpdate{
 		Name:        req.Name,
 		EpochHeight: header.EpochHeight,
 		SectorSize:  header.SectorSize,

@@ -66,7 +66,7 @@ func NewBlobUpdateQueue(mux *p2p.PeerMuxer, db *leveldb.DB) *BlobUpdateQueue {
 }
 
 func (u *BlobUpdateQueue) Start() error {
-	u.mux.AddMessageHandler(p2p.PeerMessageHandlerForType(wire.MessageTypeUpdate, u.onUpdate))
+	u.mux.AddMessageHandler(p2p.PeerMessageHandlerForType(wire.MessageTypeBlobUpdate, u.onUpdate))
 	timer := time.NewTicker(5 * time.Second)
 	for {
 		select {
@@ -84,7 +84,7 @@ func (u *BlobUpdateQueue) Stop() error {
 }
 
 // TODO: prioritize equivocations first, then higher epochs and sector sizes
-func (u *BlobUpdateQueue) Enqueue(peerID crypto.Hash, update *wire.Update) error {
+func (u *BlobUpdateQueue) Enqueue(peerID crypto.Hash, update *wire.BlobUpdate) error {
 	// use atomic below to prevent having to lock mu
 	// during expensive name validation calls when
 	// we can cheaply check for the queue size.
@@ -203,7 +203,7 @@ func (u *BlobUpdateQueue) Dequeue() *BlobUpdateQueueItem {
 }
 
 func (u *BlobUpdateQueue) onUpdate(peerID crypto.Hash, envelope *wire.Envelope) {
-	update := envelope.Message.(*wire.Update)
+	update := envelope.Message.(*wire.BlobUpdate)
 	if err := u.Enqueue(peerID, update); err != nil {
 		u.lgr.Info("update rejected", "name", update.Name, "reason", err)
 	}

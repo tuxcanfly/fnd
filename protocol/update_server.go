@@ -29,7 +29,7 @@ func NewUpdateServer(mux *p2p.PeerMuxer, db *leveldb.DB, nameLocker util.MultiLo
 }
 
 func (u *UpdateServer) Start() error {
-	u.mux.AddMessageHandler(p2p.PeerMessageHandlerForType(wire.MessageTypeUpdateReq, u.UpdateReqHandler))
+	u.mux.AddMessageHandler(p2p.PeerMessageHandlerForType(wire.MessageTypeBlobUpdateReq, u.UpdateReqHandler))
 	return nil
 }
 
@@ -38,7 +38,7 @@ func (u *UpdateServer) Stop() error {
 }
 
 func (u *UpdateServer) UpdateReqHandler(peerID crypto.Hash, envelope *wire.Envelope) {
-	msg := envelope.Message.(*wire.UpdateReq)
+	msg := envelope.Message.(*wire.BlobUpdateReq)
 	u.lgr.Debug("receive update req", "name", msg.Name, "epoch", msg.EpochHeight, "sector", msg.SectorSize)
 
 	if !u.nameLocker.TryRLock(msg.Name) {
@@ -79,7 +79,7 @@ func (u *UpdateServer) UpdateReqHandler(peerID crypto.Hash, envelope *wire.Envel
 		return
 	}
 
-	err = u.mux.Send(peerID, &wire.Update{
+	err = u.mux.Send(peerID, &wire.BlobUpdate{
 		Name:        msg.Name,
 		EpochHeight: header.EpochHeight,
 		SectorSize:  header.SectorSize,

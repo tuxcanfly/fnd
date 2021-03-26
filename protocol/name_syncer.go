@@ -54,7 +54,7 @@ func NewNameSyncer(mux *p2p.PeerMuxer, db *leveldb.DB, nameLocker util.MultiLock
 }
 
 func (ns *NameSyncer) Start() error {
-	ns.mux.AddMessageHandler(p2p.PeerMessageHandlerForType(wire.MessageTypeUpdate, ns.handleUpdate))
+	ns.mux.AddMessageHandler(p2p.PeerMessageHandlerForType(wire.MessageTypeBlobUpdate, ns.handleUpdate))
 	ns.mux.AddMessageHandler(p2p.PeerMessageHandlerForType(wire.MessageTypeNilUpdate, ns.handleNilUpdate))
 
 	resyncTick := time.NewTicker(ns.Interval)
@@ -97,7 +97,7 @@ func (ns *NameSyncer) Stop() error {
 }
 
 func (ns *NameSyncer) handleUpdate(peerID crypto.Hash, envelope *wire.Envelope) {
-	ns.obs.Emit("message:update", envelope.Message.(*wire.Update))
+	ns.obs.Emit("message:update", envelope.Message.(*wire.BlobUpdate))
 }
 
 func (ns *NameSyncer) handleNilUpdate(peerID crypto.Hash, envelope *wire.Envelope) {
@@ -105,7 +105,7 @@ func (ns *NameSyncer) handleNilUpdate(peerID crypto.Hash, envelope *wire.Envelop
 }
 
 func (ns *NameSyncer) onUpdate(name string, hdlr func()) util.Unsubscriber {
-	return ns.obs.On("message:update", func(update *wire.Update) {
+	return ns.obs.On("message:update", func(update *wire.BlobUpdate) {
 		if update.Name != name {
 			return
 		}
@@ -197,7 +197,7 @@ func (ns *NameSyncer) syncName(info *store.NameInfo) {
 		isEnvelopeCh <- false
 	})
 
-	recips, _ := p2p.BroadcastRandom(ns.mux, ns.SampleSize, &wire.UpdateReq{
+	recips, _ := p2p.BroadcastRandom(ns.mux, ns.SampleSize, &wire.BlobUpdateReq{
 		Name:        name,
 		EpochHeight: epochHeight,
 		SectorSize:  sectorSize,

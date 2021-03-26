@@ -7,7 +7,7 @@ import (
 	"fnd.localhost/dwire"
 )
 
-type Update struct {
+type BlobUpdate struct {
 	HashCacher
 
 	Name        string
@@ -15,14 +15,14 @@ type Update struct {
 	SectorSize  uint16
 }
 
-var _ Message = (*Update)(nil)
+var _ Message = (*BlobUpdate)(nil)
 
-func (u *Update) MsgType() MessageType {
-	return MessageTypeUpdate
+func (u *BlobUpdate) MsgType() MessageType {
+	return MessageTypeBlobUpdate
 }
 
-func (u *Update) Equals(other Message) bool {
-	cast, ok := other.(*Update)
+func (u *BlobUpdate) Equals(other Message) bool {
+	cast, ok := other.(*BlobUpdate)
 	if !ok {
 		return false
 	}
@@ -32,7 +32,7 @@ func (u *Update) Equals(other Message) bool {
 		u.SectorSize == cast.SectorSize
 }
 
-func (u *Update) Encode(w io.Writer) error {
+func (u *BlobUpdate) Encode(w io.Writer) error {
 	return dwire.EncodeFields(
 		w,
 		u.Name,
@@ -41,7 +41,7 @@ func (u *Update) Encode(w io.Writer) error {
 	)
 }
 
-func (u *Update) Decode(r io.Reader) error {
+func (u *BlobUpdate) Decode(r io.Reader) error {
 	return dwire.DecodeFields(
 		r,
 		&u.Name,
@@ -50,6 +50,6 @@ func (u *Update) Decode(r io.Reader) error {
 	)
 }
 
-func (u *Update) Hash() (crypto.Hash, error) {
+func (u *BlobUpdate) Hash() (crypto.Hash, error) {
 	return u.HashCacher.Hash(u)
 }

@@ -222,7 +222,7 @@ func SyncSectors(opts *SyncSectorsOpts) (*syncUpdate, error) {
 						}); err != nil {
 							lgr.Trace("error writing equivocation proof", "err", err)
 						}
-						update := &wire.Update{
+						update := &wire.BlobUpdate{
 							Name:        msg.Name,
 							EpochHeight: msg.EpochHeight,
 							SectorSize:  0,

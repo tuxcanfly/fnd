@@ -311,7 +311,7 @@ func NameUpdateBlob(cfg *NameUpdateConfig) error {
 		return nil
 	}
 
-	update := &wire.Update{
+	update := &wire.BlobUpdate{
 		Name:        item.Name,
 		EpochHeight: item.EpochHeight,
 		SectorSize:  item.SectorSize,

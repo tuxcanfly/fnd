@@ -20,7 +20,8 @@ const (
 	MessageTypeHello MessageType = iota
 	MessageTypeHelloAck
 	MessageTypePing
-	MessageTypeUpdate
+	MessageTypeNameUpdate
+	MessageTypeBlobUpdate
 	MessageTypeNilUpdate
 	MessageTypeBlobReq
 	MessageTypeBlobRes
@@ -28,7 +29,8 @@ const (
 	MessageTypeNameRes
 	MessageTypePeerReq
 	MessageTypePeerRes
-	MessageTypeUpdateReq
+	MessageTypeBlobUpdateReq
+	MessageTypeNameUpdateReq
 	MessageTypeEquivocationProof
 )
 
@@ -40,8 +42,10 @@ func (t MessageType) String() string {
 		return "HelloAck"
 	case MessageTypePing:
 		return "Ping"
-	case MessageTypeUpdate:
-		return "Update"
+	case MessageTypeNameUpdate:
+		return "NameUpdate"
+	case MessageTypeBlobUpdate:
+		return "BlobUpdate"
 	case MessageTypeNilUpdate:
 		return "NilUpdate"
 	case MessageTypeBlobReq:
@@ -56,8 +60,10 @@ func (t MessageType) String() string {
 		return "PeerReq"
 	case MessageTypePeerRes:
 		return "PeerRes"
-	case MessageTypeUpdateReq:
-		return "UpdateReq"
+	case MessageTypeNameUpdateReq:
+		return "NameUpdateReq"
+	case MessageTypeBlobUpdateReq:
+		return "BlobUpdateReq"
 	case MessageTypeEquivocationProof:
 		return "EquivocationProof"
 	default:
