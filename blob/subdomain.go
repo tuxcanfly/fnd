@@ -3,6 +3,8 @@ package blob
 import (
 	"crypto"
 	"io"
+
+	"github.com/btcsuite/btcd/btcec"
 )
 
 type Subdomain struct {
@@ -10,7 +12,7 @@ type Subdomain struct {
 	Name         string
 	EpochHeight  uint16
 	Size         uint8
-	PublicKey    crypto.PublicKey
+	PublicKey    *btcec.PublicKey
 	ReservedRoot crypto.Hash
 }
 

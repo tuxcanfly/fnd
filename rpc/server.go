@@ -17,6 +17,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/btcsuite/btcd/btcec"
 	"github.com/pkg/errors"
 	"github.com/syndtr/goleveldb/leveldb"
 	"google.golang.org/grpc"
@@ -463,6 +464,11 @@ func (s *Server) ListBlobInfo(req *apiv1.ListBlobInfoReq, srv apiv1.Footnotev1_L
 }
 
 func (s *Server) AddSubdomain(_ context.Context, req *apiv1.AddSubdomainReq) (*apiv1.AddSubdomainRes, error) {
+	pubkey, err := btcec.ParsePubKey(req.PublicKey, btcec.S256())
+	if err != nil {
+		return nil, err
+	}
+
 	header, err := store.GetHeader(s.db, req.Name)
 	if err != nil {
 		return nil, err
@@ -476,7 +482,7 @@ func (s *Server) AddSubdomain(_ context.Context, req *apiv1.AddSubdomainReq) (*a
 	subdomains = append(subdomains, blob.Subdomain{
 		//ID:          req.ID,
 		Name:      req.Subdomain,
-		PublicKey: req.PublicKey,
+		PublicKey: pubkey,
 		Size:      uint8(req.Size),
 		//EpochHeight: req.EpochHeight,
 	})
@@ -512,13 +518,25 @@ func (s *Server) GetNameInfo(_ context.Context, req *apiv1.NameInfoReq) (*apiv1.
 		return nil, err
 	}
 
+	subdomains, err := store.GetSubdomains(s.db, info.Name)
+	if err != nil {
+		return &apiv1.NameInfoRes{}, errors.Wrap(err, "error reading subdomains")
+	}
+
+	var subdomainRes []*apiv1.SubdomainRes
+	for _, s := range subdomains {
+		subdomainRes = append(subdomainRes, &apiv1.SubdomainRes{
+			Name:      s.Name,
+			PublicKey: s.PublicKey.SerializeCompressed(),
+			Size:      uint32(s.Size),
+		})
+	}
+
 	return &apiv1.NameInfoRes{
 		Name:         name,
 		PublicKey:    info.PublicKey.SerializeCompressed(),
 		ImportHeight: uint32(info.ImportHeight),
-		Names: []*apiv1.SubdomainRes{
-			{},
-		},
+		Subdomains:   subdomainRes,
 	}, nil
 }
 
@@ -537,13 +555,26 @@ func (s *Server) ListNameInfo(req *apiv1.ListNameInfoReq, srv apiv1.Footnotev1_L
 		if info == nil {
 			return nil
 		}
+
+		subdomains, err := store.GetSubdomains(s.db, info.Name)
+		if err != nil {
+			return errors.Wrap(err, "error reading subdomains")
+		}
+
+		var subdomainRes []*apiv1.SubdomainRes
+		for _, s := range subdomains {
+			subdomainRes = append(subdomainRes, &apiv1.SubdomainRes{
+				Name:      s.Name,
+				PublicKey: s.PublicKey.SerializeCompressed(),
+				Size:      uint32(s.Size),
+			})
+		}
+
 		res := &apiv1.NameInfoRes{
 			Name:         info.Name,
 			PublicKey:    info.PublicKey.SerializeCompressed(),
 			ImportHeight: uint32(info.ImportHeight),
-			Names: []*apiv1.SubdomainRes{
-				{},
-			},
+			Subdomains:   subdomainRes,
 		}
 		if err = srv.Send(res); err != nil {
 			return errors.Wrap(err, "error sending info")

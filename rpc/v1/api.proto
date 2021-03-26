@@ -168,7 +168,7 @@ message NameInfoRes {
     string name = 1;
     bytes publicKey = 2;
     uint32 importHeight = 3;
-    repeated SubdomainRes names = 4;
+    repeated SubdomainRes subdomains = 4;
 }
 
 message SendUpdateReq {
