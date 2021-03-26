@@ -234,35 +234,14 @@ func GetSubdomains(db *leveldb.DB, name string) ([]blob.Subdomain, error) {
 	if !exists {
 		return base, nil
 	}
-	baseB, err := db.Get(headerSubdomainsPrefix(name), nil)
-	if err != nil {
-		return base, errors.Wrap(err, "error getting subdomains")
-	}
-	count, err := db.Get(headerSubdomainCountPrefix(name), nil)
-	if err != nil {
-		return base, errors.Wrap(err, "error getting subdomain count")
-	}
-	base = make([]blob.Subdomain, mustDecodeInt(count))
-	for _, b := range base {
-		if err := b.Decode(bytes.NewReader(baseB)); err != nil {
-			panic(err)
-		}
-	}
 	return base, nil
 }
 
 func SetSubdomainTx(tx *leveldb.Transaction, name string, subdomains []blob.Subdomain) error {
-	var buf bytes.Buffer
-	for _, s := range subdomains {
-		if err := s.Encode(&buf); err != nil {
-			return errors.Wrap(err, "error encoding subdomains")
+	for _, subdomain := range subdomains {
+		if err := tx.Put(headerSubdomainsPrefix(name, subdomain.Name), mustMarshalJSON(&subdomain), nil); err != nil {
+			return errors.Wrap(err, "error writing subdomains")
 		}
-	}
-	if err := tx.Put(headerSubdomainCountPrefix(name), mustEncodeInt(len(subdomains)), nil); err != nil {
-		return errors.Wrap(err, "error writing subdomain count")
-	}
-	if err := tx.Put(headerSubdomainsPrefix(name), buf.Bytes(), nil); err != nil {
-		return errors.Wrap(err, "error writing subdomains")
 	}
 	return nil
 }
