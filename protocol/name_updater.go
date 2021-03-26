@@ -135,15 +135,7 @@ func NameUpdateBlob(cfg *NameUpdateConfig) error {
 	})
 
 	err = store.WithTx(cfg.DB, func(tx *leveldb.Transaction) error {
-		return store.SetSubdomainTx(tx, &store.Header{
-			Name:          header.Name,
-			EpochHeight:   header.EpochHeight,
-			SectorSize:    header.SectorSize,
-			SectorTipHash: header.SectorTipHash,
-			Signature:     header.Signature,
-			ReservedRoot:  header.ReservedRoot,
-			EpochStartAt:  header.EpochStartAt,
-		}, subdomainMeta.subdomains)
+		return store.SetSubdomainTx(tx, item.Name, subdomainMeta.subdomains)
 	})
 
 	if err != nil {

@@ -1,4 +1,4 @@
-package blob
+package name
 
 import "github.com/spf13/cobra"
 

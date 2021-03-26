@@ -15,6 +15,7 @@ import (
 	"io"
 	"net"
 	"strconv"
+	"strings"
 	"sync/atomic"
 	"time"
 
@@ -465,6 +466,14 @@ func (s *Server) ListBlobInfo(req *apiv1.ListBlobInfoReq, srv apiv1.Footnotev1_L
 }
 
 func (s *Server) AddSubdomain(_ context.Context, req *apiv1.AddSubdomainReq) (*apiv1.AddSubdomainRes, error) {
+	initialImportComplete, err := store.GetInitialImportComplete(s.db)
+	if err != nil {
+		return nil, err
+	}
+	if !initialImportComplete {
+		return nil, errors.New("initial import incomplete")
+	}
+
 	pubkey, err := btcec.ParsePubKey(req.PublicKey, btcec.S256())
 	if err != nil {
 		return nil, err
@@ -478,23 +487,20 @@ func (s *Server) AddSubdomain(_ context.Context, req *apiv1.AddSubdomainReq) (*a
 		//EpochHeight: req.EpochHeight,
 	}
 
-	header, err := store.GetHeader(s.db, req.Name)
-	if err != nil {
-		return nil, err
-	}
-
 	info, err := store.GetNameInfo(s.db, req.Name)
 	if err != nil {
 		return nil, err
 	}
-	subdomains, err := store.GetSubdomains(s.db, req.Name)
+
+	var subdomains []blob.Subdomain
+	subdomains, err = store.GetSubdomains(s.db, req.Name)
 	if err != nil {
 		return nil, err
 	}
 
 	subdomains = append(subdomains, subdomain)
 
-	name := fmt.Sprintf("%s.%s", req.Name, subdomain.Name)
+	name := fmt.Sprintf("%s.%s", subdomain.Name, req.Name)
 	err = store.WithTx(s.db, func(tx *leveldb.Transaction) error {
 		if err := store.SetNameInfoTx(tx, name, pubkey, info.ImportHeight); err != nil {
 			return errors.Wrap(err, "error inserting name info")
@@ -507,24 +513,15 @@ func (s *Server) AddSubdomain(_ context.Context, req *apiv1.AddSubdomainReq) (*a
 	}
 
 	err = store.WithTx(s.db, func(tx *leveldb.Transaction) error {
-		return store.SetSubdomainTx(tx, &store.Header{
-			Name:          header.Name,
-			EpochHeight:   header.EpochHeight,
-			SectorSize:    header.SectorSize,
-			SectorTipHash: header.SectorTipHash,
-			Signature:     header.Signature,
-			ReservedRoot:  header.ReservedRoot,
-			EpochStartAt:  header.EpochStartAt,
-		}, subdomains)
+		return store.SetSubdomainTx(tx, req.Name, subdomains)
 	})
 
 	if err != nil {
 		return nil, errors.Wrap(err, "error storing subdomains")
 	}
+
 	_, _ = p2p.GossipAll(s.mux, &wire.NameUpdate{
-		Name:        req.Name,
-		EpochHeight: header.EpochHeight,
-		SectorSize:  header.SectorSize,
+		Name: req.Name,
 	})
 
 	return &apiv1.AddSubdomainRes{}, nil
@@ -575,18 +572,21 @@ func (s *Server) ListNameInfo(req *apiv1.ListNameInfoReq, srv apiv1.Footnotev1_L
 			return nil
 		}
 
-		subdomains, err := store.GetSubdomains(s.db, info.Name)
-		if err != nil {
-			return errors.Wrap(err, "error reading subdomains")
-		}
-
 		var subdomainRes []*apiv1.SubdomainRes
-		for _, s := range subdomains {
-			subdomainRes = append(subdomainRes, &apiv1.SubdomainRes{
-				Name:      s.Name,
-				PublicKey: s.PublicKey.SerializeCompressed(),
-				Size:      uint32(s.Size),
-			})
+
+		if !strings.Contains(info.Name, ".") {
+			subdomains, err := store.GetSubdomains(s.db, info.Name)
+			if err != nil {
+				return errors.Wrap(err, "error reading subdomains")
+			}
+
+			for _, s := range subdomains {
+				subdomainRes = append(subdomainRes, &apiv1.SubdomainRes{
+					Name:      s.Name,
+					PublicKey: s.PublicKey.SerializeCompressed(),
+					Size:      uint32(s.Size),
+				})
+			}
 		}
 
 		res := &apiv1.NameInfoRes{

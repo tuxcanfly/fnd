@@ -1,8 +1,10 @@
-package blob
+package name
 
 import (
 	"context"
+	"fmt"
 	"fnd/cli"
+	"fnd/protocol"
 	apiv1 "fnd/rpc/v1"
 	"strconv"
 
@@ -20,7 +22,7 @@ var addCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		name := args[0]
 		subdomain := args[1]
-		publicKey := []byte(args[2])
+		publicKeyStr := args[2]
 		size, err := strconv.Atoi(args[3])
 		if err != nil {
 			return err
@@ -31,14 +33,20 @@ var addCmd = &cobra.Command{
 			return err
 		}
 
+		publicKey, err := protocol.ParseFNRecord(publicKeyStr)
+		if err != nil {
+			return err
+		}
+
 		client := apiv1.NewFootnotev1Client(conn)
-		client.AddSubdomain(context.Background(), &apiv1.AddSubdomainReq{
+		_, err = client.AddSubdomain(context.Background(), &apiv1.AddSubdomainReq{
 			Name:      name,
 			Subdomain: subdomain,
-			PublicKey: publicKey,
+			PublicKey: publicKey.SerializeCompressed(),
 			Size:      uint32(size),
 		})
-		return nil
+		fmt.Println(err)
+		return err
 	},
 }
 

@@ -4,10 +4,12 @@ import (
 	"fmt"
 	"fnd/cli"
 	"fnd/cmd/fnd-cli/cmd/blob"
+	"fnd/cmd/fnd-cli/cmd/name"
 	"fnd/cmd/fnd-cli/cmd/net"
 	"fnd/cmd/fnd-cli/cmd/unsafe"
-	"github.com/spf13/cobra"
 	"os"
+
+	"github.com/spf13/cobra"
 )
 
 var rootCmd = &cobra.Command{
@@ -28,6 +30,7 @@ func init() {
 	rootCmd.PersistentFlags().String(cli.FlagHome, "~/.fnd-cli", "Home directory for the CLI's configuration.")
 	rootCmd.PersistentFlags().String(cli.FlagFormat, "text", "Output format")
 	net.AddCmd(rootCmd)
+	name.AddCmd(rootCmd)
 	blob.AddCmd(rootCmd)
 	unsafe.AddCmd(rootCmd)
 }

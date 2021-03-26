@@ -1,4 +1,4 @@
-package blob
+package name
 
 import (
 	"encoding/json"
@@ -6,10 +6,11 @@ import (
 	"fnd/rpc"
 	apiv1 "fnd/rpc/v1"
 	"fnd/store"
-	"github.com/spf13/cobra"
 	"math"
 	"os"
 	"strconv"
+
+	"github.com/spf13/cobra"
 )
 
 var listCmd = &cobra.Command{
@@ -38,7 +39,7 @@ var listCmd = &cobra.Command{
 		var count int
 		encoder := json.NewEncoder(os.Stdout)
 		var innerErr error
-		err = rpc.ListBlobInfo(grpcClient, start, func(info *store.BlobInfo) bool {
+		err = rpc.ListNameInfo(grpcClient, start, func(info *store.NameInfo) bool {
 			if err := encoder.Encode(info); err != nil {
 				innerErr = err
 				return false

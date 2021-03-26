@@ -56,6 +56,50 @@ func ListBlobInfoContext(ctx context.Context, client apiv1.Footnotev1Client, sta
 		}
 	}
 }
+func GetNameInfoContext(ctx context.Context, client apiv1.Footnotev1Client, name string) (*store.NameInfo, error) {
+	res, err := client.GetNameInfo(ctx, &apiv1.NameInfoReq{
+		Name: name,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return parseNameInfoRes(res)
+}
+
+func ListNameInfoContext(ctx context.Context, client apiv1.Footnotev1Client, start string, cb func(info *store.NameInfo) bool) error {
+	stream, err := client.ListNameInfo(ctx, &apiv1.ListNameInfoReq{
+		Start: start,
+	})
+	if err != nil {
+		return err
+	}
+	defer stream.CloseSend()
+
+	for {
+		res, err := stream.Recv()
+		if err == io.EOF {
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+		parsed, err := parseNameInfoRes(res)
+		if err != nil {
+			return err
+		}
+		if !cb(parsed) {
+			return nil
+		}
+	}
+}
+
+func GetNameInfo(client apiv1.Footnotev1Client, name string) (*store.NameInfo, error) {
+	return GetNameInfoContext(context.Background(), client, name)
+}
+
+func ListNameInfo(client apiv1.Footnotev1Client, after string, cb func(info *store.NameInfo) bool) error {
+	return ListNameInfoContext(context.Background(), client, after, cb)
+}
 
 func parseBlobInfoRes(res *apiv1.BlobInfoRes) (*store.BlobInfo, error) {
 	pub, err := btcec.ParsePubKey(res.PublicKey, btcec.S256())
@@ -86,5 +130,18 @@ func parseBlobInfoRes(res *apiv1.BlobInfoRes) (*store.BlobInfo, error) {
 		Signature:     sig,
 		ReceivedAt:    time.Unix(int64(res.ReceivedAt), 0),
 		BannedAt:      time.Unix(int64(res.BannedAt), 0),
+	}, nil
+}
+
+func parseNameInfoRes(res *apiv1.NameInfoRes) (*store.NameInfo, error) {
+	pub, err := btcec.ParsePubKey(res.PublicKey, btcec.S256())
+	if err != nil {
+		return nil, errors.Wrap(err, "error parsing public key")
+	}
+
+	return &store.NameInfo{
+		Name:         res.Name,
+		PublicKey:    pub,
+		ImportHeight: int(res.ImportHeight),
 	}, nil
 }

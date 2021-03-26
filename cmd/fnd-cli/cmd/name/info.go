@@ -1,4 +1,4 @@
-package blob
+package name
 
 import (
 	"encoding/hex"
@@ -7,7 +7,6 @@ import (
 	"fnd/rpc"
 	apiv1 "fnd/rpc/v1"
 	"os"
-	"strconv"
 	"strings"
 
 	"fnd.localhost/handshake/primitives"
@@ -37,17 +36,10 @@ var infoCmd = &cobra.Command{
 		table.SetHeader([]string{
 			"Name",
 			"Public Key",
-			"Epoch Height",
-			"Sector Size",
-			"Sector Tip Hash",
-			"Reserved Root",
-			"Signature",
-			"Received At",
-			"Banned At",
 		})
 
 		for _, name := range names {
-			res, err := rpc.GetBlobInfo(grpcClient, name)
+			res, err := rpc.GetNameInfo(grpcClient, name)
 			if err != nil {
 				return err
 			}
@@ -55,13 +47,6 @@ var infoCmd = &cobra.Command{
 			table.Append([]string{
 				res.Name,
 				hex.EncodeToString(res.PublicKey.SerializeCompressed()),
-				strconv.Itoa(int(res.EpochHeight)),
-				strconv.Itoa(int(res.SectorSize)),
-				res.SectorTipHash.String(),
-				res.ReservedRoot.String(),
-				res.Signature.String(),
-				res.ReceivedAt.String(),
-				res.BannedAt.String(),
 			})
 		}
 
