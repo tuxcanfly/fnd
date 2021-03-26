@@ -38,6 +38,8 @@ var addCmd = &cobra.Command{
 			return err
 		}
 
+		// TODO: signer, must sign subdomain data with domain pubkey
+
 		client := apiv1.NewFootnotev1Client(conn)
 		_, err = client.AddSubdomain(context.Background(), &apiv1.AddSubdomainReq{
 			Name:      name,

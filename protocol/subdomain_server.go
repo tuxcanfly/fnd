@@ -67,13 +67,7 @@ func (s *SubdomainServer) onNameReq(peerID crypto.Hash, envelope *wire.Envelope)
 		"peer_id", peerID,
 	)
 
-	header, err := store.GetHeader(s.db, reqMsg.Name)
-	if err != nil {
-		lgr.Error(
-			"failed to fetch header",
-			"err", err)
-		return
-	}
+	// TODO: fetch signature
 
 	if !s.nameLocker.TryRLock(reqMsg.Name) {
 		lgr.Info("dropping sector req for busy name")
@@ -84,12 +78,11 @@ func (s *SubdomainServer) onNameReq(peerID crypto.Hash, envelope *wire.Envelope)
 	cached := s.cache.Get(cacheKey)
 	if cached != nil {
 		s.nameLocker.RUnlock(reqMsg.Name)
-		s.sendResponse(peerID, reqMsg.Name, cached.([]blob.Subdomain), header.Signature)
+		s.sendResponse(peerID, reqMsg.Name, cached.([]blob.Subdomain))
 		return
 	}
 
-	var subdomains []blob.Subdomain
-	subdomains, err = store.GetSubdomains(s.db, reqMsg.Name)
+	subdomains, err := store.GetSubdomains(s.db, reqMsg.Name)
 	if err != nil {
 		lgr.Error(
 			"failed to fetch subdomains",
@@ -98,14 +91,14 @@ func (s *SubdomainServer) onNameReq(peerID crypto.Hash, envelope *wire.Envelope)
 	}
 	s.cache.Set(cacheKey, subdomains, int64(s.CacheExpiry/time.Millisecond))
 	s.nameLocker.RUnlock(reqMsg.Name)
-	s.sendResponse(peerID, reqMsg.Name, subdomains, header.Signature)
+	s.sendResponse(peerID, reqMsg.Name, subdomains)
 }
 
-func (s *SubdomainServer) sendResponse(peerID crypto.Hash, name string, subdomains []blob.Subdomain, signature crypto.Signature) {
+func (s *SubdomainServer) sendResponse(peerID crypto.Hash, name string, subdomains []blob.Subdomain) {
 	resMsg := &wire.NameRes{
 		Name:       name,
 		Subdomains: subdomains,
-		Signature:  signature,
+		// TODO: Signature:  signature,
 	}
 	if err := s.mux.Send(peerID, resMsg); err != nil {
 		s.lgr.Error("error serving subdomain response", "err", err)
