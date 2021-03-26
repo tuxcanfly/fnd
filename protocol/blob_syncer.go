@@ -15,14 +15,14 @@ import (
 )
 
 const (
-	DefaultSyncerBlobResTimeout = 15 * time.Second
+	DefaultBlobSyncerBlobResTimeout = 15 * time.Second
 )
 
 var (
 	ErrInvalidPayloadSignature = errors.New("update signature is invalid")
 	ErrPayloadEquivocation     = errors.New("update payload is equivocated")
-	ErrSyncerNoProgress        = errors.New("sync not progressing")
-	ErrSyncerMaxAttempts       = errors.New("reached max sync attempts")
+	ErrBlobSyncerNoProgress    = errors.New("sync not progressing")
+	ErrBlobSyncerMaxAttempts   = errors.New("reached max sync attempts")
 )
 
 type syncUpdate struct {
@@ -31,7 +31,7 @@ type syncUpdate struct {
 	signature     crypto.Signature
 }
 
-type SyncSectorsOpts struct {
+type BlobSyncSectorsOpts struct {
 	Timeout     time.Duration
 	Mux         *p2p.PeerMuxer
 	Tx          blob.Transaction
@@ -76,7 +76,7 @@ func validateBlobUpdate(db *leveldb.DB, name string, epochHeight, sectorSize uin
 	return nil
 }
 
-// SyncSectors syncs the sectors for the options provided in opts. Syncing
+// BlobSyncSectors syncs the sectors for the options provided in opts. BlobSyncing
 // happens by sending a BlobReq and expecting a BlobRes in return. Multiple
 // requests may be send to multiple peers but the first valid response will be
 // considered final.
@@ -85,7 +85,7 @@ func validateBlobUpdate(db *leveldb.DB, name string, epochHeight, sectorSize uin
 // which is the proof that are two conflicting updates at the same epoch and
 // sector size, and this proof will be stored locally and served to peers in
 // the equivocation proof flow. See sector_server.go for details.
-func SyncSectors(opts *SyncSectorsOpts) (*syncUpdate, error) {
+func BlobSyncSectors(opts *BlobSyncSectorsOpts) (*syncUpdate, error) {
 	lgr := log.WithModule("payload-syncer").Sub("name", opts.Name)
 	errs := make(chan error)
 	payloadResCh := make(chan *payloadRes)

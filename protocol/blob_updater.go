@@ -233,8 +233,8 @@ func BlobUpdateBlob(cfg *BlobUpdateConfig) error {
 		return errors.Wrap(err, "error seeking transaction")
 	}
 
-	sectorMeta, err := SyncSectors(&SyncSectorsOpts{
-		Timeout:     DefaultSyncerBlobResTimeout,
+	sectorMeta, err := BlobSyncSectors(&BlobSyncSectorsOpts{
+		Timeout:     DefaultBlobSyncerBlobResTimeout,
 		Mux:         cfg.Mux,
 		Tx:          tx,
 		Peers:       item.PeerIDs,

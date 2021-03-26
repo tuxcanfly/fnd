@@ -1,7 +1,6 @@
 package protocol
 
 import (
-	"fnd/blob"
 	"fnd/config"
 	"fnd/crypto"
 	"fnd/log"
@@ -100,15 +99,6 @@ func (u *NameUpdateQueue) Enqueue(peerID crypto.Hash, update *wire.NameUpdate) e
 		return ErrNameInitialImportIncomplete
 	}
 
-	if update.SectorSize == 0 {
-		err := u.mux.Send(peerID, &wire.BlobReq{
-			Name:        update.Name,
-			EpochHeight: update.EpochHeight,
-			SectorSize:  blob.MaxSectors,
-		})
-		return err
-	}
-
 	if err := u.validateUpdate(update.Name); err != nil {
 		return err
 	}
@@ -116,30 +106,6 @@ func (u *NameUpdateQueue) Enqueue(peerID crypto.Hash, update *wire.NameUpdate) e
 	nameInfo, err := store.GetNameInfo(u.db, update.Name)
 	if err != nil {
 		return errors.Wrap(err, "error getting name info")
-	}
-
-	var epochHeight, sectorSize uint16
-	header, err := store.GetHeader(u.db, update.Name)
-	if err != nil && !errors.Is(err, leveldb.ErrNotFound) {
-		return errors.Wrap(err, "error getting name header")
-	} else if err == nil {
-		epochHeight = header.EpochHeight
-		sectorSize = header.SectorSize
-	}
-
-	// Ignore updates for epochs below ours
-	if epochHeight > update.EpochHeight {
-		return ErrNameUpdateQueueEpochUpdated
-	}
-
-	// Ignore updates for sectors below ours, same epoch
-	if epochHeight == update.EpochHeight {
-		if sectorSize > update.SectorSize {
-			return ErrNameUpdateQueueStaleSector
-		}
-		if sectorSize == update.SectorSize {
-			return ErrNameUpdateQueueSectorUpdated
-		}
 	}
 
 	u.mu.Lock()
@@ -161,18 +127,6 @@ func (u *NameUpdateQueue) Enqueue(peerID crypto.Hash, update *wire.NameUpdate) e
 		}
 		u.lgr.Info("enqueued update", "name", update.Name, "epoch", update.EpochHeight, "sector", update.SectorSize)
 		return nil
-	}
-
-	// Ignore updates for epochs below ours, if entry already exists
-	if entry.EpochHeight > update.EpochHeight {
-		return ErrNameUpdateQueueEpochUpdated
-	}
-
-	// Ignore updates for sectors below ours, if entry already exists
-	if entry.EpochHeight == update.EpochHeight {
-		if entry.SectorSize > update.SectorSize {
-			return ErrNameUpdateQueueStaleSector
-		}
 	}
 
 	u.lgr.Info("enqueued update", "name", update.Name, "epoch", update.EpochHeight, "sector", update.SectorSize)
