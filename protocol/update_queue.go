@@ -100,6 +100,13 @@ func (u *UpdateQueue) Enqueue(peerID crypto.Hash, update *wire.Update) error {
 		return ErrInitialImportIncomplete
 	}
 
+	// An Update with SectorSize zero is a special case i.e.
+	// A Equivocation Notification Update. We need to resolve this
+	// by requesting an Equivocation Proof by using the special
+	// BlobReq Message with SectorSize MaxSectors and handling the
+	// subsequent BlobRes (which contains the Equivocation Proof).
+	// NOTE: In normal cases, Update with SectorSize zero
+	// and BlobReq with SectorSize MaxSectors doesn't make sense.
 	if update.SectorSize == 0 {
 		err := u.mux.Send(peerID, &wire.BlobReq{
 			Name:        update.Name,
