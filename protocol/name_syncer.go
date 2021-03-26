@@ -1,7 +1,6 @@
 package protocol
 
 import (
-	"fnd/blob"
 	"fnd/config"
 	"fnd/crypto"
 	"fnd/log"
@@ -28,7 +27,6 @@ type NameSyncer struct {
 	Interval              time.Duration
 	SyncResponseTimeout   time.Duration
 	mux                   *p2p.PeerMuxer
-	ns                    blob.Store
 	db                    *leveldb.DB
 	nameLocker            util.MultiLocker
 	updater               *BlobUpdater
@@ -38,7 +36,7 @@ type NameSyncer struct {
 	once                  sync.Once
 }
 
-func NewNameSyncer(mux *p2p.PeerMuxer, ns blob.Store, db *leveldb.DB, nameLocker util.MultiLocker, updater *BlobUpdater) *NameSyncer {
+func NewNameSyncer(mux *p2p.PeerMuxer, db *leveldb.DB, nameLocker util.MultiLocker, updater *BlobUpdater) *NameSyncer {
 	return &NameSyncer{
 		Workers:               config.DefaultConfig.Tuning.NameSyncer.Workers,
 		SampleSize:            config.DefaultConfig.Tuning.NameSyncer.SampleSize,
@@ -46,7 +44,6 @@ func NewNameSyncer(mux *p2p.PeerMuxer, ns blob.Store, db *leveldb.DB, nameLocker
 		Interval:              config.ConvertDuration(config.DefaultConfig.Tuning.NameSyncer.IntervalMS, time.Millisecond),
 		SyncResponseTimeout:   config.ConvertDuration(config.DefaultConfig.Tuning.NameSyncer.SyncResponseTimeoutMS, time.Millisecond),
 		mux:                   mux,
-		ns:                    ns,
 		db:                    db,
 		nameLocker:            nameLocker,
 		updater:               updater,

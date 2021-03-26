@@ -17,10 +17,7 @@ service Footnotev1 {
     rpc GetBlobInfo (BlobInfoReq) returns (BlobInfoRes);
     rpc ListBlobInfo (ListBlobInfoReq) returns (stream BlobInfoRes);
 
-    rpc NameCheckout (NameCheckoutReq) returns (NameCheckoutRes);
-    rpc NameWriteSector (NameWriteSectorReq) returns (NameWriteSectorRes);
-    rpc NameCommit (NameCommitReq) returns (NameCommitRes);
-    rpc NameReadAt (NameReadAtReq) returns (NameReadAtRes);
+    rpc AddSubdomain(AddSubdomainReq) returns (AddSubdomainRes);
 
     rpc GetNameInfo (NameInfoReq) returns (NameInfoRes);
     rpc ListNameInfo (ListNameInfoReq) returns (stream NameInfoRes);
@@ -143,49 +140,14 @@ message BlobInfoRes {
     uint64 bannedAt = 10;
 }
 
-message NameCheckoutReq {
-    string name = 1;
-    bool resetEpoch = 2;
+message AddSubdomainReq {
+   string name = 1;
+   string subdomain = 2;
+   bytes publicKey = 3;
+   uint32 size = 4;
 }
 
-message NameCheckoutRes {
-    uint32 txID = 1;
-    uint32 epochHeight = 2;
-    uint32 sectorSize = 3;
-    bytes sectorTipHash = 4;
-}
-
-message NameWriteSectorReq {
-    uint32 txID = 1;
-    bytes data = 2;
-}
-
-message NameWriteSectorRes {
-    string writeErr = 1;
-}
-
-message NameCommitReq {
-    uint32 txID = 1;
-    uint64 timestamp = 2;
-    bytes signature = 3;
-    bool broadcast = 4;
-    uint32 epochHeight = 5;
-    uint32 sectorSize = 6;
-    bytes sectorTipHash = 7;
-}
-
-message NameCommitRes {
-}
-
-message NameReadAtReq {
-    string name = 1;
-    uint32 offset = 2;
-    uint32 len = 3;
-}
-
-message NameReadAtRes {
-    uint32 offset = 1;
-    bytes data = 2;
+message AddSubdomainRes {
 }
 
 message NameInfoReq {
@@ -196,7 +158,7 @@ message ListNameInfoReq {
     string start = 1;
 }
 
-message Subdomain {
+message SubdomainRes {
     string name = 1;
     bytes publicKey = 2;
     uint32 size = 3;
@@ -206,7 +168,7 @@ message NameInfoRes {
     string name = 1;
     bytes publicKey = 2;
     uint32 importHeight = 3;
-    repeated Subdomain names = 4;
+    repeated SubdomainRes names = 4;
 }
 
 message SendUpdateReq {

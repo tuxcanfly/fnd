@@ -99,6 +99,7 @@ func (h *Header) UnmarshalJSON(b []byte) error {
 var (
 	headersPrefix            = Prefixer("headers")
 	headerCountKey           = Prefixer(string(headersPrefix("count")))()
+	headerSubdomainsPrefix   = Prefixer(string(headersPrefix("subdomains")))
 	headerSectorHashesPrefix = Prefixer(string(headersPrefix("sector-hashes")))
 	headerBanPrefix          = Prefixer(string(headersPrefix("banned")))
 	headerDataPrefix         = Prefixer(string(headersPrefix("header")))
@@ -193,6 +194,56 @@ func SetHeaderTx(tx *leveldb.Transaction, header *Header, sectorHashes blob.Sect
 	var buf bytes.Buffer
 	if err := sectorHashes.Encode(&buf); err != nil {
 		return errors.Wrap(err, "error encoding sector hashes")
+	}
+	exists, err := tx.Has(headerDataPrefix(header.Name), nil)
+	if err != nil {
+		return errors.Wrap(err, "error checking header existence")
+	}
+	if err := tx.Put(headerSectorHashesPrefix(header.Name), buf.Bytes(), nil); err != nil {
+		return errors.Wrap(err, "error writing sector hashes")
+	}
+	if err := tx.Put(headerDataPrefix(header.Name), mustMarshalJSON(header), nil); err != nil {
+		return errors.Wrap(err, "error writing header tree")
+	}
+	if !exists {
+		if err := IncrementHeaderCount(tx); err != nil {
+			return errors.Wrap(err, "error incrementing header count")
+		}
+	}
+	return nil
+}
+
+func GetSubdomain(db *leveldb.DB, name string, index uint16) (blob.Subdomain, error) {
+	hashes, err := GetSubdomains(db, name)
+	if err != nil {
+		return blob.Subdomain{}, err
+	}
+	if int(index) > len(hashes) {
+		return blob.Subdomain{}, errors.Wrap(err, "error getting index")
+	}
+	return hashes[index], nil
+}
+
+func GetSubdomains(db *leveldb.DB, name string) ([]blob.Subdomain, error) {
+	var base []blob.Subdomain
+	baseB, err := db.Get(headerSubdomainsPrefix(name), nil)
+	if err != nil {
+		return base, errors.Wrap(err, "error getting sector hashes")
+	}
+	for _, b := range base {
+		if err := b.Decode(bytes.NewReader(baseB)); err != nil {
+			panic(err)
+		}
+	}
+	return base, nil
+}
+
+func SetSubdomainTx(tx *leveldb.Transaction, header *Header, subdomains []blob.Subdomain) error {
+	var buf bytes.Buffer
+	for _, s := range subdomains {
+		if err := s.Encode(&buf); err != nil {
+			return errors.Wrap(err, "error encoding subdomains")
+		}
 	}
 	exists, err := tx.Has(headerDataPrefix(header.Name), nil)
 	if err != nil {

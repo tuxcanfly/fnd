@@ -462,188 +462,47 @@ func (s *Server) ListBlobInfo(req *apiv1.ListBlobInfoReq, srv apiv1.Footnotev1_L
 	}
 }
 
-func (s *Server) NameCheckout(ctx context.Context, req *apiv1.NameCheckoutReq) (*apiv1.NameCheckoutRes, error) {
-	txID := atomic.AddUint32(&s.lastTxID, 1)
-	bl, err := s.ns.Open(req.Name)
-	if err != nil {
-		return nil, err
-	}
-	var epochHeight, sectorSize uint16
-	var sectorTipHash crypto.Hash = blob.ZeroHash
-
+func (s *Server) AddSubdomain(_ context.Context, req *apiv1.AddSubdomainReq) (*apiv1.AddSubdomainRes, error) {
 	header, err := store.GetHeader(s.db, req.Name)
 	if err != nil {
-		epochHeight = protocol.CurrentEpoch(req.Name)
-	} else {
-		epochHeight = header.EpochHeight
-		sectorSize = header.SectorSize
-		sectorTipHash = header.SectorTipHash
+		return nil, err
 	}
 
-	tx, err := bl.Transaction()
+	subdomains, err := store.GetSubdomains(s.db, req.Name)
 	if err != nil {
 		return nil, err
 	}
 
-	if req.ResetEpoch {
-		if epochHeight > protocol.CurrentEpoch(req.Name) {
-			return nil, errors.New("cannot reset epoch ahead of schedule")
-		}
-
-		if err := tx.Truncate(); err != nil {
-			return nil, err
-		}
-
-		epochHeight++
-		sectorSize = 0
-		sectorTipHash = crypto.ZeroHash
-	}
-
-	_, err = tx.Seek(int64(sectorSize)*int64(blob.SectorBytes), io.SeekStart)
-	if err != nil {
-		return nil, err
-	}
-
-	s.txStore.Set(strconv.FormatUint(uint64(txID), 32), &awaitingTx{
-		blob: bl,
-		tx:   tx,
-	}, TransactionExpiry)
-
-	return &apiv1.NameCheckoutRes{
-		TxID:          txID,
-		EpochHeight:   uint32(epochHeight),
-		SectorSize:    uint32(sectorSize),
-		SectorTipHash: sectorTipHash.Bytes(),
-	}, nil
-}
-
-func (s *Server) NameWriteSector(ctx context.Context, req *apiv1.NameWriteSectorReq) (*apiv1.NameWriteSectorRes, error) {
-	awaiting := s.txStore.Get(strconv.FormatUint(uint64(req.TxID), 32)).(*awaitingTx)
-	if awaiting == nil {
-		return nil, errors.New("transaction ID not found")
-	}
-	tx := awaiting.tx
-	// we want clients to handle partial writes
-	var sector blob.Sector
-	copy(sector[:], req.Data)
-	err := tx.WriteSector(sector)
-	res := &apiv1.NameWriteSectorRes{}
-	if err != nil {
-		res.WriteErr = err.Error()
-	}
-	return res, nil
-}
-
-func (s *Server) NameCommit(ctx context.Context, req *apiv1.NameCommitReq) (*apiv1.NameCommitRes, error) {
-	id := strconv.FormatUint(uint64(req.TxID), 32)
-	awaiting := s.txStore.Get(id).(*awaitingTx)
-	if awaiting == nil {
-		return nil, errors.New("transaction ID not found")
-	}
-
-	tx := awaiting.tx
-	name := tx.Name()
-	info, err := store.GetNameInfo(s.db, name)
-	if err != nil {
-		return nil, errors.Wrap(err, "error getting name info")
-	}
-
-	// TODO: test if epoch was updated _after_ we checked out
-	epochHeight := uint16(req.EpochHeight)
-	sectorSize := uint16(req.SectorSize)
-	sectorTipHash, err := crypto.NewHashFromBytes(req.SectorTipHash)
-	if err != nil {
-		return nil, errors.Wrap(err, "error parsing sector tip hash")
-	}
-
-	hashes, err := blob.SerialHash(blob.NewReader(tx), crypto.ZeroHash, sectorSize)
-	if err != nil {
-		return nil, errors.Wrap(err, "error getting sector hashes")
-	}
-
-	if hashes.Tip() != sectorTipHash {
-		return nil, errors.New("sector tip hash mismatch")
-	}
-
-	var sig crypto.Signature
-	copy(sig[:], req.Signature)
-	h := blob.SealHash(name, epochHeight, sectorSize, sectorTipHash, crypto.ZeroHash)
-	if !crypto.VerifySigPub(info.PublicKey, sig, h) {
-		return nil, errors.New("signature verification failed")
-	}
-
-	if !s.nameLocker.TryLock(name) {
-		return nil, errors.New("name is busy")
-	}
-	defer s.nameLocker.Unlock(name)
+	subdomains = append(subdomains, blob.Subdomain{
+		//ID:          req.ID,
+		Name:      req.Subdomain,
+		PublicKey: req.PublicKey,
+		Size:      uint8(req.Size),
+		//EpochHeight: req.EpochHeight,
+	})
 
 	err = store.WithTx(s.db, func(tx *leveldb.Transaction) error {
-		return store.SetHeaderTx(tx, &store.Header{
-			Name:          name,
-			EpochHeight:   epochHeight,
-			SectorSize:    sectorSize,
-			SectorTipHash: sectorTipHash,
-			Signature:     sig,
-			ReservedRoot:  crypto.ZeroHash,
-			EpochStartAt:  time.Now(),
-		}, hashes)
+		return store.SetSubdomainTx(tx, &store.Header{
+			Name:          header.Name,
+			EpochHeight:   header.EpochHeight,
+			SectorSize:    header.SectorSize,
+			SectorTipHash: header.SectorTipHash,
+			Signature:     header.Signature,
+			ReservedRoot:  header.ReservedRoot,
+			EpochStartAt:  header.EpochStartAt,
+		}, subdomains)
 	})
+
 	if err != nil {
-		return nil, errors.Wrap(err, "error storing header")
+		return nil, errors.Wrap(err, "error storing subdomains")
 	}
-	if err := tx.Commit(); err != nil {
-		return nil, errors.Wrap(err, "error committing blob")
-	}
-	if err := awaiting.blob.Close(); err != nil {
-		return nil, errors.Wrap(err, "error closing blob")
-	}
+	_, _ = p2p.GossipAll(s.mux, &wire.NameUpdate{
+		Name:        req.Name,
+		EpochHeight: header.EpochHeight,
+		SectorSize:  header.SectorSize,
+	})
 
-	s.txStore.Del(id)
-
-	var recips []crypto.Hash
-	if req.Broadcast {
-		recips, _ = p2p.GossipAll(s.mux, &wire.NameUpdate{
-			Name:        name,
-			EpochHeight: epochHeight,
-			SectorSize:  sectorSize,
-		})
-	}
-	s.lgr.Info("committed blob", "name", name, "recipient_count", len(recips))
-
-	return &apiv1.NameCommitRes{}, nil
-}
-
-func (s *Server) NameReadAt(_ context.Context, req *apiv1.NameReadAtReq) (*apiv1.NameReadAtRes, error) {
-	if req.Offset > blob.Size {
-		return nil, errors.New("offset is beyond blob bounds")
-	}
-	toRead := req.Len
-	if req.Offset+toRead > blob.Size {
-		return nil, errors.New("read is beyond blob bounds")
-	}
-	if toRead == 0 {
-		return &apiv1.NameReadAtRes{
-			Data: make([]byte, 0),
-		}, nil
-	}
-
-	name := req.Name
-	if !s.nameLocker.TryRLock(name) {
-		return nil, errors.New("name is busy")
-	}
-	defer s.nameLocker.RUnlock(name)
-	bl, err := s.ns.Open(name)
-	if err != nil {
-		return nil, errors.Wrap(err, "error opening blob for reading")
-	}
-	defer bl.Close()
-	buf := make([]byte, toRead)
-	if _, err := bl.ReadAt(buf, int64(req.Offset)); err != nil {
-		return nil, errors.Wrap(err, "error reading blob")
-	}
-	return &apiv1.NameReadAtRes{
-		Data: buf,
-	}, nil
+	return &apiv1.AddSubdomainRes{}, nil
 }
 
 func (s *Server) GetNameInfo(_ context.Context, req *apiv1.NameInfoReq) (*apiv1.NameInfoRes, error) {
@@ -657,7 +516,7 @@ func (s *Server) GetNameInfo(_ context.Context, req *apiv1.NameInfoReq) (*apiv1.
 		Name:         name,
 		PublicKey:    info.PublicKey.SerializeCompressed(),
 		ImportHeight: uint32(info.ImportHeight),
-		Names: []*apiv1.Subdomain{
+		Names: []*apiv1.SubdomainRes{
 			{},
 		},
 	}, nil
@@ -682,7 +541,7 @@ func (s *Server) ListNameInfo(req *apiv1.ListNameInfoReq, srv apiv1.Footnotev1_L
 			Name:         info.Name,
 			PublicKey:    info.PublicKey.SerializeCompressed(),
 			ImportHeight: uint32(info.ImportHeight),
-			Names: []*apiv1.Subdomain{
+			Names: []*apiv1.SubdomainRes{
 				{},
 			},
 		}
