@@ -39,7 +39,7 @@ func (b *BlobWriter) Open() error {
 	if b.committed {
 		panic("writer committed")
 	}
-	checkoutRes, err := b.client.Checkout(context.Background(), &apiv1.CheckoutReq{
+	checkoutRes, err := b.client.BlobCheckout(context.Background(), &apiv1.BlobCheckoutReq{
 		Name:       b.name,
 		ResetEpoch: b.resetEpoch,
 	})
@@ -69,7 +69,7 @@ func (b *BlobWriter) WriteSector(p []byte) (crypto.Hash, error) {
 	var sector blob.Sector
 	copy(sector[:], p)
 
-	res, err := b.client.WriteSector(context.Background(), &apiv1.WriteSectorReq{
+	res, err := b.client.BlobWriteSector(context.Background(), &apiv1.BlobWriteSectorReq{
 		TxID: b.txID,
 		Data: p,
 	})
@@ -99,7 +99,7 @@ func (b *BlobWriter) Commit(broadcast bool) (crypto.Hash, error) {
 	if err != nil {
 		return blob.ZeroHash, errors.Wrap(err, "error sealing blob")
 	}
-	_, err = b.client.Commit(context.Background(), &apiv1.CommitReq{
+	_, err = b.client.BlobCommit(context.Background(), &apiv1.BlobCommitReq{
 		TxID:          b.txID,
 		Timestamp:     uint64(ts.Unix()),
 		Signature:     sig[:],

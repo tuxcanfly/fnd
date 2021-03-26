@@ -9,15 +9,21 @@ service Footnotev1 {
     rpc UnbanPeer (UnbanPeerReq) returns (Empty);
     rpc ListPeers (ListPeersReq) returns (stream ListPeersRes);
 
-    rpc Checkout (CheckoutReq) returns (CheckoutRes);
-    rpc WriteSector (WriteSectorReq) returns (WriteSectorRes);
-    rpc Commit (CommitReq) returns (CommitRes);
-
-    rpc ReadAt (ReadAtReq) returns (ReadAtRes);
-
+    rpc BlobCheckout (BlobCheckoutReq) returns (BlobCheckoutRes);
+    rpc BlobWriteSector (BlobWriteSectorReq) returns (BlobWriteSectorRes);
+    rpc BlobCommit (BlobCommitReq) returns (BlobCommitRes);
+    rpc BlobReadAt (BlobReadAtReq) returns (BlobReadAtRes);
 
     rpc GetBlobInfo (BlobInfoReq) returns (BlobInfoRes);
     rpc ListBlobInfo (ListBlobInfoReq) returns (stream BlobInfoRes);
+
+    rpc NameCheckout (NameCheckoutReq) returns (NameCheckoutRes);
+    rpc NameWriteSector (NameWriteSectorReq) returns (NameWriteSectorRes);
+    rpc NameCommit (NameCommitReq) returns (NameCommitRes);
+    rpc NameReadAt (NameReadAtReq) returns (NameReadAtRes);
+
+    rpc GetNameInfo (NameInfoReq) returns (NameInfoRes);
+    rpc ListNameInfo (ListNameInfoReq) returns (stream NameInfoRes);
 
     rpc SendUpdate (SendUpdateReq) returns (SendUpdateRes);
 }
@@ -71,28 +77,28 @@ message ListPeersRes {
     bool whitelisted = 7;
 }
 
-message CheckoutReq {
+message BlobCheckoutReq {
     string name = 1;
     bool resetEpoch = 2;
 }
 
-message CheckoutRes {
+message BlobCheckoutRes {
     uint32 txID = 1;
     uint32 epochHeight = 2;
     uint32 sectorSize = 3;
     bytes sectorTipHash = 4;
 }
 
-message WriteSectorReq {
+message BlobWriteSectorReq {
     uint32 txID = 1;
     bytes data = 2;
 }
 
-message WriteSectorRes {
+message BlobWriteSectorRes {
     string writeErr = 1;
 }
 
-message CommitReq {
+message BlobCommitReq {
     uint32 txID = 1;
     uint64 timestamp = 2;
     bytes signature = 3;
@@ -102,25 +108,18 @@ message CommitReq {
     bytes sectorTipHash = 7;
 }
 
-message CommitRes {
+message BlobCommitRes {
 }
 
-message ReadAtReq {
+message BlobReadAtReq {
     string name = 1;
     uint32 offset = 2;
     uint32 len = 3;
 }
 
-message ReadAtRes {
+message BlobReadAtRes {
     uint32 offset = 1;
     bytes data = 2;
-}
-
-message ResetEpochReq {
-    uint32 txID = 1;
-}
-
-message ResetEpochRes {
 }
 
 message BlobInfoReq {
@@ -142,6 +141,72 @@ message BlobInfoRes {
     bytes signature = 8;
     uint64 receivedAt = 9;
     uint64 bannedAt = 10;
+}
+
+message NameCheckoutReq {
+    string name = 1;
+    bool resetEpoch = 2;
+}
+
+message NameCheckoutRes {
+    uint32 txID = 1;
+    uint32 epochHeight = 2;
+    uint32 sectorSize = 3;
+    bytes sectorTipHash = 4;
+}
+
+message NameWriteSectorReq {
+    uint32 txID = 1;
+    bytes data = 2;
+}
+
+message NameWriteSectorRes {
+    string writeErr = 1;
+}
+
+message NameCommitReq {
+    uint32 txID = 1;
+    uint64 timestamp = 2;
+    bytes signature = 3;
+    bool broadcast = 4;
+    uint32 epochHeight = 5;
+    uint32 sectorSize = 6;
+    bytes sectorTipHash = 7;
+}
+
+message NameCommitRes {
+}
+
+message NameReadAtReq {
+    string name = 1;
+    uint32 offset = 2;
+    uint32 len = 3;
+}
+
+message NameReadAtRes {
+    uint32 offset = 1;
+    bytes data = 2;
+}
+
+message NameInfoReq {
+    string name = 1;
+}
+
+message ListNameInfoReq {
+    string start = 1;
+}
+
+message Subdomain {
+    string name = 1;
+    bytes publicKey = 2;
+    uint32 size = 3;
+}
+
+message NameInfoRes {
+    string name = 1;
+    bytes publicKey = 2;
+    uint32 importHeight = 3;
+    repeated Subdomain names = 4;
 }
 
 message SendUpdateReq {

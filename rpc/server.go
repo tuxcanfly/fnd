@@ -31,6 +31,7 @@ var emptyRes = &apiv1.Empty{}
 type Opts struct {
 	PeerID      crypto.Hash
 	BlobStore   blob.Store
+	NameStore   blob.Store
 	PeerManager p2p.PeerManager
 	NameLocker  util.MultiLocker
 	Mux         *p2p.PeerMuxer
@@ -46,6 +47,7 @@ type Server struct {
 	mux        *p2p.PeerMuxer
 	db         *leveldb.DB
 	bs         blob.Store
+	ns         blob.Store
 	pm         p2p.PeerManager
 	nameLocker util.MultiLocker
 	txStore    *util.Cache
@@ -69,6 +71,7 @@ func NewServer(opts *Opts) *Server {
 		mux:        opts.Mux,
 		db:         opts.DB,
 		bs:         opts.BlobStore,
+		ns:         opts.BlobStore,
 		pm:         opts.PeerManager,
 		nameLocker: opts.NameLocker,
 		txStore:    util.NewCache(),
@@ -218,7 +221,7 @@ func (s *Server) ListPeers(req *apiv1.ListPeersReq, stream apiv1.Footnotev1_List
 	}
 }
 
-func (s *Server) Checkout(ctx context.Context, req *apiv1.CheckoutReq) (*apiv1.CheckoutRes, error) {
+func (s *Server) BlobCheckout(ctx context.Context, req *apiv1.BlobCheckoutReq) (*apiv1.BlobCheckoutRes, error) {
 	txID := atomic.AddUint32(&s.lastTxID, 1)
 	bl, err := s.bs.Open(req.Name)
 	if err != nil {
@@ -265,7 +268,7 @@ func (s *Server) Checkout(ctx context.Context, req *apiv1.CheckoutReq) (*apiv1.C
 		tx:   tx,
 	}, TransactionExpiry)
 
-	return &apiv1.CheckoutRes{
+	return &apiv1.BlobCheckoutRes{
 		TxID:          txID,
 		EpochHeight:   uint32(epochHeight),
 		SectorSize:    uint32(sectorSize),
@@ -273,7 +276,7 @@ func (s *Server) Checkout(ctx context.Context, req *apiv1.CheckoutReq) (*apiv1.C
 	}, nil
 }
 
-func (s *Server) WriteSector(ctx context.Context, req *apiv1.WriteSectorReq) (*apiv1.WriteSectorRes, error) {
+func (s *Server) BlobWriteSector(ctx context.Context, req *apiv1.BlobWriteSectorReq) (*apiv1.BlobWriteSectorRes, error) {
 	awaiting := s.txStore.Get(strconv.FormatUint(uint64(req.TxID), 32)).(*awaitingTx)
 	if awaiting == nil {
 		return nil, errors.New("transaction ID not found")
@@ -283,14 +286,14 @@ func (s *Server) WriteSector(ctx context.Context, req *apiv1.WriteSectorReq) (*a
 	var sector blob.Sector
 	copy(sector[:], req.Data)
 	err := tx.WriteSector(sector)
-	res := &apiv1.WriteSectorRes{}
+	res := &apiv1.BlobWriteSectorRes{}
 	if err != nil {
 		res.WriteErr = err.Error()
 	}
 	return res, nil
 }
 
-func (s *Server) Commit(ctx context.Context, req *apiv1.CommitReq) (*apiv1.CommitRes, error) {
+func (s *Server) BlobCommit(ctx context.Context, req *apiv1.BlobCommitReq) (*apiv1.BlobCommitRes, error) {
 	id := strconv.FormatUint(uint64(req.TxID), 32)
 	awaiting := s.txStore.Get(id).(*awaitingTx)
 	if awaiting == nil {
@@ -366,10 +369,10 @@ func (s *Server) Commit(ctx context.Context, req *apiv1.CommitReq) (*apiv1.Commi
 	}
 	s.lgr.Info("committed blob", "name", name, "recipient_count", len(recips))
 
-	return &apiv1.CommitRes{}, nil
+	return &apiv1.BlobCommitRes{}, nil
 }
 
-func (s *Server) ReadAt(_ context.Context, req *apiv1.ReadAtReq) (*apiv1.ReadAtRes, error) {
+func (s *Server) BlobReadAt(_ context.Context, req *apiv1.BlobReadAtReq) (*apiv1.BlobReadAtRes, error) {
 	if req.Offset > blob.Size {
 		return nil, errors.New("offset is beyond blob bounds")
 	}
@@ -378,7 +381,7 @@ func (s *Server) ReadAt(_ context.Context, req *apiv1.ReadAtReq) (*apiv1.ReadAtR
 		return nil, errors.New("read is beyond blob bounds")
 	}
 	if toRead == 0 {
-		return &apiv1.ReadAtRes{
+		return &apiv1.BlobReadAtRes{
 			Data: make([]byte, 0),
 		}, nil
 	}
@@ -397,7 +400,7 @@ func (s *Server) ReadAt(_ context.Context, req *apiv1.ReadAtReq) (*apiv1.ReadAtR
 	if _, err := bl.ReadAt(buf, int64(req.Offset)); err != nil {
 		return nil, errors.Wrap(err, "error reading blob")
 	}
-	return &apiv1.ReadAtRes{
+	return &apiv1.BlobReadAtRes{
 		Data: buf,
 	}, nil
 }
@@ -452,6 +455,236 @@ func (s *Server) ListBlobInfo(req *apiv1.ListBlobInfoReq, srv apiv1.Footnotev1_L
 			Signature:     info.Signature[:],
 			ReceivedAt:    uint64(info.ReceivedAt.Unix()),
 			BannedAt:      uint64(info.BannedAt.Unix()),
+		}
+		if err = srv.Send(res); err != nil {
+			return errors.Wrap(err, "error sending info")
+		}
+	}
+}
+
+func (s *Server) NameCheckout(ctx context.Context, req *apiv1.NameCheckoutReq) (*apiv1.NameCheckoutRes, error) {
+	txID := atomic.AddUint32(&s.lastTxID, 1)
+	bl, err := s.ns.Open(req.Name)
+	if err != nil {
+		return nil, err
+	}
+	var epochHeight, sectorSize uint16
+	var sectorTipHash crypto.Hash = blob.ZeroHash
+
+	header, err := store.GetHeader(s.db, req.Name)
+	if err != nil {
+		epochHeight = protocol.CurrentEpoch(req.Name)
+	} else {
+		epochHeight = header.EpochHeight
+		sectorSize = header.SectorSize
+		sectorTipHash = header.SectorTipHash
+	}
+
+	tx, err := bl.Transaction()
+	if err != nil {
+		return nil, err
+	}
+
+	if req.ResetEpoch {
+		if epochHeight > protocol.CurrentEpoch(req.Name) {
+			return nil, errors.New("cannot reset epoch ahead of schedule")
+		}
+
+		if err := tx.Truncate(); err != nil {
+			return nil, err
+		}
+
+		epochHeight++
+		sectorSize = 0
+		sectorTipHash = crypto.ZeroHash
+	}
+
+	_, err = tx.Seek(int64(sectorSize)*int64(blob.SectorBytes), io.SeekStart)
+	if err != nil {
+		return nil, err
+	}
+
+	s.txStore.Set(strconv.FormatUint(uint64(txID), 32), &awaitingTx{
+		blob: bl,
+		tx:   tx,
+	}, TransactionExpiry)
+
+	return &apiv1.NameCheckoutRes{
+		TxID:          txID,
+		EpochHeight:   uint32(epochHeight),
+		SectorSize:    uint32(sectorSize),
+		SectorTipHash: sectorTipHash.Bytes(),
+	}, nil
+}
+
+func (s *Server) NameWriteSector(ctx context.Context, req *apiv1.NameWriteSectorReq) (*apiv1.NameWriteSectorRes, error) {
+	awaiting := s.txStore.Get(strconv.FormatUint(uint64(req.TxID), 32)).(*awaitingTx)
+	if awaiting == nil {
+		return nil, errors.New("transaction ID not found")
+	}
+	tx := awaiting.tx
+	// we want clients to handle partial writes
+	var sector blob.Sector
+	copy(sector[:], req.Data)
+	err := tx.WriteSector(sector)
+	res := &apiv1.NameWriteSectorRes{}
+	if err != nil {
+		res.WriteErr = err.Error()
+	}
+	return res, nil
+}
+
+func (s *Server) NameCommit(ctx context.Context, req *apiv1.NameCommitReq) (*apiv1.NameCommitRes, error) {
+	id := strconv.FormatUint(uint64(req.TxID), 32)
+	awaiting := s.txStore.Get(id).(*awaitingTx)
+	if awaiting == nil {
+		return nil, errors.New("transaction ID not found")
+	}
+
+	tx := awaiting.tx
+	name := tx.Name()
+	info, err := store.GetNameInfo(s.db, name)
+	if err != nil {
+		return nil, errors.Wrap(err, "error getting name info")
+	}
+
+	// TODO: test if epoch was updated _after_ we checked out
+	epochHeight := uint16(req.EpochHeight)
+	sectorSize := uint16(req.SectorSize)
+	sectorTipHash, err := crypto.NewHashFromBytes(req.SectorTipHash)
+	if err != nil {
+		return nil, errors.Wrap(err, "error parsing sector tip hash")
+	}
+
+	hashes, err := blob.SerialHash(blob.NewReader(tx), crypto.ZeroHash, sectorSize)
+	if err != nil {
+		return nil, errors.Wrap(err, "error getting sector hashes")
+	}
+
+	if hashes.Tip() != sectorTipHash {
+		return nil, errors.New("sector tip hash mismatch")
+	}
+
+	var sig crypto.Signature
+	copy(sig[:], req.Signature)
+	h := blob.SealHash(name, epochHeight, sectorSize, sectorTipHash, crypto.ZeroHash)
+	if !crypto.VerifySigPub(info.PublicKey, sig, h) {
+		return nil, errors.New("signature verification failed")
+	}
+
+	if !s.nameLocker.TryLock(name) {
+		return nil, errors.New("name is busy")
+	}
+	defer s.nameLocker.Unlock(name)
+
+	err = store.WithTx(s.db, func(tx *leveldb.Transaction) error {
+		return store.SetHeaderTx(tx, &store.Header{
+			Name:          name,
+			EpochHeight:   epochHeight,
+			SectorSize:    sectorSize,
+			SectorTipHash: sectorTipHash,
+			Signature:     sig,
+			ReservedRoot:  crypto.ZeroHash,
+			EpochStartAt:  time.Now(),
+		}, hashes)
+	})
+	if err != nil {
+		return nil, errors.Wrap(err, "error storing header")
+	}
+	if err := tx.Commit(); err != nil {
+		return nil, errors.Wrap(err, "error committing blob")
+	}
+	if err := awaiting.blob.Close(); err != nil {
+		return nil, errors.Wrap(err, "error closing blob")
+	}
+
+	s.txStore.Del(id)
+
+	var recips []crypto.Hash
+	if req.Broadcast {
+		recips, _ = p2p.GossipAll(s.mux, &wire.NameUpdate{
+			Name:        name,
+			EpochHeight: epochHeight,
+			SectorSize:  sectorSize,
+		})
+	}
+	s.lgr.Info("committed blob", "name", name, "recipient_count", len(recips))
+
+	return &apiv1.NameCommitRes{}, nil
+}
+
+func (s *Server) NameReadAt(_ context.Context, req *apiv1.NameReadAtReq) (*apiv1.NameReadAtRes, error) {
+	if req.Offset > blob.Size {
+		return nil, errors.New("offset is beyond blob bounds")
+	}
+	toRead := req.Len
+	if req.Offset+toRead > blob.Size {
+		return nil, errors.New("read is beyond blob bounds")
+	}
+	if toRead == 0 {
+		return &apiv1.NameReadAtRes{
+			Data: make([]byte, 0),
+		}, nil
+	}
+
+	name := req.Name
+	if !s.nameLocker.TryRLock(name) {
+		return nil, errors.New("name is busy")
+	}
+	defer s.nameLocker.RUnlock(name)
+	bl, err := s.ns.Open(name)
+	if err != nil {
+		return nil, errors.Wrap(err, "error opening blob for reading")
+	}
+	defer bl.Close()
+	buf := make([]byte, toRead)
+	if _, err := bl.ReadAt(buf, int64(req.Offset)); err != nil {
+		return nil, errors.Wrap(err, "error reading blob")
+	}
+	return &apiv1.NameReadAtRes{
+		Data: buf,
+	}, nil
+}
+
+func (s *Server) GetNameInfo(_ context.Context, req *apiv1.NameInfoReq) (*apiv1.NameInfoRes, error) {
+	name := req.Name
+	info, err := store.GetNameInfo(s.db, req.Name)
+	if err != nil {
+		return nil, err
+	}
+
+	return &apiv1.NameInfoRes{
+		Name:         name,
+		PublicKey:    info.PublicKey.SerializeCompressed(),
+		ImportHeight: uint32(info.ImportHeight),
+		Names: []*apiv1.Subdomain{
+			{},
+		},
+	}, nil
+}
+
+func (s *Server) ListNameInfo(req *apiv1.ListNameInfoReq, srv apiv1.Footnotev1_ListNameInfoServer) error {
+	stream, err := store.StreamNameInfo(s.db, req.Start)
+	if err != nil {
+		return errors.Wrap(err, "error opening header stream")
+	}
+	defer stream.Close()
+
+	for {
+		info, err := stream.Next()
+		if err != nil {
+			return errors.Wrap(err, "error reading info")
+		}
+		if info == nil {
+			return nil
+		}
+		res := &apiv1.NameInfoRes{
+			Name:         info.Name,
+			PublicKey:    info.PublicKey.SerializeCompressed(),
+			ImportHeight: uint32(info.ImportHeight),
+			Names: []*apiv1.Subdomain{
+				{},
+			},
 		}
 		if err = srv.Send(res); err != nil {
 			return errors.Wrap(err, "error sending info")
