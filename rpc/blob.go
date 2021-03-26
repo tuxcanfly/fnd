@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"context"
+	"fnd/blob"
 	"fnd/crypto"
 	apiv1 "fnd/rpc/v1"
 	"fnd/store"
@@ -139,9 +140,22 @@ func parseNameInfoRes(res *apiv1.NameInfoRes) (*store.NameInfo, error) {
 		return nil, errors.Wrap(err, "error parsing public key")
 	}
 
+	subdomains := make([]blob.Subdomain, len(res.Subdomains))
+	for i, subdomain := range res.Subdomains {
+		pub, err := btcec.ParsePubKey(subdomain.PublicKey, btcec.S256())
+		if err != nil {
+			return nil, errors.Wrap(err, "error parsing public key")
+		}
+		subdomains[i] = blob.Subdomain{
+			Name:      subdomain.Name,
+			PublicKey: pub,
+			Size:      uint8(subdomain.Size),
+		}
+	}
 	return &store.NameInfo{
 		Name:         res.Name,
 		PublicKey:    pub,
 		ImportHeight: int(res.ImportHeight),
+		Subdomains:   subdomains,
 	}, nil
 }

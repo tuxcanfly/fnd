@@ -36,6 +36,7 @@ var infoCmd = &cobra.Command{
 		table.SetHeader([]string{
 			"Name",
 			"Public Key",
+			"Subdomains",
 		})
 
 		for _, name := range names {
@@ -48,6 +49,13 @@ var infoCmd = &cobra.Command{
 				res.Name,
 				hex.EncodeToString(res.PublicKey.SerializeCompressed()),
 			})
+
+			for _, subdomain := range res.Subdomains {
+				table.Append([]string{
+					subdomain.Name,
+					hex.EncodeToString(subdomain.PublicKey.SerializeCompressed()),
+				})
+			}
 		}
 
 		table.Render()

@@ -4,12 +4,14 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
+	"fnd/blob"
+	"math"
+
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/pkg/errors"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/iterator"
 	"github.com/syndtr/goleveldb/leveldb/util"
-	"math"
 )
 
 var (
@@ -58,6 +60,7 @@ type NameInfo struct {
 	Name         string
 	PublicKey    *btcec.PublicKey
 	ImportHeight int
+	Subdomains   []blob.Subdomain
 }
 
 func (n *NameInfo) MarshalJSON() ([]byte, error) {
