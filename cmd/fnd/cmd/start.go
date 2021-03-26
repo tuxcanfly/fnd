@@ -64,6 +64,10 @@ var startCmd = &cobra.Command{
 		lgr.Info("opening blob store", "path", blobsPath)
 		bs := blob.NewStore(blobsPath)
 
+		namesPath := config.ExpandNamesPath(configuredHomeDir)
+		lgr.Info("opening names store", "path", namesPath)
+		ns := blob.NewStore(namesPath)
+
 		seedsStr := cfg.P2P.FixedSeeds
 		seeds, err := p2p.ParseSeedPeers(seedsStr)
 		if err != nil {
@@ -154,7 +158,7 @@ var startCmd = &cobra.Command{
 		nameUpdater.PollInterval = config.ConvertDuration(cfg.Tuning.Updater.PollIntervalMS, time.Millisecond)
 		nameUpdater.Workers = cfg.Tuning.Updater.Workers
 
-		blobUpdater := protocol.NewBlobUpdater(mux, db, blobUpdateQueue, nameLocker, bs)
+		blobUpdater := protocol.NewBlobUpdater(mux, db, blobUpdateQueue, nameLocker, bs, ns)
 		blobUpdater.PollInterval = config.ConvertDuration(cfg.Tuning.Updater.PollIntervalMS, time.Millisecond)
 		blobUpdater.Workers = cfg.Tuning.Updater.Workers
 
@@ -170,7 +174,7 @@ var startCmd = &cobra.Command{
 		peerExchanger.ResponseTimeout = config.ConvertDuration(cfg.Tuning.PeerExchanger.ResponseTimeoutMS, time.Millisecond)
 		peerExchanger.RequestInterval = config.ConvertDuration(cfg.Tuning.PeerExchanger.RequestIntervalMS, time.Millisecond)
 
-		nameSyncer := protocol.NewNameSyncer(mux, db, nameLocker, blobUpdater)
+		nameSyncer := protocol.NewNameSyncer(mux, ns, db, nameLocker, blobUpdater)
 		nameSyncer.Workers = cfg.Tuning.NameSyncer.Workers
 		nameSyncer.SampleSize = cfg.Tuning.NameSyncer.SampleSize
 		nameSyncer.UpdateResponseTimeout = config.ConvertDuration(cfg.Tuning.NameSyncer.UpdateResponseTimeoutMS, time.Millisecond)

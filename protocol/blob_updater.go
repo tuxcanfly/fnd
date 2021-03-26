@@ -38,13 +38,14 @@ type BlobUpdater struct {
 	queue        *BlobUpdateQueue
 	nameLocker   util.MultiLocker
 	bs           blob.Store
+	ns           blob.Store
 	obs          *util.Observable
 	quitCh       chan struct{}
 	wg           sync.WaitGroup
 	lgr          log.Logger
 }
 
-func NewBlobUpdater(mux *p2p.PeerMuxer, db *leveldb.DB, queue *BlobUpdateQueue, nameLocker util.MultiLocker, bs blob.Store) *BlobUpdater {
+func NewBlobUpdater(mux *p2p.PeerMuxer, db *leveldb.DB, queue *BlobUpdateQueue, nameLocker util.MultiLocker, bs blob.Store, ns blob.Store) *BlobUpdater {
 	return &BlobUpdater{
 		PollInterval: config.ConvertDuration(config.DefaultConfig.Tuning.Updater.PollIntervalMS, time.Millisecond),
 		Workers:      config.DefaultConfig.Tuning.Updater.Workers,
@@ -53,6 +54,7 @@ func NewBlobUpdater(mux *p2p.PeerMuxer, db *leveldb.DB, queue *BlobUpdateQueue, 
 		queue:        queue,
 		nameLocker:   nameLocker,
 		bs:           bs,
+		ns:           ns,
 		obs:          util.NewObservable(),
 		quitCh:       make(chan struct{}),
 		lgr:          log.WithModule("updater"),

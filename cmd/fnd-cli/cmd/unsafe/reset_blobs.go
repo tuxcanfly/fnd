@@ -4,9 +4,10 @@ import (
 	"fmt"
 	"fnd/config"
 	"fnd/store"
+	"os"
+
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
-	"os"
 )
 
 var resetBlobsCmd = &cobra.Command{
@@ -23,6 +24,9 @@ var resetBlobsCmd = &cobra.Command{
 			return errors.Wrap(err, "error erasing blob data")
 		}
 		if err := config.InitBlobsDir(homePath); err != nil {
+			return errors.Wrap(err, "error recreating blobs directory")
+		}
+		if err := config.InitNamesDir(homePath); err != nil {
 			return errors.Wrap(err, "error recreating blobs directory")
 		}
 		if err := store.TruncateHeaderStore(db); err != nil {

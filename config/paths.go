@@ -1,12 +1,14 @@
 package config
 
 import (
-	"github.com/mitchellh/go-homedir"
 	"os"
 	"path"
+
+	"github.com/mitchellh/go-homedir"
 )
 
 const (
+	NamesPath = "names"
 	BlobsPath = "blobs"
 	DBPath    = "db"
 )
@@ -23,8 +25,17 @@ func ExpandBlobsPath(homePath string) string {
 	return path.Join(homePath, BlobsPath)
 }
 
+func ExpandNamesPath(homePath string) string {
+	return path.Join(homePath, NamesPath)
+}
+
 func InitBlobsDir(homePath string) error {
 	p := ExpandBlobsPath(homePath)
+	return os.MkdirAll(p, 0700)
+}
+
+func InitNamesDir(homePath string) error {
+	p := ExpandNamesPath(homePath)
 	return os.MkdirAll(p, 0700)
 }
 
