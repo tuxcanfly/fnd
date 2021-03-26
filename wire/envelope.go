@@ -89,6 +89,10 @@ func (e *Envelope) Decode(r io.Reader) error {
 		msg = &BlobReq{}
 	case MessageTypeBlobRes:
 		msg = &BlobRes{}
+	case MessageTypeNameReq:
+		msg = &NameReq{}
+	case MessageTypeNameRes:
+		msg = &NameRes{}
 	case MessageTypePeerReq:
 		msg = &PeerReq{}
 	case MessageTypePeerRes:

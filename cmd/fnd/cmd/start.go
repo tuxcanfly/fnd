@@ -163,6 +163,9 @@ var startCmd = &cobra.Command{
 		sectorServer := protocol.NewSectorServer(mux, db, bs, nameLocker)
 		sectorServer.CacheExpiry = config.ConvertDuration(cfg.Tuning.SectorServer.CacheExpiryMS, time.Millisecond)
 
+		subdomainServer := protocol.NewSubdomainServer(mux, db, nameLocker)
+		subdomainServer.CacheExpiry = config.ConvertDuration(cfg.Tuning.SectorServer.CacheExpiryMS, time.Millisecond)
+
 		updateServer := protocol.NewUpdateServer(mux, db, nameLocker)
 
 		peerExchanger := protocol.NewPeerExchanger(pm, mux, db)
@@ -195,6 +198,7 @@ var startCmd = &cobra.Command{
 			blobUpdater,
 			pinger,
 			sectorServer,
+			subdomainServer,
 			updateServer,
 			peerExchanger,
 			nameSyncer,

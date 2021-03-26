@@ -124,15 +124,26 @@ func NameUpdateBlob(cfg *NameUpdateConfig) error {
 		return errors.Wrap(err, "error getting header")
 	}
 
+	var epochHeight, sectorSize uint16
+	epochHeight = CurrentEpoch(item.Name)
+	if header != nil {
+		epochHeight = header.EpochHeight
+		sectorSize = header.SectorSize
+	}
+
 	subdomainMeta, err := NameSyncSubdomains(&NameSyncSubdomainsOpts{
 		Timeout:     DefaultNameSyncerBlobResTimeout,
 		Mux:         cfg.Mux,
 		Peers:       item.PeerIDs,
-		EpochHeight: header.EpochHeight,
-		SectorSize:  header.SectorSize,
+		EpochHeight: epochHeight,
+		SectorSize:  sectorSize,
 		Name:        item.Name,
 		DB:          cfg.DB,
 	})
+
+	if err != nil {
+		return errors.Wrap(err, "error syncing subdomains")
+	}
 
 	err = store.WithTx(cfg.DB, func(tx *leveldb.Transaction) error {
 		return store.SetSubdomainTx(tx, item.Name, subdomainMeta.subdomains)
