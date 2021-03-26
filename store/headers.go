@@ -227,13 +227,22 @@ func GetSubdomain(db *leveldb.DB, name string, index uint16) (blob.Subdomain, er
 
 func GetSubdomains(db *leveldb.DB, name string) ([]blob.Subdomain, error) {
 	var base []blob.Subdomain
-	exists, err := db.Has(headerSubdomainsPrefix(name), nil)
-	if err != nil {
-		return base, err
+
+	iterRange := &util.Range{
+		Start: headerSubdomainsPrefix(name + string([]byte{0x00})),
+		Limit: headerSubdomainsPrefix(name + string([]byte{0xff})),
 	}
-	if !exists {
-		return base, nil
+	last := iterRange.Start[len(iterRange.Start)-1]
+	iterRange.Start[len(iterRange.Start)-1] = last + 1
+	iter := db.NewIterator(iterRange, nil)
+
+	for iter.Next() {
+		subdomain := new(blob.Subdomain)
+		mustUnmarshalJSON(iter.Value(), subdomain)
+		base = append(base, *subdomain)
 	}
+	iter.Release()
+
 	return base, nil
 }
 

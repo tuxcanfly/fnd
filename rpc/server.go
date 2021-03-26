@@ -15,7 +15,6 @@ import (
 	"io"
 	"net"
 	"strconv"
-	"strings"
 	"sync/atomic"
 	"time"
 
@@ -572,28 +571,10 @@ func (s *Server) ListNameInfo(req *apiv1.ListNameInfoReq, srv apiv1.Footnotev1_L
 			return nil
 		}
 
-		var subdomainRes []*apiv1.SubdomainRes
-
-		if !strings.Contains(info.Name, ".") {
-			subdomains, err := store.GetSubdomains(s.db, info.Name)
-			if err != nil {
-				return errors.Wrap(err, "error reading subdomains")
-			}
-
-			for _, s := range subdomains {
-				subdomainRes = append(subdomainRes, &apiv1.SubdomainRes{
-					Name:      s.Name,
-					PublicKey: s.PublicKey.SerializeCompressed(),
-					Size:      uint32(s.Size),
-				})
-			}
-		}
-
 		res := &apiv1.NameInfoRes{
 			Name:         info.Name,
 			PublicKey:    info.PublicKey.SerializeCompressed(),
 			ImportHeight: uint32(info.ImportHeight),
-			Subdomains:   subdomainRes,
 		}
 		if err = srv.Send(res); err != nil {
 			return errors.Wrap(err, "error sending info")
