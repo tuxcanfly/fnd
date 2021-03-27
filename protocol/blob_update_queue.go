@@ -12,7 +12,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"fnd.localhost/handshake/primitives"
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/pkg/errors"
 	"github.com/syndtr/goleveldb/leveldb"
@@ -210,9 +209,11 @@ func (u *BlobUpdateQueue) onUpdate(peerID crypto.Hash, envelope *wire.Envelope) 
 }
 
 func (u *BlobUpdateQueue) validateUpdate(name string) error {
-	if err := primitives.ValidateName(name); err != nil {
-		return errors.Wrap(err, "update name is invalid")
-	}
+	// TODO: temporarily allow names with "." in them
+	// to allow subdomain names to sync
+	//if err := primitives.ValidateName(name); err != nil {
+	//return errors.Wrap(err, "update name is invalid")
+	//}
 	nameBan, err := store.NameIsBanned(u.db, name)
 	if err != nil {
 		return errors.Wrap(err, "error reading name ban state")
