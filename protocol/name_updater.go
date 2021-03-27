@@ -1,6 +1,7 @@
 package protocol
 
 import (
+	"fmt"
 	"fnd/blob"
 	"fnd/config"
 	"fnd/log"
@@ -124,6 +125,11 @@ func NameUpdateBlob(cfg *NameUpdateConfig) error {
 		return errors.Wrap(err, "error getting header")
 	}
 
+	info, err := store.GetNameInfo(cfg.DB, item.Name)
+	if err != nil {
+		return errors.Wrap(err, "error getting info")
+	}
+
 	var epochHeight, sectorSize uint16
 	epochHeight = CurrentEpoch(item.Name)
 	if header != nil {
@@ -145,12 +151,22 @@ func NameUpdateBlob(cfg *NameUpdateConfig) error {
 		return errors.Wrap(err, "error syncing subdomains")
 	}
 
+	for _, subdomain := range subdomainMeta.subdomains {
+		name := fmt.Sprintf("%s.%s", subdomain.Name, item.Name)
+		err = store.WithTx(cfg.DB, func(tx *leveldb.Transaction) error {
+			if err := store.SetNameInfoTx(tx, name, subdomain.PublicKey, info.ImportHeight); err != nil {
+				return errors.Wrap(err, "error inserting name info")
+			}
+			return nil
+		})
+	}
+
 	err = store.WithTx(cfg.DB, func(tx *leveldb.Transaction) error {
 		return store.SetSubdomainTx(tx, item.Name, subdomainMeta.subdomains)
 	})
 
 	if err != nil {
-		return errors.Wrap(err, "error storing header")
+		return errors.Wrap(err, "error storing subdomain name info")
 	}
 
 	height, err := store.GetLastNameImportHeight(cfg.DB)
