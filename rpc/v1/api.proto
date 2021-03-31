@@ -116,13 +116,6 @@ message ReadAtRes {
     bytes data = 2;
 }
 
-message ResetEpochReq {
-    uint32 txID = 1;
-}
-
-message ResetEpochRes {
-}
-
 message BlobInfoReq {
     string name = 1;
 }
