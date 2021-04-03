@@ -21,13 +21,11 @@ type nameSyncUpdate struct {
 }
 
 type NameSyncSubdomainsOpts struct {
-	Timeout     time.Duration
-	Mux         *p2p.PeerMuxer
-	Peers       *PeerSet
-	EpochHeight uint16
-	SectorSize  uint16
-	Name        string
-	DB          *leveldb.DB
+	Timeout time.Duration
+	Mux     *p2p.PeerMuxer
+	Peers   *PeerSet
+	Name    string
+	DB      *leveldb.DB
 }
 
 type namePayloadRes struct {
@@ -61,9 +59,7 @@ func NameSyncSubdomains(opts *NameSyncSubdomainsOpts) (*nameSyncUpdate, error) {
 					break
 				}
 				err := opts.Mux.Send(peerID, &wire.NameReq{
-					Name:        opts.Name,
-					EpochHeight: opts.EpochHeight,
-					SectorSize:  opts.SectorSize,
+					Name: opts.Name,
 				})
 				if err != nil {
 					lgr.Warn("error fetching payload from peer, trying another", "peer_id", peerID, "err", err)

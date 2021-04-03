@@ -1,7 +1,6 @@
 package protocol
 
 import (
-	"fmt"
 	"fnd/blob"
 	"fnd/config"
 	"fnd/crypto"
@@ -67,14 +66,12 @@ func (s *SubdomainServer) onNameReq(peerID crypto.Hash, envelope *wire.Envelope)
 		"peer_id", peerID,
 	)
 
-	// TODO: fetch signature
-
 	if !s.nameLocker.TryRLock(reqMsg.Name) {
 		lgr.Info("dropping sector req for busy name")
 		return
 	}
 
-	cacheKey := fmt.Sprintf("%s:%d:%d", reqMsg.Name, reqMsg.EpochHeight)
+	cacheKey := reqMsg.Name
 	cached := s.cache.Get(cacheKey)
 	if cached != nil {
 		s.nameLocker.RUnlock(reqMsg.Name)

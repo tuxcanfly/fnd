@@ -173,19 +173,6 @@ func (ns *DomainSyncer) OnSyncError(cb func(name string, err error)) util.Unsubs
 
 func (ns *DomainSyncer) syncName(info *store.NameInfo) {
 	name := info.Name
-	var epochHeight uint16
-	header, err := store.GetHeader(ns.db, info.Name)
-	if err != nil && !errors.Is(err, leveldb.ErrNotFound) {
-		ns.lgr.Error(
-			"failed to fetch name header",
-			"err", err,
-		)
-		return
-	}
-	if err == nil {
-		epochHeight = header.EpochHeight
-	}
-
 	isEnvelopeCh := make(chan bool)
 	envelopeCountCh := make(chan int)
 	doneCh := make(chan struct{})
@@ -207,7 +194,6 @@ func (ns *DomainSyncer) syncName(info *store.NameInfo) {
 
 	recips, _ := p2p.BroadcastRandom(ns.mux, ns.SampleSize, &wire.NameUpdateReq{
 		Name:          name,
-		EpochHeight:   epochHeight,
 		SubdomainSize: uint16(len(subdomains)),
 	})
 	sampleSize := len(recips)

@@ -120,31 +120,17 @@ type NameUpdateConfig struct {
 func NameUpdateBlob(cfg *NameUpdateConfig) error {
 	item := cfg.Item
 	defer item.Dispose()
-	header, err := store.GetHeader(cfg.DB, item.Name)
-	if err != nil && !errors.Is(err, leveldb.ErrNotFound) {
-		return errors.Wrap(err, "error getting header")
-	}
-
 	info, err := store.GetNameInfo(cfg.DB, item.Name)
 	if err != nil {
 		return errors.Wrap(err, "error getting info")
 	}
 
-	var epochHeight, sectorSize uint16
-	epochHeight = BlobEpoch(item.Name)
-	if header != nil {
-		epochHeight = header.EpochHeight
-		sectorSize = header.SectorSize
-	}
-
 	subdomainMeta, err := NameSyncSubdomains(&NameSyncSubdomainsOpts{
-		Timeout:     DefaultNameSyncerBlobResTimeout,
-		Mux:         cfg.Mux,
-		Peers:       item.PeerIDs,
-		EpochHeight: epochHeight,
-		SectorSize:  sectorSize,
-		Name:        item.Name,
-		DB:          cfg.DB,
+		Timeout: DefaultNameSyncerBlobResTimeout,
+		Mux:     cfg.Mux,
+		Peers:   item.PeerIDs,
+		Name:    item.Name,
+		DB:      cfg.DB,
 	})
 
 	if err != nil {
@@ -181,7 +167,6 @@ func NameUpdateBlob(cfg *NameUpdateConfig) error {
 
 	update := &wire.NameUpdate{
 		Name:          item.Name,
-		EpochHeight:   item.EpochHeight,
 		SubdomainSize: uint16(len(subdomainMeta.subdomains)),
 	}
 	p2p.GossipAll(cfg.Mux, update)

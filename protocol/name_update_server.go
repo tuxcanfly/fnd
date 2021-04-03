@@ -8,7 +8,6 @@ import (
 	"fnd/util"
 	"fnd/wire"
 
-	"github.com/pkg/errors"
 	"github.com/syndtr/goleveldb/leveldb"
 )
 
@@ -51,25 +50,6 @@ func (u *NameUpdateServer) UpdateReqHandler(peerID crypto.Hash, envelope *wire.E
 	}
 	defer u.nameLocker.RUnlock(msg.Name)
 
-	header, err := store.GetHeader(u.db, msg.Name)
-	if errors.Is(err, leveldb.ErrNotFound) {
-		if err := u.mux.Send(peerID, wire.NewNilUpdate(msg.Name)); err != nil {
-			u.lgr.Error("error sending response to update req", "name", msg.Name, "err", err)
-		} else {
-			u.lgr.Debug("serving nil update response for unknown name", "name", msg.Name)
-		}
-		return
-	}
-	if err != nil {
-		u.lgr.Error("error reading blob header", "name", msg.Name, "err", err)
-		if err := u.mux.Send(peerID, wire.NewNilUpdate(msg.Name)); err != nil {
-			u.lgr.Error("error sending response to update req", "name", msg.Name, "err", err)
-		} else {
-			u.lgr.Debug("serving nil update response for name after error reading header", "name", msg.Name)
-		}
-		return
-	}
-
 	subdomains, err := store.GetSubdomains(u.db, msg.Name)
 	if err != nil {
 		if err := u.mux.Send(peerID, wire.NewNilUpdate(msg.Name)); err != nil {
@@ -93,7 +73,6 @@ func (u *NameUpdateServer) UpdateReqHandler(peerID crypto.Hash, envelope *wire.E
 
 	err = u.mux.Send(peerID, &wire.NameUpdate{
 		Name:          msg.Name,
-		EpochHeight:   header.EpochHeight,
 		SubdomainSize: subdomainSize,
 	})
 	if err != nil {
