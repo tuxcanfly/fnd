@@ -6,9 +6,10 @@ import (
 	"fnd/log"
 	"fnd/util"
 	"fnd/wire"
-	"github.com/pkg/errors"
 	"sync"
 	"sync/atomic"
+
+	"github.com/pkg/errors"
 )
 
 const (

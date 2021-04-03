@@ -2,7 +2,6 @@ package name
 
 import (
 	"context"
-	"fmt"
 	"fnd/blob"
 	"fnd/cli"
 	"fnd/protocol"
@@ -12,14 +11,19 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const (
+	BroadcastFlag = "broadcast"
+)
+
 var (
-	fndHome string
+	fndHome   string
+	broadcast bool
 )
 
 var addCmd = &cobra.Command{
 	Use:   "add <name> <subdomain> <publickey> <size>",
 	Short: "Add subdomain to the given name.",
-	Args:  cobra.MinimumNArgs(1),
+	Args:  cobra.MinimumNArgs(4),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		name := args[0]
 		subdomain := args[1]
@@ -60,13 +64,14 @@ var addCmd = &cobra.Command{
 			Size:        uint32(size),
 			PublicKey:   publicKey.SerializeCompressed(),
 			Signature:   sig[:],
+			Broadcast:   broadcast,
 		})
-		fmt.Println(err)
-		return err
+		return nil
 	},
 }
 
 func init() {
+	addCmd.Flags().BoolVar(&broadcast, BroadcastFlag, true, "Broadcast data to the network upon completion")
 	addCmd.Flags().StringVar(&fndHome, "fnd-home", "~/.fnd", "Path to FootnoteD's home directory.")
 	cmd.AddCommand(addCmd)
 }

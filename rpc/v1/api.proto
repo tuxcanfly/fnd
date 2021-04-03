@@ -147,6 +147,7 @@ message AddSubdomainReq {
    uint32 size = 4;
    bytes publicKey = 5;
    bytes signature = 6;
+   bool broadcast = 7;
 }
 
 message AddSubdomainRes {

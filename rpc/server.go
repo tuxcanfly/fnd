@@ -526,9 +526,14 @@ func (s *Server) AddSubdomain(_ context.Context, req *apiv1.AddSubdomainReq) (*a
 		return nil, errors.Wrap(err, "error storing subdomains")
 	}
 
-	_, _ = p2p.GossipAll(s.mux, &wire.NameUpdate{
-		Name: req.Name,
-	})
+	var recips []crypto.Hash
+	if req.Broadcast {
+		recips, _ = p2p.GossipAll(s.mux, &wire.NameUpdate{
+			Name:          req.Name,
+			SubdomainSize: uint16(len(subdomains)),
+		})
+	}
+	s.lgr.Info("committed subdomain", "name", name, "recipient_count", len(recips))
 
 	return &apiv1.AddSubdomainRes{}, nil
 }
