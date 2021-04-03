@@ -480,7 +480,7 @@ func (s *Server) AddSubdomain(_ context.Context, req *apiv1.AddSubdomainReq) (*a
 
 	var sig crypto.Signature
 	copy(sig[:], req.Signature)
-	h := blob.NameSealHash(req.Subdomain, uint16(req.EpochHeight), uint16(req.Size))
+	h := blob.NameSealHash(req.Subdomain, uint16(req.EpochHeight), uint8(req.Size))
 	if !crypto.VerifySigPub(info.PublicKey, sig, h) {
 		return nil, errors.New("signature verification failed")
 	}

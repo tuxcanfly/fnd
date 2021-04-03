@@ -5,6 +5,7 @@ import (
 	"fnd/crypto"
 	"fnd/log"
 	"fnd/p2p"
+	"fnd/store"
 	"fnd/wire"
 	"time"
 
@@ -17,7 +18,6 @@ const (
 
 type nameSyncUpdate struct {
 	subdomains []blob.Subdomain
-	signature  crypto.Signature
 }
 
 type NameSyncSubdomainsOpts struct {
@@ -82,9 +82,20 @@ func NameSyncSubdomains(opts *NameSyncSubdomainsOpts) (*nameSyncUpdate, error) {
 					lgr.Trace("received payload for extraneous name", "other_name", msg.Name)
 					continue
 				}
+				for _, subdomain := range msg.Subdomains {
+					info, err := store.GetNameInfo(opts.DB, msg.Name)
+					if err != nil {
+						lgr.Trace("error reading name info", "err", err)
+						continue
+					}
+					h := blob.NameSealHash(subdomain.Name, subdomain.EpochHeight, subdomain.Size)
+					if !crypto.VerifySigPub(info.PublicKey, subdomain.Signature, h) {
+						lgr.Trace("error validating signature", "err", err)
+						continue
+					}
+				}
 				payloadProcessedCh <- &nameSyncUpdate{
 					subdomains: msg.Subdomains,
-					signature:  msg.Signature,
 				}
 			case <-doneCh:
 				return

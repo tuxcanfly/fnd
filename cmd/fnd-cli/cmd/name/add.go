@@ -47,7 +47,7 @@ var addCmd = &cobra.Command{
 
 		epochHeight := protocol.NameEpoch(subdomain)
 
-		sig, err := blob.NameSignSeal(signer, subdomain, epochHeight, uint16(size))
+		sig, err := blob.NameSignSeal(signer, subdomain, epochHeight, uint8(size))
 		if err != nil {
 			return err
 		}

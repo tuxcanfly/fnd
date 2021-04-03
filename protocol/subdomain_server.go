@@ -98,7 +98,6 @@ func (s *SubdomainServer) sendResponse(peerID crypto.Hash, name string, subdomai
 	resMsg := &wire.NameRes{
 		Name:       name,
 		Subdomains: subdomains,
-		// TODO: Signature:  signature,
 	}
 	if err := s.mux.Send(peerID, resMsg); err != nil {
 		s.lgr.Error("error serving subdomain response", "err", err)

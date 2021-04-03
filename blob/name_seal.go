@@ -7,7 +7,7 @@ import (
 	"golang.org/x/crypto/blake2b"
 )
 
-func NameSealHash(name string, epochHeight, size uint16) crypto.Hash {
+func NameSealHash(name string, epochHeight uint16, size uint8) crypto.Hash {
 	h, _ := blake2b.New256(nil)
 	if _, err := h.Write([]byte("FNBLOB")); err != nil {
 		panic(err)
@@ -27,7 +27,7 @@ func NameSealHash(name string, epochHeight, size uint16) crypto.Hash {
 	return out
 }
 
-func NameSignSeal(signer crypto.Signer, name string, epochHeight, size uint16) (crypto.Signature, error) {
+func NameSignSeal(signer crypto.Signer, name string, epochHeight uint16, size uint8) (crypto.Signature, error) {
 	h := NameSealHash(name, epochHeight, size)
 	return signer.Sign(h)
 }
