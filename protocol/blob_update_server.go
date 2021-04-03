@@ -42,7 +42,7 @@ func (u *BlobUpdateServer) UpdateReqHandler(peerID crypto.Hash, envelope *wire.E
 	u.lgr.Debug("receive update req", "name", msg.Name, "epoch", msg.EpochHeight, "sector", msg.SectorSize)
 
 	if !u.nameLocker.TryRLock(msg.Name) {
-		if err := u.mux.Send(peerID, wire.NewNilUpdate(msg.Name)); err != nil {
+		if err := u.mux.Send(peerID, wire.NewBlobNilUpdate(msg.Name)); err != nil {
 			u.lgr.Error("error sending response to update req", "name", msg.Name, "err", err)
 		} else {
 			u.lgr.Debug("serving nil update response for busy name", "name", msg.Name)
@@ -53,7 +53,7 @@ func (u *BlobUpdateServer) UpdateReqHandler(peerID crypto.Hash, envelope *wire.E
 
 	header, err := store.GetHeader(u.db, msg.Name)
 	if errors.Is(err, leveldb.ErrNotFound) {
-		if err := u.mux.Send(peerID, wire.NewNilUpdate(msg.Name)); err != nil {
+		if err := u.mux.Send(peerID, wire.NewBlobNilUpdate(msg.Name)); err != nil {
 			u.lgr.Error("error sending response to update req", "name", msg.Name, "err", err)
 		} else {
 			u.lgr.Debug("serving nil update response for unknown name", "name", msg.Name)
@@ -62,7 +62,7 @@ func (u *BlobUpdateServer) UpdateReqHandler(peerID crypto.Hash, envelope *wire.E
 	}
 	if err != nil {
 		u.lgr.Error("error reading blob header", "name", msg.Name, "err", err)
-		if err := u.mux.Send(peerID, wire.NewNilUpdate(msg.Name)); err != nil {
+		if err := u.mux.Send(peerID, wire.NewBlobNilUpdate(msg.Name)); err != nil {
 			u.lgr.Error("error sending response to update req", "name", msg.Name, "err", err)
 		} else {
 			u.lgr.Debug("serving nil update response for name after error reading header", "name", msg.Name)
@@ -71,7 +71,7 @@ func (u *BlobUpdateServer) UpdateReqHandler(peerID crypto.Hash, envelope *wire.E
 	}
 
 	if header.SectorSize < msg.SectorSize || header.SectorSize == msg.SectorSize {
-		if err := u.mux.Send(peerID, wire.NewNilUpdate(msg.Name)); err != nil {
+		if err := u.mux.Send(peerID, wire.NewBlobNilUpdate(msg.Name)); err != nil {
 			u.lgr.Error("error sending response to update req", "name", msg.Name, "err", err)
 		} else {
 			u.lgr.Debug("serving nil update response for future header", "name", msg.Name)

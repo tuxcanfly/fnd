@@ -17,7 +17,7 @@ import (
 )
 
 var (
-	ErrDomainSyncerSyncResponseTimeout = errors.New("sync timed out")
+	ErrDomainSyncerSyncResponseTimeout = errors.New("subdomain sync timed out")
 )
 
 type DomainSyncer struct {
@@ -55,14 +55,14 @@ func NewDomainSyncer(mux *p2p.PeerMuxer, db *leveldb.DB, nameLocker util.MultiLo
 
 func (ns *DomainSyncer) Start() error {
 	ns.mux.AddMessageHandler(p2p.PeerMessageHandlerForType(wire.MessageTypeNameUpdate, ns.handleUpdate))
-	ns.mux.AddMessageHandler(p2p.PeerMessageHandlerForType(wire.MessageTypeNilUpdate, ns.handleNilUpdate))
+	ns.mux.AddMessageHandler(p2p.PeerMessageHandlerForType(wire.MessageTypeNameNilUpdate, ns.handleNilUpdate))
 
 	resyncTick := time.NewTicker(ns.Interval)
 	for {
 		in, out := ns.mux.PeerCount()
 		total := in + out
 		if total == 0 {
-			ns.lgr.Info("no connected peers, skipping name sync")
+			ns.lgr.Info("no connected peers, skipping name subdomain sync")
 			time.Sleep(5 * time.Second)
 			continue
 		}
@@ -73,7 +73,7 @@ func (ns *DomainSyncer) Start() error {
 			continue
 		}
 		if !initialImportComplete {
-			ns.lgr.Info("initial import incomplete, skipping name sync")
+			ns.lgr.Info("initial import incomplete, skipping name subdomain sync")
 			time.Sleep(time.Minute)
 			continue
 		}
@@ -101,7 +101,7 @@ func (ns *DomainSyncer) handleUpdate(peerID crypto.Hash, envelope *wire.Envelope
 }
 
 func (ns *DomainSyncer) handleNilUpdate(peerID crypto.Hash, envelope *wire.Envelope) {
-	ns.obs.Emit("message:nil-update", envelope.Message.(*wire.NilUpdate))
+	ns.obs.Emit("message:nil-update", envelope.Message.(*wire.NameNilUpdate))
 }
 
 func (ns *DomainSyncer) onUpdate(name string, hdlr func()) util.Unsubscriber {
@@ -114,7 +114,7 @@ func (ns *DomainSyncer) onUpdate(name string, hdlr func()) util.Unsubscriber {
 }
 
 func (ns *DomainSyncer) onNilUpdate(name string, hdlr func()) util.Unsubscriber {
-	return ns.obs.On("message:nil-update", func(update *wire.NilUpdate) {
+	return ns.obs.On("message:nil-update", func(update *wire.NameNilUpdate) {
 		if update.Name != name {
 			return
 		}
@@ -123,7 +123,7 @@ func (ns *DomainSyncer) onNilUpdate(name string, hdlr func()) util.Unsubscriber 
 }
 
 func (ns *DomainSyncer) doSync() {
-	ns.lgr.Info("starting name sync")
+	ns.lgr.Info("starting name subdomain sync")
 
 	var syncCount int64
 	sem := make(chan struct{}, ns.Workers)
@@ -156,7 +156,7 @@ func (ns *DomainSyncer) doSync() {
 		sem <- struct{}{}
 	}
 	ns.obs.Emit("sync:job-complete", int(syncCount))
-	ns.lgr.Info("finished name sync", "count", syncCount)
+	ns.lgr.Info("finished name subdomain sync", "count", syncCount)
 }
 
 func (ns *DomainSyncer) OnNameComplete(cb func(name string, receiptCount int)) util.Unsubscriber {
@@ -236,7 +236,7 @@ func (ns *DomainSyncer) awaitSyncCompletion(name string, receiptCount int, sampl
 	if receiptCount == 0 {
 		ns.obs.Emit("sync:name-complete", name, receiptCount)
 		ns.lgr.Info(
-			"synced name",
+			"synced name subdomain",
 			"name", name,
 			"receipt_count", receiptCount,
 			"nil_count", sampleSize-receiptCount,
@@ -261,17 +261,17 @@ func (ns *DomainSyncer) awaitSyncCompletion(name string, receiptCount int, sampl
 	select {
 	case <-timeout.C:
 		ns.obs.Emit("sync:err", name, ErrDomainSyncerSyncResponseTimeout)
-		ns.lgr.Error("sync timed out", "name", name)
+		ns.lgr.Error("subdomain sync timed out", "name", name)
 		return
 	case err := <-errCh:
 		if err != nil {
-			ns.obs.Emit("sync:err", name, errors.Wrap(err, "failed to sync name"))
-			ns.lgr.Error("encountered error while syncing name", "err", err)
+			ns.obs.Emit("sync:err", name, errors.Wrap(err, "failed to sync name subdomain"))
+			ns.lgr.Error("encountered error while syncing name subdomain", "err", err)
 			return
 		}
 		ns.obs.Emit("sync:name-complete", name, receiptCount)
 		ns.lgr.Info(
-			"synced name",
+			"synced name subdomain",
 			"name", name,
 			"receipt_count", receiptCount,
 			"nil_count", sampleSize-receiptCount,

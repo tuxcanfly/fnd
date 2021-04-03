@@ -83,8 +83,10 @@ func (e *Envelope) Decode(r io.Reader) error {
 		msg = &NameUpdate{}
 	case MessageTypeBlobUpdate:
 		msg = &BlobUpdate{}
-	case MessageTypeNilUpdate:
-		msg = &NilUpdate{}
+	case MessageTypeBlobNilUpdate:
+		msg = &BlobNilUpdate{}
+	case MessageTypeNameNilUpdate:
+		msg = &NameNilUpdate{}
 	case MessageTypeBlobReq:
 		msg = &BlobReq{}
 	case MessageTypeBlobRes:

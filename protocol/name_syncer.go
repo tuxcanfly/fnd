@@ -17,7 +17,7 @@ import (
 )
 
 var (
-	ErrNameSyncerSyncResponseTimeout = errors.New("sync timed out")
+	ErrNameSyncerSyncResponseTimeout = errors.New("blob sync timed out")
 )
 
 type NameSyncer struct {
@@ -55,14 +55,14 @@ func NewNameSyncer(mux *p2p.PeerMuxer, db *leveldb.DB, nameLocker util.MultiLock
 
 func (ns *NameSyncer) Start() error {
 	ns.mux.AddMessageHandler(p2p.PeerMessageHandlerForType(wire.MessageTypeBlobUpdate, ns.handleUpdate))
-	ns.mux.AddMessageHandler(p2p.PeerMessageHandlerForType(wire.MessageTypeNilUpdate, ns.handleNilUpdate))
+	ns.mux.AddMessageHandler(p2p.PeerMessageHandlerForType(wire.MessageTypeNameNilUpdate, ns.handleNilUpdate))
 
 	resyncTick := time.NewTicker(ns.Interval)
 	for {
 		in, out := ns.mux.PeerCount()
 		total := in + out
 		if total == 0 {
-			ns.lgr.Info("no connected peers, skipping name sync")
+			ns.lgr.Info("no connected peers, skipping name blob sync")
 			time.Sleep(5 * time.Second)
 			continue
 		}
@@ -73,7 +73,7 @@ func (ns *NameSyncer) Start() error {
 			continue
 		}
 		if !initialImportComplete {
-			ns.lgr.Info("initial import incomplete, skipping name sync")
+			ns.lgr.Info("initial import incomplete, skipping name blob sync")
 			time.Sleep(time.Minute)
 			continue
 		}
@@ -101,7 +101,7 @@ func (ns *NameSyncer) handleUpdate(peerID crypto.Hash, envelope *wire.Envelope) 
 }
 
 func (ns *NameSyncer) handleNilUpdate(peerID crypto.Hash, envelope *wire.Envelope) {
-	ns.obs.Emit("message:nil-update", envelope.Message.(*wire.NilUpdate))
+	ns.obs.Emit("message:nil-update", envelope.Message.(*wire.NameNilUpdate))
 }
 
 func (ns *NameSyncer) onUpdate(name string, hdlr func()) util.Unsubscriber {
@@ -114,7 +114,7 @@ func (ns *NameSyncer) onUpdate(name string, hdlr func()) util.Unsubscriber {
 }
 
 func (ns *NameSyncer) onNilUpdate(name string, hdlr func()) util.Unsubscriber {
-	return ns.obs.On("message:nil-update", func(update *wire.NilUpdate) {
+	return ns.obs.On("message:nil-update", func(update *wire.NameNilUpdate) {
 		if update.Name != name {
 			return
 		}
@@ -123,7 +123,7 @@ func (ns *NameSyncer) onNilUpdate(name string, hdlr func()) util.Unsubscriber {
 }
 
 func (ns *NameSyncer) doSync() {
-	ns.lgr.Info("starting name sync")
+	ns.lgr.Info("starting name blob sync")
 
 	var syncCount int64
 	sem := make(chan struct{}, ns.Workers)
@@ -156,7 +156,7 @@ func (ns *NameSyncer) doSync() {
 		sem <- struct{}{}
 	}
 	ns.obs.Emit("sync:job-complete", int(syncCount))
-	ns.lgr.Info("finished name sync", "count", syncCount)
+	ns.lgr.Info("finished name blob sync", "count", syncCount)
 }
 
 func (ns *NameSyncer) OnNameComplete(cb func(name string, receiptCount int)) util.Unsubscriber {
@@ -242,7 +242,7 @@ func (ns *NameSyncer) awaitSyncCompletion(name string, receiptCount int, sampleS
 	if receiptCount == 0 {
 		ns.obs.Emit("sync:name-complete", name, receiptCount)
 		ns.lgr.Info(
-			"synced name",
+			"synced name blob",
 			"name", name,
 			"receipt_count", receiptCount,
 			"nil_count", sampleSize-receiptCount,
@@ -267,17 +267,17 @@ func (ns *NameSyncer) awaitSyncCompletion(name string, receiptCount int, sampleS
 	select {
 	case <-timeout.C:
 		ns.obs.Emit("sync:err", name, ErrNameSyncerSyncResponseTimeout)
-		ns.lgr.Error("sync timed out", "name", name)
+		ns.lgr.Error("blob sync timed out", "name", name)
 		return
 	case err := <-errCh:
 		if err != nil {
-			ns.obs.Emit("sync:err", name, errors.Wrap(err, "failed to sync name"))
-			ns.lgr.Error("encountered error while syncing name", "err", err)
+			ns.obs.Emit("sync:err", name, errors.Wrap(err, "failed to sync name blob"))
+			ns.lgr.Error("encountered error while syncing name blob", "err", err)
 			return
 		}
 		ns.obs.Emit("sync:name-complete", name, receiptCount)
 		ns.lgr.Info(
-			"synced name",
+			"synced name blob",
 			"name", name,
 			"receipt_count", receiptCount,
 			"nil_count", sampleSize-receiptCount,

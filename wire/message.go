@@ -22,7 +22,8 @@ const (
 	MessageTypePing
 	MessageTypeNameUpdate
 	MessageTypeBlobUpdate
-	MessageTypeNilUpdate
+	MessageTypeBlobNilUpdate
+	MessageTypeNameNilUpdate
 	MessageTypeBlobReq
 	MessageTypeBlobRes
 	MessageTypeNameReq
@@ -46,8 +47,10 @@ func (t MessageType) String() string {
 		return "NameUpdate"
 	case MessageTypeBlobUpdate:
 		return "BlobUpdate"
-	case MessageTypeNilUpdate:
-		return "NilUpdate"
+	case MessageTypeBlobNilUpdate:
+		return "BlobNilUpdate"
+	case MessageTypeNameNilUpdate:
+		return "NameNilUpdate"
 	case MessageTypeBlobReq:
 		return "BlobReq"
 	case MessageTypeBlobRes:

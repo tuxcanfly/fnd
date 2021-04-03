@@ -41,7 +41,7 @@ func (u *NameUpdateServer) UpdateReqHandler(peerID crypto.Hash, envelope *wire.E
 	u.lgr.Debug("receive update req", "name", msg.Name, "epoch", msg.EpochHeight, "sector", msg.SubdomainSize)
 
 	if !u.nameLocker.TryRLock(msg.Name) {
-		if err := u.mux.Send(peerID, wire.NewNilUpdate(msg.Name)); err != nil {
+		if err := u.mux.Send(peerID, wire.NewNameNilUpdate(msg.Name)); err != nil {
 			u.lgr.Error("error sending response to update req", "name", msg.Name, "err", err)
 		} else {
 			u.lgr.Debug("serving nil update response for busy name", "name", msg.Name)
@@ -52,7 +52,7 @@ func (u *NameUpdateServer) UpdateReqHandler(peerID crypto.Hash, envelope *wire.E
 
 	subdomains, err := store.GetSubdomains(u.db, msg.Name)
 	if err != nil {
-		if err := u.mux.Send(peerID, wire.NewNilUpdate(msg.Name)); err != nil {
+		if err := u.mux.Send(peerID, wire.NewNameNilUpdate(msg.Name)); err != nil {
 			u.lgr.Error("error sending response to update req", "name", msg.Name, "err", err)
 		} else {
 			u.lgr.Debug("serving nil update response for future header", "name", msg.Name)
@@ -63,7 +63,7 @@ func (u *NameUpdateServer) UpdateReqHandler(peerID crypto.Hash, envelope *wire.E
 	subdomainSize := uint16(len(subdomains))
 
 	if subdomainSize < msg.SubdomainSize || subdomainSize == msg.SubdomainSize {
-		if err := u.mux.Send(peerID, wire.NewNilUpdate(msg.Name)); err != nil {
+		if err := u.mux.Send(peerID, wire.NewNameNilUpdate(msg.Name)); err != nil {
 			u.lgr.Error("error sending response to update req", "name", msg.Name, "err", err)
 		} else {
 			u.lgr.Debug("serving nil update response for future header", "name", msg.Name)
