@@ -150,10 +150,6 @@ var startCmd = &cobra.Command{
 		blobUpdateQueue := protocol.NewBlobUpdateQueue(mux, db)
 		blobUpdateQueue.MaxLen = int32(cfg.Tuning.UpdateQueue.MaxLen)
 
-		nameUpdater := protocol.NewNameUpdater(mux, db, nameUpdateQueue, nameLocker, bs)
-		nameUpdater.PollInterval = config.ConvertDuration(cfg.Tuning.Updater.PollIntervalMS, time.Millisecond)
-		nameUpdater.Workers = cfg.Tuning.Updater.Workers
-
 		blobUpdater := protocol.NewBlobUpdater(mux, db, blobUpdateQueue, nameLocker, bs)
 		blobUpdater.PollInterval = config.ConvertDuration(cfg.Tuning.Updater.PollIntervalMS, time.Millisecond)
 		blobUpdater.Workers = cfg.Tuning.Updater.Workers
@@ -180,6 +176,10 @@ var startCmd = &cobra.Command{
 		nameSyncer.UpdateResponseTimeout = config.ConvertDuration(cfg.Tuning.NameSyncer.UpdateResponseTimeoutMS, time.Millisecond)
 		nameSyncer.Interval = config.ConvertDuration(cfg.Tuning.NameSyncer.IntervalMS, time.Millisecond)
 		nameSyncer.SyncResponseTimeout = config.ConvertDuration(cfg.Tuning.NameSyncer.SyncResponseTimeoutMS, time.Millisecond)
+
+		nameUpdater := protocol.NewNameUpdater(mux, db, nameUpdateQueue, nameLocker, bs, nameSyncer)
+		nameUpdater.PollInterval = config.ConvertDuration(cfg.Tuning.Updater.PollIntervalMS, time.Millisecond)
+		nameUpdater.Workers = cfg.Tuning.Updater.Workers
 
 		domainSyncer := protocol.NewDomainSyncer(mux, db, nameLocker, nameUpdater)
 		domainSyncer.Workers = cfg.Tuning.NameSyncer.Workers

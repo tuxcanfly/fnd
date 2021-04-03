@@ -34,6 +34,7 @@ type NameUpdater struct {
 	Workers      int
 	mux          *p2p.PeerMuxer
 	db           *leveldb.DB
+	ns           *NameSyncer
 	queue        *NameUpdateQueue
 	nameLocker   util.MultiLocker
 	bs           blob.Store
@@ -43,12 +44,13 @@ type NameUpdater struct {
 	lgr          log.Logger
 }
 
-func NewNameUpdater(mux *p2p.PeerMuxer, db *leveldb.DB, queue *NameUpdateQueue, nameLocker util.MultiLocker, bs blob.Store) *NameUpdater {
+func NewNameUpdater(mux *p2p.PeerMuxer, db *leveldb.DB, queue *NameUpdateQueue, nameLocker util.MultiLocker, bs blob.Store, ns *NameSyncer) *NameUpdater {
 	return &NameUpdater{
 		PollInterval: config.ConvertDuration(config.DefaultConfig.Tuning.Updater.PollIntervalMS, time.Millisecond),
 		Workers:      config.DefaultConfig.Tuning.Updater.Workers,
 		mux:          mux,
 		db:           db,
+		ns:           ns,
 		queue:        queue,
 		nameLocker:   nameLocker,
 		bs:           bs,
@@ -92,6 +94,7 @@ func (u *NameUpdater) runWorker() {
 			cfg := &NameUpdateConfig{
 				Mux:        u.mux,
 				DB:         u.db,
+				NameSyncer: u.ns,
 				NameLocker: u.nameLocker,
 				BlobStore:  u.bs,
 				Item:       item,
@@ -115,6 +118,7 @@ type NameUpdateConfig struct {
 	NameLocker util.MultiLocker
 	BlobStore  blob.Store
 	Item       *NameUpdateQueueItem
+	NameSyncer *NameSyncer
 }
 
 func NameUpdateBlob(cfg *NameUpdateConfig) error {
@@ -145,6 +149,7 @@ func NameUpdateBlob(cfg *NameUpdateConfig) error {
 			}
 			return nil
 		})
+		cfg.NameSyncer.syncName(name)
 	}
 
 	err = store.WithTx(cfg.DB, func(tx *leveldb.Transaction) error {

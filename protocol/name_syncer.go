@@ -147,7 +147,7 @@ func (ns *NameSyncer) doSync() {
 
 		sem <- struct{}{}
 		go func() {
-			ns.syncName(info)
+			ns.syncName(info.Name)
 			atomic.AddInt64(&syncCount, 1)
 			<-sem
 		}()
@@ -171,10 +171,9 @@ func (ns *NameSyncer) OnSyncError(cb func(name string, err error)) util.Unsubscr
 	return ns.obs.On("sync:err", cb)
 }
 
-func (ns *NameSyncer) syncName(info *store.NameInfo) {
-	name := info.Name
+func (ns *NameSyncer) syncName(name string) {
 	var epochHeight, sectorSize uint16
-	header, err := store.GetHeader(ns.db, info.Name)
+	header, err := store.GetHeader(ns.db, name)
 	if err != nil && !errors.Is(err, leveldb.ErrNotFound) {
 		ns.lgr.Error(
 			"failed to fetch name header",
