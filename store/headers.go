@@ -97,13 +97,12 @@ func (h *Header) UnmarshalJSON(b []byte) error {
 }
 
 var (
-	headersPrefix              = Prefixer("headers")
-	headerCountKey             = Prefixer(string(headersPrefix("count")))()
-	headerSubdomainsPrefix     = Prefixer(string(headersPrefix("subdomains")))
-	headerSubdomainCountPrefix = Prefixer(string(headersPrefix("subdomain-count")))
-	headerSectorHashesPrefix   = Prefixer(string(headersPrefix("sector-hashes")))
-	headerBanPrefix            = Prefixer(string(headersPrefix("banned")))
-	headerDataPrefix           = Prefixer(string(headersPrefix("header")))
+	headersPrefix            = Prefixer("headers")
+	headerCountKey           = Prefixer(string(headersPrefix("count")))()
+	headerSubdomainsPrefix   = Prefixer(string(headersPrefix("subdomains")))
+	headerSectorHashesPrefix = Prefixer(string(headersPrefix("sector-hashes")))
+	headerBanPrefix          = Prefixer(string(headersPrefix("banned")))
+	headerDataPrefix         = Prefixer(string(headersPrefix("header")))
 )
 
 func GetHeaderCount(db *leveldb.DB) (int, error) {

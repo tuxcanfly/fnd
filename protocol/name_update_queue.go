@@ -111,12 +111,12 @@ func (u *NameUpdateQueue) Enqueue(peerID crypto.Hash, update *wire.NameUpdate) e
 	u.mu.Lock()
 	defer u.mu.Unlock()
 	entry := u.entries[update.Name]
-	if entry == nil || entry.SectorSize < update.SectorSize {
+	if entry == nil || entry.SectorSize < update.SubdomainSize {
 		u.entries[update.Name] = &NameUpdateQueueItem{
 			PeerIDs:     NewPeerSet([]crypto.Hash{peerID}),
 			Name:        update.Name,
 			EpochHeight: update.EpochHeight,
-			SectorSize:  update.SectorSize,
+			SectorSize:  update.SubdomainSize,
 			Pub:         nameInfo.PublicKey,
 			Height:      nameInfo.ImportHeight,
 		}
@@ -125,11 +125,11 @@ func (u *NameUpdateQueue) Enqueue(peerID crypto.Hash, update *wire.NameUpdate) e
 			u.queue = append(u.queue, update.Name)
 			atomic.AddInt32(&u.queueLen, 1)
 		}
-		u.lgr.Info("enqueued update", "name", update.Name, "epoch", update.EpochHeight, "sector", update.SectorSize)
+		u.lgr.Info("enqueued update", "name", update.Name, "epoch", update.EpochHeight, "sector", update.SubdomainSize)
 		return nil
 	}
 
-	u.lgr.Info("enqueued update", "name", update.Name, "epoch", update.EpochHeight, "sector", update.SectorSize)
+	u.lgr.Info("enqueued update", "name", update.Name, "epoch", update.EpochHeight, "sector", update.SubdomainSize)
 	entry.PeerIDs.Add(peerID)
 	return nil
 }

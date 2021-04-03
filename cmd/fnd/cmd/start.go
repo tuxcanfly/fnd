@@ -166,7 +166,8 @@ var startCmd = &cobra.Command{
 		subdomainServer := protocol.NewSubdomainServer(mux, db, nameLocker)
 		subdomainServer.CacheExpiry = config.ConvertDuration(cfg.Tuning.SectorServer.CacheExpiryMS, time.Millisecond)
 
-		updateServer := protocol.NewUpdateServer(mux, db, nameLocker)
+		blobUpdateServer := protocol.NewBlobUpdateServer(mux, db, nameLocker)
+		nameUpdateServer := protocol.NewNameUpdateServer(mux, db, nameLocker)
 
 		peerExchanger := protocol.NewPeerExchanger(pm, mux, db)
 		peerExchanger.SampleSize = cfg.Tuning.PeerExchanger.SampleSize
@@ -179,6 +180,13 @@ var startCmd = &cobra.Command{
 		nameSyncer.UpdateResponseTimeout = config.ConvertDuration(cfg.Tuning.NameSyncer.UpdateResponseTimeoutMS, time.Millisecond)
 		nameSyncer.Interval = config.ConvertDuration(cfg.Tuning.NameSyncer.IntervalMS, time.Millisecond)
 		nameSyncer.SyncResponseTimeout = config.ConvertDuration(cfg.Tuning.NameSyncer.SyncResponseTimeoutMS, time.Millisecond)
+
+		domainSyncer := protocol.NewDomainSyncer(mux, db, nameLocker, nameUpdater)
+		domainSyncer.Workers = cfg.Tuning.NameSyncer.Workers
+		domainSyncer.SampleSize = cfg.Tuning.NameSyncer.SampleSize
+		domainSyncer.UpdateResponseTimeout = config.ConvertDuration(cfg.Tuning.NameSyncer.UpdateResponseTimeoutMS, time.Millisecond)
+		domainSyncer.Interval = config.ConvertDuration(cfg.Tuning.NameSyncer.IntervalMS, time.Millisecond)
+		domainSyncer.SyncResponseTimeout = config.ConvertDuration(cfg.Tuning.NameSyncer.SyncResponseTimeoutMS, time.Millisecond)
 
 		server := rpc.NewServer(&rpc.Opts{
 			PeerID:      ownPeerID,
@@ -199,9 +207,11 @@ var startCmd = &cobra.Command{
 			pinger,
 			sectorServer,
 			subdomainServer,
-			updateServer,
+			blobUpdateServer,
+			nameUpdateServer,
 			peerExchanger,
 			nameSyncer,
+			domainSyncer,
 			server,
 		}...)
 

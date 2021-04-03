@@ -10,9 +10,9 @@ import (
 type NameUpdate struct {
 	HashCacher
 
-	Name        string
-	EpochHeight uint16
-	SectorSize  uint16
+	Name          string
+	EpochHeight   uint16
+	SubdomainSize uint16
 }
 
 var _ Message = (*NameUpdate)(nil)
@@ -29,7 +29,7 @@ func (u *NameUpdate) Equals(other Message) bool {
 
 	return u.Name == cast.Name &&
 		u.EpochHeight == cast.EpochHeight &&
-		u.SectorSize == cast.SectorSize
+		u.SubdomainSize == cast.SubdomainSize
 }
 
 func (u *NameUpdate) Encode(w io.Writer) error {
@@ -37,7 +37,7 @@ func (u *NameUpdate) Encode(w io.Writer) error {
 		w,
 		u.Name,
 		u.EpochHeight,
-		u.SectorSize,
+		u.SubdomainSize,
 	)
 }
 
@@ -46,7 +46,7 @@ func (u *NameUpdate) Decode(r io.Reader) error {
 		r,
 		&u.Name,
 		&u.EpochHeight,
-		&u.SectorSize,
+		&u.SubdomainSize,
 	)
 }
 

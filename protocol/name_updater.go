@@ -180,9 +180,9 @@ func NameUpdateBlob(cfg *NameUpdateConfig) error {
 	}
 
 	update := &wire.NameUpdate{
-		Name:        item.Name,
-		EpochHeight: item.EpochHeight,
-		SectorSize:  item.SectorSize,
+		Name:          item.Name,
+		EpochHeight:   item.EpochHeight,
+		SubdomainSize: uint16(len(subdomainMeta.subdomains)),
 	}
 	p2p.GossipAll(cfg.Mux, update)
 	return nil
