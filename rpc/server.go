@@ -234,7 +234,7 @@ func (s *Server) BlobCheckout(ctx context.Context, req *apiv1.BlobCheckoutReq) (
 
 	header, err := store.GetHeader(s.db, req.Name)
 	if err != nil {
-		epochHeight = protocol.CurrentEpoch(req.Name)
+		epochHeight = protocol.BlobEpoch(req.Name)
 	} else {
 		epochHeight = header.EpochHeight
 		sectorSize = header.SectorSize
@@ -247,7 +247,7 @@ func (s *Server) BlobCheckout(ctx context.Context, req *apiv1.BlobCheckoutReq) (
 	}
 
 	if req.ResetEpoch {
-		if epochHeight > protocol.CurrentEpoch(req.Name) {
+		if epochHeight > protocol.BlobEpoch(req.Name) {
 			return nil, errors.New("cannot reset epoch ahead of schedule")
 		}
 
@@ -473,22 +473,29 @@ func (s *Server) AddSubdomain(_ context.Context, req *apiv1.AddSubdomainReq) (*a
 		return nil, errors.New("initial import incomplete")
 	}
 
+	info, err := store.GetNameInfo(s.db, req.Name)
+	if err != nil {
+		return nil, err
+	}
+
+	var sig crypto.Signature
+	copy(sig[:], req.Signature)
+	h := blob.NameSealHash(req.Subdomain, uint16(req.EpochHeight), uint16(req.Size))
+	if !crypto.VerifySigPub(info.PublicKey, sig, h) {
+		return nil, errors.New("signature verification failed")
+	}
+
 	pubkey, err := btcec.ParsePubKey(req.PublicKey, btcec.S256())
 	if err != nil {
 		return nil, err
 	}
 
 	subdomain := blob.Subdomain{
-		//ID:          req.ID,
-		Name:      req.Subdomain,
-		PublicKey: pubkey,
-		Size:      uint8(req.Size),
-		//EpochHeight: req.EpochHeight,
-	}
-
-	info, err := store.GetNameInfo(s.db, req.Name)
-	if err != nil {
-		return nil, err
+		Name:        req.Subdomain,
+		EpochHeight: uint16(req.EpochHeight),
+		Size:        uint8(req.Size),
+		PublicKey:   pubkey,
+		Signature:   sig,
 	}
 
 	var subdomains []blob.Subdomain

@@ -131,7 +131,7 @@ func NameUpdateBlob(cfg *NameUpdateConfig) error {
 	}
 
 	var epochHeight, sectorSize uint16
-	epochHeight = CurrentEpoch(item.Name)
+	epochHeight = BlobEpoch(item.Name)
 	if header != nil {
 		epochHeight = header.EpochHeight
 		sectorSize = header.SectorSize

@@ -14,6 +14,8 @@ var now = time.Now
 const (
 	secondsPerHour = 60 * 60
 	hoursPerWeek   = 7 * 24
+	weeksPerMonth  = 4
+	monthDuration  = time.Duration(weeksPerMonth * hoursPerWeek * time.Hour)
 	weekDuration   = time.Duration(hoursPerWeek * time.Hour)
 )
 
@@ -27,7 +29,7 @@ func modBuffer(b []byte, n int) int {
 	return acc
 }
 
-func CurrentEpoch(name string) uint16 {
+func BlobEpoch(name string) uint16 {
 	hash := primitives.HashName(name)
 	mod := modBuffer(hash, hoursPerWeek)
 	offset := mod * secondsPerHour

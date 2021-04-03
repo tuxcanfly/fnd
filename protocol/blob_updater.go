@@ -181,13 +181,13 @@ func BlobUpdateBlob(cfg *BlobUpdateConfig) error {
 		// conditions is only valid if the last local epoch increment is less
 		// than a week old.
 		if time.Now().Before(header.EpochStartAt.Add(7 * 24 * time.Duration(time.Hour))) {
-			if item.EpochHeight < CurrentEpoch(item.Name)+1 {
+			if item.EpochHeight < BlobEpoch(item.Name)+1 {
 				return ErrBlobUpdaterInvalidEpochThrottled
 			}
 		}
 
 		// Reject any epochs more than one in the future
-		if item.EpochHeight > CurrentEpoch(item.Name)+1 {
+		if item.EpochHeight > BlobEpoch(item.Name)+1 {
 			return ErrBlobUpdaterInvalidEpochFuturedated
 		}
 
@@ -219,7 +219,7 @@ func BlobUpdateBlob(cfg *BlobUpdateConfig) error {
 	}
 
 	if epochUpdated {
-		if epochHeight > CurrentEpoch(item.Name)+1 {
+		if epochHeight > BlobEpoch(item.Name)+1 {
 			return errors.New("cannot reset epoch ahead of schedule")
 		}
 

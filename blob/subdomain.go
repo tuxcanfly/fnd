@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
+	"fnd/crypto"
 	"io"
 
 	"github.com/btcsuite/btcd/btcec"
@@ -15,6 +16,7 @@ type Subdomain struct {
 	EpochHeight uint16           `json:"epoch_height"`
 	Size        uint8            `json:"size"`
 	PublicKey   *btcec.PublicKey `json:"public_key"`
+	Signature   crypto.Signature `json:"signature"`
 }
 
 func (s *Subdomain) MarshalJSON() ([]byte, error) {
@@ -24,12 +26,14 @@ func (s *Subdomain) MarshalJSON() ([]byte, error) {
 		EpochHeight uint16 `json:"epoch_height"`
 		Size        uint8  `json:"sector_size"`
 		PublicKey   string `json:"public_key"`
+		Signature   string `json:"signature"`
 	}{
 		s.ID,
 		s.Name,
 		s.EpochHeight,
 		s.Size,
 		hex.EncodeToString(s.PublicKey.SerializeCompressed()),
+		s.Signature.String(),
 	}
 
 	return json.Marshal(out)
@@ -42,8 +46,17 @@ func (s *Subdomain) UnmarshalJSON(b []byte) error {
 		EpochHeight uint16 `json:"epoch_height"`
 		Size        uint8  `json:"size"`
 		PublicKey   string `json:"public_key"`
+		Signature   string `json:"signature"`
 	}{}
 	if err := json.Unmarshal(b, in); err != nil {
+		return err
+	}
+	sigB, err := hex.DecodeString(in.Signature)
+	if err != nil {
+		return err
+	}
+	sig, err := crypto.NewSignatureFromBytes(sigB)
+	if err != nil {
 		return err
 	}
 
@@ -52,6 +65,7 @@ func (s *Subdomain) UnmarshalJSON(b []byte) error {
 	s.EpochHeight = in.EpochHeight
 	s.Size = in.Size
 	s.PublicKey = mustDecodePublicKey(in.PublicKey)
+	s.Signature = sig
 	return nil
 }
 
@@ -92,6 +106,10 @@ func (s Subdomain) Encode(w io.Writer) error {
 	if err != nil {
 		return err
 	}
+	err = binary.Write(w, binary.BigEndian, s.Signature)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -129,5 +147,15 @@ func (s *Subdomain) Decode(r io.Reader) error {
 		return err
 	}
 	s.PublicKey = publicKey
+	signatureByes := make([]byte, 65)
+	err = binary.Read(r, binary.BigEndian, signatureByes)
+	if err != nil {
+		return err
+	}
+	signature, err := crypto.NewSignatureFromBytes(signatureByes)
+	if err != nil {
+		return err
+	}
+	s.Signature = signature
 	return nil
 }

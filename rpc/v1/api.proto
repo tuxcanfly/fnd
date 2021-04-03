@@ -143,8 +143,10 @@ message BlobInfoRes {
 message AddSubdomainReq {
    string name = 1;
    string subdomain = 2;
-   bytes publicKey = 3;
+   uint32 epochHeight = 3;
    uint32 size = 4;
+   bytes publicKey = 5;
+   bytes signature = 6;
 }
 
 message AddSubdomainRes {
