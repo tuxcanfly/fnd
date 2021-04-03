@@ -4,36 +4,32 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
-	"fnd/crypto"
 	"io"
 
 	"github.com/btcsuite/btcd/btcec"
 )
 
 type Subdomain struct {
-	ID           uint8            `json:"id"`
-	Name         string           `json:"name"`
-	EpochHeight  uint16           `json:"epoch_height"`
-	Size         uint8            `json:"size"`
-	PublicKey    *btcec.PublicKey `json:"public_key"`
-	ReservedRoot crypto.Hash      `json:"reserved_root"`
+	ID          uint8            `json:"id"`
+	Name        string           `json:"name"`
+	EpochHeight uint16           `json:"epoch_height"`
+	Size        uint8            `json:"size"`
+	PublicKey   *btcec.PublicKey `json:"public_key"`
 }
 
 func (s *Subdomain) MarshalJSON() ([]byte, error) {
 	out := &struct {
-		ID           uint8  `json:"id"`
-		Name         string `json:"name"`
-		EpochHeight  uint16 `json:"epoch_height"`
-		Size         uint8  `json:"sector_size"`
-		PublicKey    string `json:"public_key"`
-		ReservedRoot string `json:"reserved_root"`
+		ID          uint8  `json:"id"`
+		Name        string `json:"name"`
+		EpochHeight uint16 `json:"epoch_height"`
+		Size        uint8  `json:"sector_size"`
+		PublicKey   string `json:"public_key"`
 	}{
 		s.ID,
 		s.Name,
 		s.EpochHeight,
 		s.Size,
 		hex.EncodeToString(s.PublicKey.SerializeCompressed()),
-		s.ReservedRoot.String(),
 	}
 
 	return json.Marshal(out)
@@ -41,22 +37,13 @@ func (s *Subdomain) MarshalJSON() ([]byte, error) {
 
 func (s *Subdomain) UnmarshalJSON(b []byte) error {
 	in := &struct {
-		ID           uint8  `json:"id"`
-		Name         string `json:"name"`
-		EpochHeight  uint16 `json:"epoch_height"`
-		Size         uint8  `json:"size"`
-		PublicKey    string `json:"public_key"`
-		ReservedRoot string `json:"reserved_root"`
+		ID          uint8  `json:"id"`
+		Name        string `json:"name"`
+		EpochHeight uint16 `json:"epoch_height"`
+		Size        uint8  `json:"size"`
+		PublicKey   string `json:"public_key"`
 	}{}
 	if err := json.Unmarshal(b, in); err != nil {
-		return err
-	}
-	rrB, err := hex.DecodeString(in.ReservedRoot)
-	if err != nil {
-		return err
-	}
-	rr, err := crypto.NewHashFromBytes(rrB)
-	if err != nil {
 		return err
 	}
 
@@ -65,7 +52,6 @@ func (s *Subdomain) UnmarshalJSON(b []byte) error {
 	s.EpochHeight = in.EpochHeight
 	s.Size = in.Size
 	s.PublicKey = mustDecodePublicKey(in.PublicKey)
-	s.ReservedRoot = rr
 	return nil
 }
 
@@ -106,10 +92,6 @@ func (s Subdomain) Encode(w io.Writer) error {
 	if err != nil {
 		return err
 	}
-	err = binary.Write(w, binary.BigEndian, s.ReservedRoot)
-	if err != nil {
-		return err
-	}
 	return nil
 }
 
@@ -147,9 +129,5 @@ func (s *Subdomain) Decode(r io.Reader) error {
 		return err
 	}
 	s.PublicKey = publicKey
-	err = binary.Read(r, binary.BigEndian, &s.ReservedRoot)
-	if err != nil {
-		return err
-	}
 	return nil
 }

@@ -95,7 +95,7 @@ func (b *BlobWriter) Commit(broadcast bool) (crypto.Hash, error) {
 	}
 	ts := time.Now()
 
-	sig, err := blob.SignSeal(b.signer, b.name, b.epochHeight, b.sectorSize, b.sectorTipHash, crypto.ZeroHash)
+	sig, err := blob.BlobSignSeal(b.signer, b.name, b.epochHeight, b.sectorSize, b.sectorTipHash, crypto.ZeroHash)
 	if err != nil {
 		return blob.ZeroHash, errors.Wrap(err, "error sealing blob")
 	}

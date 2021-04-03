@@ -328,7 +328,7 @@ func (s *Server) BlobCommit(ctx context.Context, req *apiv1.BlobCommitReq) (*api
 
 	var sig crypto.Signature
 	copy(sig[:], req.Signature)
-	h := blob.SealHash(name, epochHeight, sectorSize, sectorTipHash, crypto.ZeroHash)
+	h := blob.BlobSealHash(name, epochHeight, sectorSize, sectorTipHash, crypto.ZeroHash)
 	if !crypto.VerifySigPub(info.PublicKey, sig, h) {
 		return nil, errors.New("signature verification failed")
 	}

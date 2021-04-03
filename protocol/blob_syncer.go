@@ -70,7 +70,7 @@ func validateBlobUpdate(db *leveldb.DB, name string, epochHeight, sectorSize uin
 	if err != nil {
 		return errors.Wrap(err, "error reading name info")
 	}
-	h := blob.SealHash(name, epochHeight, sectorSize, sectorTipHash, reservedRoot)
+	h := blob.BlobSealHash(name, epochHeight, sectorSize, sectorTipHash, reservedRoot)
 	if !crypto.VerifySigPub(info.PublicKey, sig, h) {
 		return ErrInvalidPayloadSignature
 	}
