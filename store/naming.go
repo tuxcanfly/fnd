@@ -4,7 +4,6 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
-	"fnd/blob"
 	"math"
 
 	"github.com/btcsuite/btcd/btcec"
@@ -19,6 +18,8 @@ var (
 	initialImportCompleteKey = []byte("initial-import-complete")
 	namesPrefix              = Prefixer("names")
 	nameDataPrefix           = Prefixer(string(namesPrefix("name")))
+	subdomainsPrefix         = Prefixer("subdomains")
+	subdomainDataPrefix      = Prefixer(string(subdomainsPrefix("subdomain")))
 )
 
 func GetLastNameImportHeight(db *leveldb.DB) (int, error) {
@@ -60,7 +61,6 @@ type NameInfo struct {
 	Name         string
 	PublicKey    *btcec.PublicKey
 	ImportHeight int
-	Subdomains   []blob.Subdomain
 }
 
 func (n *NameInfo) MarshalJSON() ([]byte, error) {
@@ -144,6 +144,100 @@ func SetNameInfoTx(tx *leveldb.Transaction, name string, key *btcec.PublicKey, h
 		Name:         name,
 		PublicKey:    key,
 		ImportHeight: height,
+	}), nil)
+	if err != nil {
+		return errors.Wrap(err, "error inserting name info")
+	}
+	return nil
+}
+
+type SubdomainInfo struct {
+	Subdomain   string
+	PublicKey   *btcec.PublicKey
+	EpochHeight int
+}
+
+func (n *SubdomainInfo) MarshalJSON() ([]byte, error) {
+	out := struct {
+		Subdomain   string `json:"name"`
+		PublicKey   string `json:"public_key"`
+		EpochHeight int    `json:"epoch_height"`
+	}{
+		n.Subdomain,
+		hex.EncodeToString(n.PublicKey.SerializeCompressed()),
+		n.EpochHeight,
+	}
+	return json.Marshal(out)
+}
+
+func (n *SubdomainInfo) UnmarshalJSON(data []byte) error {
+	out := &struct {
+		Subdomain   string `json:"name"`
+		PublicKey   string `json:"public_key"`
+		EpochHeight int    `json:"epoch_height"`
+	}{}
+	if err := json.Unmarshal(data, out); err != nil {
+		return err
+	}
+	n.Subdomain = out.Subdomain
+	n.PublicKey = mustDecodePublicKey(out.PublicKey)
+	n.EpochHeight = out.EpochHeight
+	return nil
+}
+
+func GetSubdomainInfo(db *leveldb.DB, name string) (*SubdomainInfo, error) {
+	res, err := db.Get(subdomainDataPrefix(name), nil)
+	if err != nil {
+		return nil, errors.Wrap(err, "error getting name info")
+	}
+	info := new(SubdomainInfo)
+	mustUnmarshalJSON(res, info)
+	return info, nil
+}
+
+type SubdomainInfoStream struct {
+	iter iterator.Iterator
+}
+
+func (nis *SubdomainInfoStream) Next() (*SubdomainInfo, error) {
+	if !nis.iter.Next() {
+		return nil, nil
+	}
+
+	info := new(SubdomainInfo)
+	mustUnmarshalJSON(nis.iter.Value(), info)
+	return info, nil
+}
+
+func (nis *SubdomainInfoStream) Close() error {
+	nis.iter.Release()
+	return nis.iter.Error()
+}
+
+func StreamSubdomainInfo(db *leveldb.DB, start string) (*SubdomainInfoStream, error) {
+	if start == "" {
+		return &SubdomainInfoStream{
+			iter: db.NewIterator(util.BytesPrefix(subdomainDataPrefix()), nil),
+		}, nil
+	}
+
+	iterRange := &util.Range{
+		Start: subdomainDataPrefix(start),
+		Limit: subdomainDataPrefix(string([]byte{0xff})),
+	}
+	last := iterRange.Start[len(iterRange.Start)-1]
+	iterRange.Start[len(iterRange.Start)-1] = last + 1
+	iter := db.NewIterator(iterRange, nil)
+	return &SubdomainInfoStream{
+		iter: iter,
+	}, nil
+}
+
+func SetSubdomainInfoTx(tx *leveldb.Transaction, name string, key *btcec.PublicKey, height int) error {
+	err := tx.Put(subdomainDataPrefix(name), mustMarshalJSON(&SubdomainInfo{
+		Subdomain:   name,
+		PublicKey:   key,
+		EpochHeight: height,
 	}), nil)
 	if err != nil {
 		return errors.Wrap(err, "error inserting name info")

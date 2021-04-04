@@ -1,4 +1,4 @@
-package name
+package subdomain
 
 import (
 	"context"
@@ -49,7 +49,7 @@ var addCmd = &cobra.Command{
 			return err
 		}
 
-		epochHeight := protocol.NameEpoch(subdomain)
+		epochHeight := protocol.BlobEpoch(subdomain)
 
 		sig, err := blob.NameSignSeal(signer, subdomain, epochHeight, uint8(size))
 		if err != nil {

@@ -1,4 +1,4 @@
-package name
+package subdomain
 
 import (
 	"encoding/hex"
@@ -35,8 +35,8 @@ var infoCmd = &cobra.Command{
 		table := tablewriter.NewWriter(os.Stdout)
 		table.SetHeader([]string{
 			"Name",
-			"Subdomain",
 			"Public Key",
+			"Import Height",
 		})
 
 		for _, name := range names {
@@ -47,17 +47,9 @@ var infoCmd = &cobra.Command{
 
 			table.Append([]string{
 				res.Name,
-				"",
 				hex.EncodeToString(res.PublicKey.SerializeCompressed()),
+				string(res.ImportHeight),
 			})
-
-			for _, subdomain := range res.Subdomains {
-				table.Append([]string{
-					res.Name,
-					subdomain.Name,
-					hex.EncodeToString(subdomain.PublicKey.SerializeCompressed()),
-				})
-			}
 		}
 
 		table.Render()
