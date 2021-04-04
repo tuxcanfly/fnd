@@ -56,18 +56,18 @@ func ListBlobInfoContext(ctx context.Context, client apiv1.Footnotev1Client, sta
 		}
 	}
 }
-func GetNameInfoContext(ctx context.Context, client apiv1.Footnotev1Client, name string) (*store.NameInfo, error) {
-	res, err := client.GetNameInfo(ctx, &apiv1.NameInfoReq{
+func GetSubdomainInfoContext(ctx context.Context, client apiv1.Footnotev1Client, name string) (*store.SubdomainInfo, error) {
+	res, err := client.GetSubdomainInfo(ctx, &apiv1.SubdomainInfoReq{
 		Name: name,
 	})
 	if err != nil {
 		return nil, err
 	}
-	return parseNameInfoRes(res)
+	return parseSubdomainInfoRes(res)
 }
 
-func ListNameInfoContext(ctx context.Context, client apiv1.Footnotev1Client, start string, cb func(info *store.NameInfo) bool) error {
-	stream, err := client.ListNameInfo(ctx, &apiv1.ListNameInfoReq{
+func ListSubdomainInfoContext(ctx context.Context, client apiv1.Footnotev1Client, start string, cb func(info *store.SubdomainInfo) bool) error {
+	stream, err := client.ListSubdomainInfo(ctx, &apiv1.ListSubdomainInfoReq{
 		Start: start,
 	})
 	if err != nil {
@@ -83,7 +83,7 @@ func ListNameInfoContext(ctx context.Context, client apiv1.Footnotev1Client, sta
 		if err != nil {
 			return err
 		}
-		parsed, err := parseNameInfoRes(res)
+		parsed, err := parseSubdomainInfoRes(res)
 		if err != nil {
 			return err
 		}
@@ -93,12 +93,12 @@ func ListNameInfoContext(ctx context.Context, client apiv1.Footnotev1Client, sta
 	}
 }
 
-func GetNameInfo(client apiv1.Footnotev1Client, name string) (*store.NameInfo, error) {
-	return GetNameInfoContext(context.Background(), client, name)
+func GetSubdomainInfo(client apiv1.Footnotev1Client, name string) (*store.SubdomainInfo, error) {
+	return GetSubdomainInfoContext(context.Background(), client, name)
 }
 
-func ListNameInfo(client apiv1.Footnotev1Client, after string, cb func(info *store.NameInfo) bool) error {
-	return ListNameInfoContext(context.Background(), client, after, cb)
+func ListSubdomainInfo(client apiv1.Footnotev1Client, after string, cb func(info *store.SubdomainInfo) bool) error {
+	return ListSubdomainInfoContext(context.Background(), client, after, cb)
 }
 
 func parseBlobInfoRes(res *apiv1.BlobInfoRes) (*store.BlobInfo, error) {
@@ -133,15 +133,15 @@ func parseBlobInfoRes(res *apiv1.BlobInfoRes) (*store.BlobInfo, error) {
 	}, nil
 }
 
-func parseNameInfoRes(res *apiv1.NameInfoRes) (*store.NameInfo, error) {
+func parseSubdomainInfoRes(res *apiv1.SubdomainInfoRes) (*store.SubdomainInfo, error) {
 	pub, err := btcec.ParsePubKey(res.PublicKey, btcec.S256())
 	if err != nil {
 		return nil, errors.Wrap(err, "error parsing public key")
 	}
 
-	return &store.NameInfo{
-		Name:         res.Name,
-		PublicKey:    pub,
-		ImportHeight: int(res.ImportHeight),
+	return &store.SubdomainInfo{
+		Name:        res.Name,
+		PublicKey:   pub,
+		EpochHeight: int(res.EpochHeight),
 	}, nil
 }

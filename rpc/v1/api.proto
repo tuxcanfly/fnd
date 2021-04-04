@@ -19,8 +19,8 @@ service Footnotev1 {
 
     rpc AddSubdomain(AddSubdomainReq) returns (AddSubdomainRes);
 
-    rpc GetNameInfo (NameInfoReq) returns (NameInfoRes);
-    rpc ListNameInfo (ListNameInfoReq) returns (stream NameInfoRes);
+    rpc GetSubdomainInfo (SubdomainInfoReq) returns (SubdomainInfoRes);
+    rpc ListSubdomainInfo (ListSubdomainInfoReq) returns (stream SubdomainInfoRes);
 
     rpc SendUpdate (SendUpdateReq) returns (SendUpdateRes);
 }
@@ -153,24 +153,25 @@ message AddSubdomainReq {
 message AddSubdomainRes {
 }
 
-message NameInfoReq {
+message SubdomainInfoReq {
     string name = 1;
 }
 
-message ListNameInfoReq {
+message ListSubdomainInfoReq {
     string start = 1;
 }
 
 message SubdomainRes {
     string name = 1;
     bytes publicKey = 2;
-    uint32 size = 3;
+    uint32 epochHeight = 3;
+    uint32 size = 4;
 }
 
-message NameInfoRes {
+message SubdomainInfoRes {
     string name = 1;
     bytes publicKey = 2;
-    uint32 importHeight = 3;
+    uint32 epochHeight = 3;
     repeated SubdomainRes subdomains = 4;
 }
 

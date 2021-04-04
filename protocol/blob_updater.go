@@ -301,15 +301,16 @@ func BlobUpdateBlob(cfg *BlobUpdateConfig) error {
 	}
 	tx.Commit()
 
-	height, err := store.GetLastNameImportHeight(cfg.DB)
-	if err != nil {
-		blobUpdaterLogger.Error("error getting last name import height, skipping gossip", "err", err)
-		return nil
-	}
-	if height-item.Height < 10 {
-		blobUpdaterLogger.Info("updated name is below gossip height, skipping", "name", item.Name)
-		return nil
-	}
+	// TODO: revisit this now that we do not have height in update item
+	//height, err := store.GetLastNameImportHeight(cfg.DB)
+	//if err != nil {
+	//blobUpdaterLogger.Error("error getting last name import height, skipping gossip", "err", err)
+	//return nil
+	//}
+	//if height-item.Height < 10 {
+	//blobUpdaterLogger.Info("updated name is below gossip height, skipping", "name", item.Name)
+	//return nil
+	//}
 
 	update := &wire.BlobUpdate{
 		Name:        item.Name,

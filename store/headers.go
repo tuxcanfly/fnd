@@ -307,7 +307,7 @@ func (bis *BlobInfoStream) Next() (*BlobInfo, error) {
 
 	header := new(Header)
 	mustUnmarshalJSON(bis.iter.Value(), header)
-	nameInfo, err := GetNameInfo(bis.db, header.Name)
+	nameInfo, err := GetSubdomainInfo(bis.db, header.Name)
 	if err != nil {
 		return nil, errors.Wrap(err, "error getting name info")
 	}
@@ -318,7 +318,6 @@ func (bis *BlobInfoStream) Next() (*BlobInfo, error) {
 	return &BlobInfo{
 		Name:          header.Name,
 		PublicKey:     nameInfo.PublicKey,
-		ImportHeight:  nameInfo.ImportHeight,
 		EpochHeight:   header.EpochHeight,
 		SectorSize:    header.SectorSize,
 		SectorTipHash: header.SectorTipHash,

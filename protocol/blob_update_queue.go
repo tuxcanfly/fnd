@@ -45,7 +45,6 @@ type BlobUpdateQueueItem struct {
 	EpochHeight uint16
 	SectorSize  uint16
 	Pub         *btcec.PublicKey
-	Height      int
 	Disposed    int32
 }
 
@@ -119,7 +118,7 @@ func (u *BlobUpdateQueue) Enqueue(peerID crypto.Hash, update *wire.BlobUpdate) e
 		return err
 	}
 
-	nameInfo, err := store.GetNameInfo(u.db, update.Name)
+	nameInfo, err := store.GetSubdomainInfo(u.db, update.Name)
 	if err != nil {
 		return errors.Wrap(err, "error getting name info")
 	}
@@ -158,7 +157,6 @@ func (u *BlobUpdateQueue) Enqueue(peerID crypto.Hash, update *wire.BlobUpdate) e
 			EpochHeight: update.EpochHeight,
 			SectorSize:  update.SectorSize,
 			Pub:         nameInfo.PublicKey,
-			Height:      nameInfo.ImportHeight,
 		}
 
 		if entry == nil {

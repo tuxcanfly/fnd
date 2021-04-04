@@ -304,7 +304,7 @@ func (s *Server) BlobCommit(ctx context.Context, req *apiv1.BlobCommitReq) (*api
 
 	tx := awaiting.tx
 	name := tx.Name()
-	info, err := store.GetNameInfo(s.db, name)
+	info, err := store.GetSubdomainInfo(s.db, name)
 	if err != nil {
 		return nil, errors.Wrap(err, "error getting name info")
 	}
@@ -413,7 +413,7 @@ func (s *Server) GetBlobInfo(_ context.Context, req *apiv1.BlobInfoReq) (*apiv1.
 	if err != nil {
 		return nil, err
 	}
-	info, err := store.GetNameInfo(s.db, req.Name)
+	info, err := store.GetSubdomainInfo(s.db, name)
 	if err != nil {
 		return nil, err
 	}
@@ -421,7 +421,6 @@ func (s *Server) GetBlobInfo(_ context.Context, req *apiv1.BlobInfoReq) (*apiv1.
 	return &apiv1.BlobInfoRes{
 		Name:          name,
 		PublicKey:     info.PublicKey.SerializeCompressed(),
-		ImportHeight:  uint32(info.ImportHeight),
 		EpochHeight:   uint32(header.EpochHeight),
 		SectorSize:    uint32(header.SectorSize),
 		SectorTipHash: header.SectorTipHash[:],
@@ -508,7 +507,7 @@ func (s *Server) AddSubdomain(_ context.Context, req *apiv1.AddSubdomainReq) (*a
 
 	name := fmt.Sprintf("%s.%s", subdomain.Name, req.Name)
 	err = store.WithTx(s.db, func(tx *leveldb.Transaction) error {
-		if err := store.SetNameInfoTx(tx, name, pubkey, info.ImportHeight); err != nil {
+		if err := store.SetSubdomainInfoTx(tx, name, pubkey, int(req.EpochHeight)); err != nil {
 			return errors.Wrap(err, "error inserting name info")
 		}
 		return nil
@@ -538,16 +537,16 @@ func (s *Server) AddSubdomain(_ context.Context, req *apiv1.AddSubdomainReq) (*a
 	return &apiv1.AddSubdomainRes{}, nil
 }
 
-func (s *Server) GetNameInfo(_ context.Context, req *apiv1.NameInfoReq) (*apiv1.NameInfoRes, error) {
+func (s *Server) GetSubdomainInfo(_ context.Context, req *apiv1.SubdomainInfoReq) (*apiv1.SubdomainInfoRes, error) {
 	name := req.Name
-	info, err := store.GetNameInfo(s.db, req.Name)
+	info, err := store.GetSubdomainInfo(s.db, req.Name)
 	if err != nil {
 		return nil, err
 	}
 
 	subdomains, err := store.GetSubdomains(s.db, info.Name)
 	if err != nil {
-		return &apiv1.NameInfoRes{}, errors.Wrap(err, "error reading subdomains")
+		return &apiv1.SubdomainInfoRes{}, errors.Wrap(err, "error reading subdomains")
 	}
 
 	var subdomainRes []*apiv1.SubdomainRes
@@ -559,16 +558,16 @@ func (s *Server) GetNameInfo(_ context.Context, req *apiv1.NameInfoReq) (*apiv1.
 		})
 	}
 
-	return &apiv1.NameInfoRes{
-		Name:         name,
-		PublicKey:    info.PublicKey.SerializeCompressed(),
-		ImportHeight: uint32(info.ImportHeight),
-		Subdomains:   subdomainRes,
+	return &apiv1.SubdomainInfoRes{
+		Name:        name,
+		PublicKey:   info.PublicKey.SerializeCompressed(),
+		EpochHeight: uint32(info.EpochHeight),
+		Subdomains:  subdomainRes,
 	}, nil
 }
 
-func (s *Server) ListNameInfo(req *apiv1.ListNameInfoReq, srv apiv1.Footnotev1_ListNameInfoServer) error {
-	stream, err := store.StreamNameInfo(s.db, req.Start)
+func (s *Server) ListSubdomainInfo(req *apiv1.ListSubdomainInfoReq, srv apiv1.Footnotev1_ListSubdomainInfoServer) error {
+	stream, err := store.StreamSubdomainInfo(s.db, req.Start)
 	if err != nil {
 		return errors.Wrap(err, "error opening header stream")
 	}
@@ -583,10 +582,10 @@ func (s *Server) ListNameInfo(req *apiv1.ListNameInfoReq, srv apiv1.Footnotev1_L
 			return nil
 		}
 
-		res := &apiv1.NameInfoRes{
-			Name:         info.Name,
-			PublicKey:    info.PublicKey.SerializeCompressed(),
-			ImportHeight: uint32(info.ImportHeight),
+		res := &apiv1.SubdomainInfoRes{
+			Name:        info.Name,
+			PublicKey:   info.PublicKey.SerializeCompressed(),
+			EpochHeight: uint32(info.EpochHeight),
 		}
 		if err = srv.Send(res); err != nil {
 			return errors.Wrap(err, "error sending info")

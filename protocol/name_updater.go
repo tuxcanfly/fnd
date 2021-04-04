@@ -124,10 +124,6 @@ type NameUpdateConfig struct {
 func NameUpdateBlob(cfg *NameUpdateConfig) error {
 	item := cfg.Item
 	defer item.Dispose()
-	info, err := store.GetNameInfo(cfg.DB, item.Name)
-	if err != nil {
-		return errors.Wrap(err, "error getting info")
-	}
 
 	subdomainMeta, err := NameSyncSubdomains(&NameSyncSubdomainsOpts{
 		Timeout: DefaultNameSyncerBlobResTimeout,
@@ -144,7 +140,7 @@ func NameUpdateBlob(cfg *NameUpdateConfig) error {
 	for _, subdomain := range subdomainMeta.subdomains {
 		name := fmt.Sprintf("%s.%s", subdomain.Name, item.Name)
 		err = store.WithTx(cfg.DB, func(tx *leveldb.Transaction) error {
-			if err := store.SetNameInfoTx(tx, name, subdomain.PublicKey, info.ImportHeight); err != nil {
+			if err := store.SetSubdomainInfoTx(tx, name, subdomain.PublicKey, int(subdomain.EpochHeight)); err != nil {
 				return errors.Wrap(err, "error inserting name info")
 			}
 			return nil

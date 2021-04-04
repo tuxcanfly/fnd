@@ -66,7 +66,7 @@ func validateBlobUpdate(db *leveldb.DB, name string, epochHeight, sectorSize uin
 		return errors.New("name is banned")
 	}
 	// TODO: should we check header ban state here?
-	info, err := store.GetNameInfo(db, name)
+	info, err := store.GetSubdomainInfo(db, name)
 	if err != nil {
 		return errors.Wrap(err, "error reading name info")
 	}

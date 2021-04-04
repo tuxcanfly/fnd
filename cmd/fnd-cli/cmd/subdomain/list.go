@@ -39,7 +39,7 @@ var listCmd = &cobra.Command{
 		var count int
 		encoder := json.NewEncoder(os.Stdout)
 		var innerErr error
-		err = rpc.ListNameInfo(grpcClient, start, func(info *store.NameInfo) bool {
+		err = rpc.ListSubdomainInfo(grpcClient, start, func(info *store.SubdomainInfo) bool {
 			if err := encoder.Encode(info); err != nil {
 				innerErr = err
 				return false

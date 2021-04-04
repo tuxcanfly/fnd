@@ -36,11 +36,11 @@ var infoCmd = &cobra.Command{
 		table.SetHeader([]string{
 			"Name",
 			"Public Key",
-			"Import Height",
+			"Epoch Height",
 		})
 
 		for _, name := range names {
-			res, err := rpc.GetNameInfo(grpcClient, name)
+			res, err := rpc.GetSubdomainInfo(grpcClient, name)
 			if err != nil {
 				return err
 			}
@@ -48,7 +48,7 @@ var infoCmd = &cobra.Command{
 			table.Append([]string{
 				res.Name,
 				hex.EncodeToString(res.PublicKey.SerializeCompressed()),
-				string(res.ImportHeight),
+				string(res.EpochHeight),
 			})
 		}
 
