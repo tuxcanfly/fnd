@@ -1,5 +1,0 @@
-* sign add subdomain - store signature to subdomain header
-
-* onNameUpdate - validate signature
-
-* sync subdomain - createe nameinfo entry

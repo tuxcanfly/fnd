@@ -33,10 +33,8 @@ test: proto
 .PHONY: test
 
 install: all
-	mv ./build/fnd ~/.bin/
-	mv ./build/fnd-cli ~/.bin/
-	scp ~/.bin/fnd merkleblock.com:.bin
-	scp ~/.bin/fnd-cli merkleblock.com:.bin
+	sudo mv ./build/fnd /usr/local/bin
+	sudo mv ./build/fnd-cli /usr/local/bin
 .PHONY: install
 
 clean:
