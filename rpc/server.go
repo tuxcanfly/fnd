@@ -489,18 +489,19 @@ func (s *Server) AddSubdomain(_ context.Context, req *apiv1.AddSubdomainReq) (*a
 		return nil, err
 	}
 
+	var subdomains []blob.Subdomain
+	subdomains, err = store.GetSubdomains(s.db, req.Name)
+	if err != nil {
+		return nil, err
+	}
+
 	subdomain := blob.Subdomain{
+		ID:          uint8(len(subdomains)),
 		Name:        req.Subdomain,
 		EpochHeight: uint16(req.EpochHeight),
 		Size:        uint8(req.Size),
 		PublicKey:   pubkey,
 		Signature:   sig,
-	}
-
-	var subdomains []blob.Subdomain
-	subdomains, err = store.GetSubdomains(s.db, req.Name)
-	if err != nil {
-		return nil, err
 	}
 
 	subdomains = append(subdomains, subdomain)
