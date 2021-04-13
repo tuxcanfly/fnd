@@ -155,6 +155,7 @@ type SubdomainInfo struct {
 	Name        string
 	PublicKey   *btcec.PublicKey
 	EpochHeight int
+	Size        int
 }
 
 func (n *SubdomainInfo) MarshalJSON() ([]byte, error) {
@@ -162,10 +163,12 @@ func (n *SubdomainInfo) MarshalJSON() ([]byte, error) {
 		Name        string `json:"name"`
 		PublicKey   string `json:"public_key"`
 		EpochHeight int    `json:"epoch_height"`
+		Size        int    `json:"size"`
 	}{
 		n.Name,
 		hex.EncodeToString(n.PublicKey.SerializeCompressed()),
 		n.EpochHeight,
+		n.Size,
 	}
 	return json.Marshal(out)
 }
@@ -175,6 +178,7 @@ func (n *SubdomainInfo) UnmarshalJSON(data []byte) error {
 		Name        string `json:"name"`
 		PublicKey   string `json:"public_key"`
 		EpochHeight int    `json:"epoch_height"`
+		Size        int    `json:"size"`
 	}{}
 	if err := json.Unmarshal(data, out); err != nil {
 		return err
@@ -182,6 +186,7 @@ func (n *SubdomainInfo) UnmarshalJSON(data []byte) error {
 	n.Name = out.Name
 	n.PublicKey = mustDecodePublicKey(out.PublicKey)
 	n.EpochHeight = out.EpochHeight
+	n.Size = out.Size
 	return nil
 }
 
@@ -233,11 +238,12 @@ func StreamSubdomainInfo(db *leveldb.DB, start string) (*SubdomainInfoStream, er
 	}, nil
 }
 
-func SetSubdomainInfoTx(tx *leveldb.Transaction, name string, key *btcec.PublicKey, epochHeight int) error {
+func SetSubdomainInfoTx(tx *leveldb.Transaction, name string, key *btcec.PublicKey, epochHeight int, size int) error {
 	err := tx.Put(subdomainDataPrefix(name), mustMarshalJSON(&SubdomainInfo{
 		Name:        name,
 		PublicKey:   key,
 		EpochHeight: epochHeight,
+		Size:        size,
 	}), nil)
 	if err != nil {
 		return errors.Wrap(err, "error inserting name info")

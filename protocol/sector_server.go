@@ -137,7 +137,15 @@ func (s *SectorServer) onBlobReq(peerID crypto.Hash, envelope *wire.Envelope) {
 		return
 	}
 
-	bl, err := s.bs.Open(reqMsg.Name)
+	info, err := store.GetSubdomainInfo(s.db, reqMsg.Name)
+	if err != nil {
+		lgr.Error(
+			"failed to fetch info",
+			"err", err)
+		return
+	}
+
+	bl, err := s.bs.Open(reqMsg.Name, int64(info.Size*blob.SectorBytes))
 	if err != nil {
 		s.nameLocker.RUnlock(reqMsg.Name)
 		lgr.Error(

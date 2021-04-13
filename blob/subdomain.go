@@ -24,7 +24,7 @@ func (s *Subdomain) MarshalJSON() ([]byte, error) {
 		ID          uint8  `json:"id"`
 		Name        string `json:"name"`
 		EpochHeight uint16 `json:"epoch_height"`
-		Size        uint8  `json:"sector_size"`
+		Size        uint8  `json:"size"`
 		PublicKey   string `json:"public_key"`
 		Signature   string `json:"signature"`
 	}{

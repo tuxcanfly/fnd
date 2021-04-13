@@ -140,7 +140,7 @@ func NameUpdateBlob(cfg *NameUpdateConfig) error {
 	for _, subdomain := range subdomainMeta.subdomains {
 		name := fmt.Sprintf("%s.%s", subdomain.Name, item.Name)
 		err = store.WithTx(cfg.DB, func(tx *leveldb.Transaction) error {
-			if err := store.SetSubdomainInfoTx(tx, name, subdomain.PublicKey, int(subdomain.EpochHeight)); err != nil {
+			if err := store.SetSubdomainInfoTx(tx, name, subdomain.PublicKey, int(subdomain.EpochHeight), int(subdomain.Size)); err != nil {
 				return errors.Wrap(err, "error inserting name info")
 			}
 			return nil

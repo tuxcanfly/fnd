@@ -203,7 +203,12 @@ func BlobUpdateBlob(cfg *BlobUpdateConfig) error {
 	}
 	defer cfg.NameLocker.Unlock(item.Name)
 
-	bl, err := cfg.BlobStore.Open(item.Name)
+	info, err := store.GetSubdomainInfo(cfg.DB, item.Name)
+	if err != nil {
+		return errors.Wrap(err, "error getting subdomain info")
+	}
+
+	bl, err := cfg.BlobStore.Open(item.Name, int64(info.Size*blob.SectorBytes))
 	if err != nil {
 		return errors.Wrap(err, "error getting blob")
 	}

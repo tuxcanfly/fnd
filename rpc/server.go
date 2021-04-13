@@ -225,7 +225,12 @@ func (s *Server) ListPeers(req *apiv1.ListPeersReq, stream apiv1.Footnotev1_List
 
 func (s *Server) BlobCheckout(ctx context.Context, req *apiv1.BlobCheckoutReq) (*apiv1.BlobCheckoutRes, error) {
 	txID := atomic.AddUint32(&s.lastTxID, 1)
-	bl, err := s.bs.Open(req.Name)
+	info, err := store.GetSubdomainInfo(s.db, req.Name)
+	if err != nil {
+		return nil, err
+	}
+
+	bl, err := s.bs.Open(req.Name, int64(info.Size*blob.SectorBytes))
 	if err != nil {
 		return nil, err
 	}
@@ -393,7 +398,13 @@ func (s *Server) BlobReadAt(_ context.Context, req *apiv1.BlobReadAtReq) (*apiv1
 		return nil, errors.New("name is busy")
 	}
 	defer s.nameLocker.RUnlock(name)
-	bl, err := s.bs.Open(name)
+
+	info, err := store.GetSubdomainInfo(s.db, name)
+	if err != nil {
+		return nil, err
+	}
+
+	bl, err := s.bs.Open(name, int64(info.Size*blob.SectorBytes))
 	if err != nil {
 		return nil, errors.Wrap(err, "error opening blob for reading")
 	}
@@ -508,7 +519,7 @@ func (s *Server) AddSubdomain(_ context.Context, req *apiv1.AddSubdomainReq) (*a
 
 	name := fmt.Sprintf("%s.%s", subdomain.Name, req.Name)
 	err = store.WithTx(s.db, func(tx *leveldb.Transaction) error {
-		if err := store.SetSubdomainInfoTx(tx, name, pubkey, int(req.EpochHeight)); err != nil {
+		if err := store.SetSubdomainInfoTx(tx, name, pubkey, int(req.EpochHeight), int(req.Size)); err != nil {
 			return errors.Wrap(err, "error inserting name info")
 		}
 		return nil

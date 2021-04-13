@@ -4,9 +4,10 @@ import (
 	"fnd/blob"
 	"fnd/log"
 	"fnd/store"
+	"time"
+
 	"github.com/pkg/errors"
 	"github.com/syndtr/goleveldb/leveldb"
-	"time"
 )
 
 const (
@@ -41,6 +42,10 @@ func IngestBanLists(db *leveldb.DB, bs blob.Store, lists []string) error {
 				if err := store.BanName(tx, name); err != nil {
 					return errors.Wrap(err, "error banning name")
 				}
+				info, err := store.GetSubdomainInfo(db, name)
+				if err != nil {
+					return errors.Wrap(err, "error fetching subdomain info")
+				}
 				exists, err := bs.Exists(name)
 				if err != nil {
 					return errors.Wrap(err, "error checking blob existence")
@@ -49,7 +54,7 @@ func IngestBanLists(db *leveldb.DB, bs blob.Store, lists []string) error {
 					continue
 				}
 				lgr.Info("deleting banned name", "name", name)
-				bl, err := bs.Open(name)
+				bl, err := bs.Open(name, int64(info.Size*blob.SectorBytes))
 				if err != nil {
 					return errors.Wrap(err, "error opening blob")
 				}
