@@ -8,11 +8,12 @@ import (
 	"fnd/store"
 	"fnd/util"
 	"fnd/wire"
-	"github.com/pkg/errors"
-	"github.com/syndtr/goleveldb/leveldb"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/pkg/errors"
+	"github.com/syndtr/goleveldb/leveldb"
 )
 
 var (
@@ -144,6 +145,14 @@ func (ns *NameSyncer) doSync() {
 			break
 		}
 
+		if info.Expired {
+			ns.lgr.Info("skipping expired name", "name", info.Name)
+			if err := store.TruncateHeaderStore(ns.db); err != nil {
+				ns.lgr.Error("error truncating name header", "err", err)
+			}
+			continue
+		}
+
 		sem <- struct{}{}
 		go func() {
 			ns.syncName(info)
@@ -197,9 +206,9 @@ func (ns *NameSyncer) syncName(info *store.NameInfo) {
 	})
 
 	recips, _ := p2p.BroadcastRandom(ns.mux, ns.SampleSize, &wire.UpdateReq{
-		Name:      name,
+		Name:        name,
 		EpochHeight: epochHeight,
-		SectorSize: sectorSize,
+		SectorSize:  sectorSize,
 	})
 	sampleSize := len(recips)
 

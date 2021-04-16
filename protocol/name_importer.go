@@ -2,25 +2,27 @@ package protocol
 
 import (
 	"bytes"
-	"encoding/hex"
 	"encoding/base64"
+	"encoding/hex"
 	"fmt"
-	"github.com/btcsuite/btcd/btcec"
 	"fnd/config"
 	"fnd/log"
 	"fnd/store"
-	"fnd.localhost/handshake/client"
-	"fnd.localhost/handshake/dns"
-	"fnd.localhost/handshake/primitives"
-	"github.com/pkg/errors"
-	"github.com/syndtr/goleveldb/leveldb"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"fnd.localhost/handshake/client"
+	"fnd.localhost/handshake/dns"
+	"fnd.localhost/handshake/primitives"
+	"github.com/btcsuite/btcd/btcec"
+	"github.com/pkg/errors"
+	"github.com/syndtr/goleveldb/leveldb"
 )
 
 type NameImporter struct {
 	ConfirmationDepth     int
+	ExpiryDepth           int
 	CheckInterval         time.Duration
 	Workers               int
 	VerificationThreshold float64
@@ -39,6 +41,7 @@ type HNSName struct {
 func NewNameImporter(client *client.Client, db *leveldb.DB) *NameImporter {
 	return &NameImporter{
 		ConfirmationDepth:     config.DefaultConfig.Tuning.NameImporter.ConfirmationDepth,
+		ExpiryDepth:           100, // FIXME: maybe use config
 		CheckInterval:         config.ConvertDuration(config.DefaultConfig.Tuning.NameImporter.CheckIntervalMS, time.Millisecond),
 		Workers:               config.DefaultConfig.Tuning.NameImporter.Workers,
 		VerificationThreshold: config.DefaultConfig.Tuning.NameImporter.VerificationThreshold,
@@ -134,9 +137,18 @@ func (n *NameImporter) doSync() {
 				names = append(names, *name)
 			}
 
+			var expired = false
+			expiryHeight := chainHeight - n.ExpiryDepth
+			if expiryHeight < blockHeight {
+				expired = true
+			}
+
 			err := store.WithTx(n.db, func(tx *leveldb.Transaction) error {
 				for i, record := range records {
-					if err := store.SetNameInfoTx(tx, names[i], record.PublicKey, blockHeight); err != nil {
+					if record.Revoked {
+						expired = true
+					}
+					if err := store.SetNameInfoTx(tx, names[i], record.PublicKey, blockHeight, expired); err != nil {
 						return errors.Wrap(err, "error inserting name info")
 					}
 				}
@@ -197,15 +209,18 @@ func (n *NameImporter) fetchBlocks(start int, count int) ([]*primitives.Block, e
 }
 
 type FNRecord struct {
-	NameHash  string
-	PublicKey *btcec.PublicKey
+	NameHash    string
+	PublicKey   *btcec.PublicKey
+	TxIndex     int
+	OutputIndex int
+	Revoked     bool
 }
 
 func ExtractTXTRecordsBlock(block *primitives.Block) []*FNRecord {
 	uniqRecords := make(map[string]*FNRecord)
 	var order []string
-	for _, tx := range block.Transactions {
-		records := ExtractTXTRecordsTx(tx)
+	for i, tx := range block.Transactions {
+		records := ExtractTXTRecordsTx(tx, i)
 		for _, rec := range records {
 			if _, ok := uniqRecords[rec.NameHash]; !ok {
 				order = append(order, rec.NameHash)
@@ -220,13 +235,16 @@ func ExtractTXTRecordsBlock(block *primitives.Block) []*FNRecord {
 	return out
 }
 
-func ExtractTXTRecordsTx(tx *primitives.Transaction) []*FNRecord {
+func ExtractTXTRecordsTx(tx *primitives.Transaction, index int) []*FNRecord {
 	var out []*FNRecord
-	for _, vOut := range tx.Outputs {
+	for i, vOut := range tx.Outputs {
 		covenant := vOut.Covenant
+		var revoked bool
 		var resource *dns.Resource
 		var nh []byte
 		switch covenant.Type {
+		case primitives.CovenantRevoke:
+			revoked = true
 		case primitives.CovenantUpdate:
 			cov, err := primitives.UpdateFromCovenant(covenant)
 			if err != nil {
@@ -268,8 +286,11 @@ func ExtractTXTRecordsTx(tx *primitives.Transaction) []*FNRecord {
 		}
 
 		out = append(out, &FNRecord{
-			NameHash:  hex.EncodeToString(nh),
-			PublicKey: pub,
+			NameHash:    hex.EncodeToString(nh),
+			PublicKey:   pub,
+			TxIndex:     index,
+			OutputIndex: i,
+			Revoked:     revoked,
 		})
 	}
 	return out

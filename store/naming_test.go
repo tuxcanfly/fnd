@@ -2,9 +2,10 @@ package store
 
 import (
 	"fnd/testutil/testcrypto"
+	"testing"
+
 	"github.com/stretchr/testify/require"
 	"github.com/syndtr/goleveldb/leveldb"
-	"testing"
 )
 
 func TestNaming_Meta(t *testing.T) {
@@ -32,7 +33,7 @@ func TestNaming_GetSetNameInfo(t *testing.T) {
 
 	_, pub := testcrypto.RandKey()
 	require.NoError(t, WithTx(db, func(tx *leveldb.Transaction) error {
-		return SetNameInfoTx(tx, "foo", pub, 10)
+		return SetNameInfoTx(tx, "foo", pub, 10, false)
 	}))
 	info, err = GetNameInfo(db, "foo")
 	require.NoError(t, err)
@@ -68,7 +69,7 @@ func TestNaming_StreamNameInfo(t *testing.T) {
 	}
 	require.NoError(t, WithTx(db, func(tx *leveldb.Transaction) error {
 		for _, item := range items {
-			require.NoError(t, SetNameInfoTx(tx, item.Name, item.PublicKey, item.ImportHeight))
+			require.NoError(t, SetNameInfoTx(tx, item.Name, item.PublicKey, item.ImportHeight, item.Expired))
 		}
 		return nil
 	}))

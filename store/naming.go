@@ -4,12 +4,13 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
+	"math"
+
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/pkg/errors"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/iterator"
 	"github.com/syndtr/goleveldb/leveldb/util"
-	"math"
 )
 
 var (
@@ -58,6 +59,7 @@ type NameInfo struct {
 	Name         string
 	PublicKey    *btcec.PublicKey
 	ImportHeight int
+	Expired      bool
 }
 
 func (n *NameInfo) MarshalJSON() ([]byte, error) {
@@ -65,10 +67,12 @@ func (n *NameInfo) MarshalJSON() ([]byte, error) {
 		Name         string `json:"name"`
 		PublicKey    string `json:"public_key"`
 		ImportHeight int    `json:"import_height"`
+		Expired      bool   `json:"expired"`
 	}{
 		n.Name,
 		hex.EncodeToString(n.PublicKey.SerializeCompressed()),
 		n.ImportHeight,
+		n.Expired,
 	}
 	return json.Marshal(out)
 }
@@ -78,6 +82,7 @@ func (n *NameInfo) UnmarshalJSON(data []byte) error {
 		Name         string `json:"name"`
 		PublicKey    string `json:"public_key"`
 		ImportHeight int    `json:"import_height"`
+		Expired      bool   `json:"expired"`
 	}{}
 	if err := json.Unmarshal(data, out); err != nil {
 		return err
@@ -85,6 +90,7 @@ func (n *NameInfo) UnmarshalJSON(data []byte) error {
 	n.Name = out.Name
 	n.PublicKey = mustDecodePublicKey(out.PublicKey)
 	n.ImportHeight = out.ImportHeight
+	n.Expired = out.Expired
 	return nil
 }
 
@@ -136,11 +142,12 @@ func StreamNameInfo(db *leveldb.DB, start string) (*NameInfoStream, error) {
 	}, nil
 }
 
-func SetNameInfoTx(tx *leveldb.Transaction, name string, key *btcec.PublicKey, height int) error {
+func SetNameInfoTx(tx *leveldb.Transaction, name string, key *btcec.PublicKey, height int, expired bool) error {
 	err := tx.Put(nameDataPrefix(name), mustMarshalJSON(&NameInfo{
 		Name:         name,
 		PublicKey:    key,
 		ImportHeight: height,
+		Expired:      expired,
 	}), nil)
 	if err != nil {
 		return errors.Wrap(err, "error inserting name info")
