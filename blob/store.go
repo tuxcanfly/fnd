@@ -66,7 +66,7 @@ func NewInStorePath(blobsPath string, name string, size int64) (Blob, error) {
 		return nil, err
 	}
 
-	return newFromFile(name, f), nil
+	return newFromFile(name, f, size), nil
 }
 
 func fileExists(f string) (bool, error) {

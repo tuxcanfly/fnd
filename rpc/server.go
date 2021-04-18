@@ -13,6 +13,7 @@ import (
 	"fnd/util"
 	"fnd/wire"
 	"io"
+	"math"
 	"net"
 	"strconv"
 	"sync/atomic"
@@ -475,6 +476,12 @@ func (s *Server) ListBlobInfo(req *apiv1.ListBlobInfoReq, srv apiv1.Footnotev1_L
 }
 
 func (s *Server) AddSubdomain(_ context.Context, req *apiv1.AddSubdomainReq) (*apiv1.AddSubdomainRes, error) {
+	if req.EpochHeight >= math.MaxUint16 {
+		return nil, errors.New("epoch height overflows uint16")
+	}
+	if req.Size >= math.MaxUint8 {
+		return nil, errors.New("epoch height overflows uint8")
+	}
 	initialImportComplete, err := store.GetInitialImportComplete(s.db)
 	if err != nil {
 		return nil, err
@@ -598,6 +605,7 @@ func (s *Server) ListSubdomainInfo(req *apiv1.ListSubdomainInfoReq, srv apiv1.Fo
 			Name:        info.Name,
 			PublicKey:   info.PublicKey.SerializeCompressed(),
 			EpochHeight: uint32(info.EpochHeight),
+			Size:        uint32(info.Size),
 		}
 		if err = srv.Send(res); err != nil {
 			return errors.Wrap(err, "error sending info")

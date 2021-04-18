@@ -172,7 +172,8 @@ message SubdomainInfoRes {
     string name = 1;
     bytes publicKey = 2;
     uint32 epochHeight = 3;
-    repeated SubdomainRes subdomains = 4;
+    uint32 size = 4;
+    repeated SubdomainRes subdomains = 5;
 }
 
 message SendUpdateReq {

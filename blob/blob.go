@@ -1,11 +1,12 @@
 package blob
 
 import (
-	"github.com/pkg/errors"
 	"io"
 	"io/ioutil"
 	"os"
 	"sync"
+
+	"github.com/pkg/errors"
 )
 
 type SectorReader interface {
@@ -27,13 +28,15 @@ type Blob interface {
 type blobImpl struct {
 	f    *os.File
 	name string
+	size int64
 	mu   sync.Mutex
 }
 
-func newFromFile(name string, f *os.File) Blob {
+func newFromFile(name string, f *os.File, size int64) Blob {
 	return &blobImpl{
 		name: name,
 		f:    f,
+		size: size,
 	}
 }
 
@@ -56,6 +59,7 @@ func (b *blobImpl) ReadAt(p []byte, off int64) (int, error) {
 func (b *blobImpl) Transaction() (Transaction, error) {
 	return &txImpl{
 		name:      b.name,
+		size:      b.size,
 		cloner:    b.txCloner,
 		committer: b.txCommitter,
 		remover:   b.txRemover,

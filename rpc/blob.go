@@ -143,5 +143,6 @@ func parseSubdomainInfoRes(res *apiv1.SubdomainInfoRes) (*store.SubdomainInfo, e
 		Name:        res.Name,
 		PublicKey:   pub,
 		EpochHeight: int(res.EpochHeight),
+		Size:        int(res.Size),
 	}, nil
 }

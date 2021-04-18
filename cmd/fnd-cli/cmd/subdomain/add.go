@@ -66,7 +66,7 @@ var addCmd = &cobra.Command{
 			Signature:   sig[:],
 			Broadcast:   broadcast,
 		})
-		return nil
+		return err
 	},
 }
 
