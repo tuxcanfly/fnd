@@ -9,20 +9,19 @@ import (
 	"fnd/wire"
 	"time"
 
-	"fnd.localhost/handshake/primitives"
 	"github.com/pkg/errors"
 	"github.com/syndtr/goleveldb/leveldb"
 )
 
 const (
-	DefaultSyncerBlobResTimeout = 15 * time.Second
+	DefaultBlobSyncerBlobResTimeout = 15 * time.Second
 )
 
 var (
 	ErrInvalidPayloadSignature = errors.New("update signature is invalid")
 	ErrPayloadEquivocation     = errors.New("update payload is equivocated")
-	ErrSyncerNoProgress        = errors.New("sync not progressing")
-	ErrSyncerMaxAttempts       = errors.New("reached max sync attempts")
+	ErrBlobSyncerNoProgress    = errors.New("sync not progressing")
+	ErrBlobSyncerMaxAttempts   = errors.New("reached max sync attempts")
 )
 
 type syncUpdate struct {
@@ -31,7 +30,7 @@ type syncUpdate struct {
 	signature     crypto.Signature
 }
 
-type SyncSectorsOpts struct {
+type BlobSyncSectorsOpts struct {
 	Timeout     time.Duration
 	Mux         *p2p.PeerMuxer
 	Tx          blob.Transaction
@@ -54,9 +53,11 @@ type payloadRes struct {
 // known sector size, there exists a _unique_ compact proof of the update in
 // the form of the signature.
 func validateBlobUpdate(db *leveldb.DB, name string, epochHeight, sectorSize uint16, sectorTipHash crypto.Hash, reservedRoot crypto.Hash, sig crypto.Signature) error {
-	if err := primitives.ValidateName(name); err != nil {
-		return errors.Wrap(err, "update name is invalid")
-	}
+	// TODO: temporarily allow names with "." in them
+	// to allow subdomain names to sync
+	//if err := primitives.ValidateName(name); err != nil {
+	//return errors.Wrap(err, "update name is invalid")
+	//}
 	banned, err := store.NameIsBanned(db, name)
 	if err != nil {
 		return errors.Wrap(err, "error reading name ban state")
@@ -65,18 +66,18 @@ func validateBlobUpdate(db *leveldb.DB, name string, epochHeight, sectorSize uin
 		return errors.New("name is banned")
 	}
 	// TODO: should we check header ban state here?
-	info, err := store.GetNameInfo(db, name)
+	info, err := store.GetSubdomainInfo(db, name)
 	if err != nil {
 		return errors.Wrap(err, "error reading name info")
 	}
-	h := blob.SealHash(name, epochHeight, sectorSize, sectorTipHash, reservedRoot)
+	h := blob.BlobSealHash(name, epochHeight, sectorSize, sectorTipHash, reservedRoot)
 	if !crypto.VerifySigPub(info.PublicKey, sig, h) {
 		return ErrInvalidPayloadSignature
 	}
 	return nil
 }
 
-// SyncSectors syncs the sectors for the options provided in opts. Syncing
+// BlobSyncSectors syncs the sectors for the options provided in opts. BlobSyncing
 // happens by sending a BlobReq and expecting a BlobRes in return. Multiple
 // requests may be send to multiple peers but the first valid response will be
 // considered final.
@@ -85,7 +86,7 @@ func validateBlobUpdate(db *leveldb.DB, name string, epochHeight, sectorSize uin
 // which is the proof that are two conflicting updates at the same epoch and
 // sector size, and this proof will be stored locally and served to peers in
 // the equivocation proof flow. See sector_server.go for details.
-func SyncSectors(opts *SyncSectorsOpts) (*syncUpdate, error) {
+func BlobSyncSectors(opts *BlobSyncSectorsOpts) (*syncUpdate, error) {
 	lgr := log.WithModule("payload-syncer").Sub("name", opts.Name)
 	errs := make(chan error)
 	payloadResCh := make(chan *payloadRes)
@@ -222,7 +223,7 @@ func SyncSectors(opts *SyncSectorsOpts) (*syncUpdate, error) {
 						}); err != nil {
 							lgr.Trace("error writing equivocation proof", "err", err)
 						}
-						update := &wire.Update{
+						update := &wire.BlobUpdate{
 							Name:        msg.Name,
 							EpochHeight: msg.EpochHeight,
 							SectorSize:  0,

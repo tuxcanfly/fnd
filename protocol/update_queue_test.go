@@ -202,7 +202,7 @@ func TestUpdateQueue_EnqueueDequeue(t *testing.T) {
 }
 
 func signHeader(t *testing.T, header *store.Header) *store.Header {
-	sig, err := blob.SignSeal(testcrypto.FixedSigner(t), header.Name, header.EpochHeight, header.SectorSize, header.SectorTipHash, header.ReservedRoot)
+	sig, err := blob.BlobSignSeal(testcrypto.FixedSigner(t), header.Name, header.EpochHeight, header.SectorSize, header.SectorTipHash, header.ReservedRoot)
 	require.NoError(t, err)
 	header.Signature = sig
 	return header

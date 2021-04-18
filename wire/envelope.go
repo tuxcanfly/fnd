@@ -79,20 +79,30 @@ func (e *Envelope) Decode(r io.Reader) error {
 		msg = &HelloAck{}
 	case MessageTypePing:
 		msg = &Ping{}
-	case MessageTypeUpdate:
-		msg = &Update{}
-	case MessageTypeNilUpdate:
-		msg = &NilUpdate{}
+	case MessageTypeNameUpdate:
+		msg = &NameUpdate{}
+	case MessageTypeBlobUpdate:
+		msg = &BlobUpdate{}
+	case MessageTypeBlobNilUpdate:
+		msg = &BlobNilUpdate{}
+	case MessageTypeNameNilUpdate:
+		msg = &NameNilUpdate{}
 	case MessageTypeBlobReq:
 		msg = &BlobReq{}
 	case MessageTypeBlobRes:
 		msg = &BlobRes{}
+	case MessageTypeNameReq:
+		msg = &NameReq{}
+	case MessageTypeNameRes:
+		msg = &NameRes{}
 	case MessageTypePeerReq:
 		msg = &PeerReq{}
 	case MessageTypePeerRes:
 		msg = &PeerRes{}
-	case MessageTypeUpdateReq:
-		msg = &UpdateReq{}
+	case MessageTypeNameUpdateReq:
+		msg = &NameUpdateReq{}
+	case MessageTypeBlobUpdateReq:
+		msg = &BlobUpdateReq{}
 	case MessageTypeEquivocationProof:
 		msg = &EquivocationProof{}
 	default:

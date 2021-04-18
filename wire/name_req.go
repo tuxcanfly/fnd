@@ -1,13 +1,14 @@
 package wire
 
 import (
-	"fnd/crypto"
 	"io"
+
+	"fnd/crypto"
 
 	"fnd.localhost/dwire"
 )
 
-type Update struct {
+type NameReq struct {
 	HashCacher
 
 	Name        string
@@ -15,14 +16,14 @@ type Update struct {
 	SectorSize  uint16
 }
 
-var _ Message = (*Update)(nil)
+var _ Message = (*NameReq)(nil)
 
-func (u *Update) MsgType() MessageType {
-	return MessageTypeUpdate
+func (u *NameReq) MsgType() MessageType {
+	return MessageTypeNameReq
 }
 
-func (u *Update) Equals(other Message) bool {
-	cast, ok := other.(*Update)
+func (u *NameReq) Equals(other Message) bool {
+	cast, ok := other.(*NameReq)
 	if !ok {
 		return false
 	}
@@ -32,7 +33,7 @@ func (u *Update) Equals(other Message) bool {
 		u.SectorSize == cast.SectorSize
 }
 
-func (u *Update) Encode(w io.Writer) error {
+func (u *NameReq) Encode(w io.Writer) error {
 	return dwire.EncodeFields(
 		w,
 		u.Name,
@@ -41,7 +42,7 @@ func (u *Update) Encode(w io.Writer) error {
 	)
 }
 
-func (u *Update) Decode(r io.Reader) error {
+func (u *NameReq) Decode(r io.Reader) error {
 	return dwire.DecodeFields(
 		r,
 		&u.Name,
@@ -50,6 +51,6 @@ func (u *Update) Decode(r io.Reader) error {
 	)
 }
 
-func (u *Update) Hash() (crypto.Hash, error) {
+func (u *NameReq) Hash() (crypto.Hash, error) {
 	return u.HashCacher.Hash(u)
 }

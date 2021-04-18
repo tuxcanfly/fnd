@@ -12,27 +12,26 @@ import (
 	"sync/atomic"
 	"time"
 
-	"fnd.localhost/handshake/primitives"
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/pkg/errors"
 	"github.com/syndtr/goleveldb/leveldb"
 )
 
 var (
-	ErrUpdateQueueMaxLen        = errors.New("update queue is at max length")
-	ErrUpdateQueueEpochUpdated  = errors.New("epoch already updated")
-	ErrUpdateQueueSectorUpdated = errors.New("sector already updated")
-	ErrUpdateQueueThrottled     = errors.New("update is throttled")
-	ErrUpdateQueueStaleSector   = errors.New("sector is stale")
-	ErrUpdateQueueSpltBrain     = errors.New("split brain")
-	ErrInitialImportIncomplete  = errors.New("initial import incomplete")
+	ErrBlobUpdateQueueMaxLen        = errors.New("update queue is at max length")
+	ErrBlobUpdateQueueEpochUpdated  = errors.New("epoch already updated")
+	ErrBlobUpdateQueueSectorUpdated = errors.New("sector already updated")
+	ErrBlobUpdateQueueThrottled     = errors.New("update is throttled")
+	ErrBlobUpdateQueueStaleSector   = errors.New("sector is stale")
+	ErrBlobUpdateQueueSpltBrain     = errors.New("split brain")
+	ErrInitialImportIncomplete      = errors.New("initial import incomplete")
 )
 
-type UpdateQueue struct {
+type BlobUpdateQueue struct {
 	MaxLen   int32
 	mux      *p2p.PeerMuxer
 	db       *leveldb.DB
-	entries  map[string]*UpdateQueueItem
+	entries  map[string]*BlobUpdateQueueItem
 	quitCh   chan struct{}
 	queue    []string
 	queueLen int32
@@ -40,33 +39,32 @@ type UpdateQueue struct {
 	lgr      log.Logger
 }
 
-type UpdateQueueItem struct {
+type BlobUpdateQueueItem struct {
 	PeerIDs     *PeerSet
 	Name        string
 	EpochHeight uint16
 	SectorSize  uint16
 	Pub         *btcec.PublicKey
-	Height      int
 	Disposed    int32
 }
 
-func (u *UpdateQueueItem) Dispose() {
+func (u *BlobUpdateQueueItem) Dispose() {
 	atomic.StoreInt32(&u.Disposed, 1)
 }
 
-func NewUpdateQueue(mux *p2p.PeerMuxer, db *leveldb.DB) *UpdateQueue {
-	return &UpdateQueue{
+func NewBlobUpdateQueue(mux *p2p.PeerMuxer, db *leveldb.DB) *BlobUpdateQueue {
+	return &BlobUpdateQueue{
 		MaxLen:  int32(config.DefaultConfig.Tuning.UpdateQueue.MaxLen),
 		mux:     mux,
 		db:      db,
-		entries: make(map[string]*UpdateQueueItem),
+		entries: make(map[string]*BlobUpdateQueueItem),
 		quitCh:  make(chan struct{}),
 		lgr:     log.WithModule("update-queue"),
 	}
 }
 
-func (u *UpdateQueue) Start() error {
-	u.mux.AddMessageHandler(p2p.PeerMessageHandlerForType(wire.MessageTypeUpdate, u.onUpdate))
+func (u *BlobUpdateQueue) Start() error {
+	u.mux.AddMessageHandler(p2p.PeerMessageHandlerForType(wire.MessageTypeBlobUpdate, u.onUpdate))
 	timer := time.NewTicker(5 * time.Second)
 	for {
 		select {
@@ -78,18 +76,18 @@ func (u *UpdateQueue) Start() error {
 	}
 }
 
-func (u *UpdateQueue) Stop() error {
+func (u *BlobUpdateQueue) Stop() error {
 	close(u.quitCh)
 	return nil
 }
 
 // TODO: prioritize equivocations first, then higher epochs and sector sizes
-func (u *UpdateQueue) Enqueue(peerID crypto.Hash, update *wire.Update) error {
+func (u *BlobUpdateQueue) Enqueue(peerID crypto.Hash, update *wire.BlobUpdate) error {
 	// use atomic below to prevent having to lock mu
 	// during expensive name validation calls when
 	// we can cheaply check for the queue size.
 	if atomic.LoadInt32(&u.queueLen) >= u.MaxLen {
-		return ErrUpdateQueueMaxLen
+		return ErrBlobUpdateQueueMaxLen
 	}
 
 	initialImportComplete, err := store.GetInitialImportComplete(u.db)
@@ -120,7 +118,7 @@ func (u *UpdateQueue) Enqueue(peerID crypto.Hash, update *wire.Update) error {
 		return err
 	}
 
-	nameInfo, err := store.GetNameInfo(u.db, update.Name)
+	nameInfo, err := store.GetSubdomainInfo(u.db, update.Name)
 	if err != nil {
 		return errors.Wrap(err, "error getting name info")
 	}
@@ -136,16 +134,16 @@ func (u *UpdateQueue) Enqueue(peerID crypto.Hash, update *wire.Update) error {
 
 	// Ignore updates for epochs below ours
 	if epochHeight > update.EpochHeight {
-		return ErrUpdateQueueEpochUpdated
+		return ErrBlobUpdateQueueEpochUpdated
 	}
 
 	// Ignore updates for sectors below ours, same epoch
 	if epochHeight == update.EpochHeight {
 		if sectorSize > update.SectorSize {
-			return ErrUpdateQueueStaleSector
+			return ErrBlobUpdateQueueStaleSector
 		}
 		if sectorSize == update.SectorSize {
-			return ErrUpdateQueueSectorUpdated
+			return ErrBlobUpdateQueueSectorUpdated
 		}
 	}
 
@@ -153,13 +151,12 @@ func (u *UpdateQueue) Enqueue(peerID crypto.Hash, update *wire.Update) error {
 	defer u.mu.Unlock()
 	entry := u.entries[update.Name]
 	if entry == nil || entry.SectorSize < update.SectorSize {
-		u.entries[update.Name] = &UpdateQueueItem{
+		u.entries[update.Name] = &BlobUpdateQueueItem{
 			PeerIDs:     NewPeerSet([]crypto.Hash{peerID}),
 			Name:        update.Name,
 			EpochHeight: update.EpochHeight,
 			SectorSize:  update.SectorSize,
 			Pub:         nameInfo.PublicKey,
-			Height:      nameInfo.ImportHeight,
 		}
 
 		if entry == nil {
@@ -172,13 +169,13 @@ func (u *UpdateQueue) Enqueue(peerID crypto.Hash, update *wire.Update) error {
 
 	// Ignore updates for epochs below ours, if entry already exists
 	if entry.EpochHeight > update.EpochHeight {
-		return ErrUpdateQueueEpochUpdated
+		return ErrBlobUpdateQueueEpochUpdated
 	}
 
 	// Ignore updates for sectors below ours, if entry already exists
 	if entry.EpochHeight == update.EpochHeight {
 		if entry.SectorSize > update.SectorSize {
-			return ErrUpdateQueueStaleSector
+			return ErrBlobUpdateQueueStaleSector
 		}
 	}
 
@@ -187,7 +184,7 @@ func (u *UpdateQueue) Enqueue(peerID crypto.Hash, update *wire.Update) error {
 	return nil
 }
 
-func (u *UpdateQueue) Dequeue() *UpdateQueueItem {
+func (u *BlobUpdateQueue) Dequeue() *BlobUpdateQueueItem {
 	u.mu.Lock()
 	defer u.mu.Unlock()
 	if len(u.queue) == 0 {
@@ -202,17 +199,19 @@ func (u *UpdateQueue) Dequeue() *UpdateQueueItem {
 	return ret
 }
 
-func (u *UpdateQueue) onUpdate(peerID crypto.Hash, envelope *wire.Envelope) {
-	update := envelope.Message.(*wire.Update)
+func (u *BlobUpdateQueue) onUpdate(peerID crypto.Hash, envelope *wire.Envelope) {
+	update := envelope.Message.(*wire.BlobUpdate)
 	if err := u.Enqueue(peerID, update); err != nil {
 		u.lgr.Info("update rejected", "name", update.Name, "reason", err)
 	}
 }
 
-func (u *UpdateQueue) validateUpdate(name string) error {
-	if err := primitives.ValidateName(name); err != nil {
-		return errors.Wrap(err, "update name is invalid")
-	}
+func (u *BlobUpdateQueue) validateUpdate(name string) error {
+	// TODO: temporarily allow names with "." in them
+	// to allow subdomain names to sync
+	//if err := primitives.ValidateName(name); err != nil {
+	//return errors.Wrap(err, "update name is invalid")
+	//}
 	nameBan, err := store.NameIsBanned(u.db, name)
 	if err != nil {
 		return errors.Wrap(err, "error reading name ban state")
@@ -230,7 +229,7 @@ func (u *UpdateQueue) validateUpdate(name string) error {
 	return nil
 }
 
-func (u *UpdateQueue) reapDequeuedUpdates() {
+func (u *BlobUpdateQueue) reapDequeuedUpdates() {
 	u.mu.Lock()
 	defer u.mu.Unlock()
 	var toDelete []string

@@ -56,6 +56,50 @@ func ListBlobInfoContext(ctx context.Context, client apiv1.Footnotev1Client, sta
 		}
 	}
 }
+func GetSubdomainInfoContext(ctx context.Context, client apiv1.Footnotev1Client, name string) (*store.SubdomainInfo, error) {
+	res, err := client.GetSubdomainInfo(ctx, &apiv1.SubdomainInfoReq{
+		Name: name,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return parseSubdomainInfoRes(res)
+}
+
+func ListSubdomainInfoContext(ctx context.Context, client apiv1.Footnotev1Client, start string, cb func(info *store.SubdomainInfo) bool) error {
+	stream, err := client.ListSubdomainInfo(ctx, &apiv1.ListSubdomainInfoReq{
+		Start: start,
+	})
+	if err != nil {
+		return err
+	}
+	defer stream.CloseSend()
+
+	for {
+		res, err := stream.Recv()
+		if err == io.EOF {
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+		parsed, err := parseSubdomainInfoRes(res)
+		if err != nil {
+			return err
+		}
+		if !cb(parsed) {
+			return nil
+		}
+	}
+}
+
+func GetSubdomainInfo(client apiv1.Footnotev1Client, name string) (*store.SubdomainInfo, error) {
+	return GetSubdomainInfoContext(context.Background(), client, name)
+}
+
+func ListSubdomainInfo(client apiv1.Footnotev1Client, after string, cb func(info *store.SubdomainInfo) bool) error {
+	return ListSubdomainInfoContext(context.Background(), client, after, cb)
+}
 
 func parseBlobInfoRes(res *apiv1.BlobInfoRes) (*store.BlobInfo, error) {
 	pub, err := btcec.ParsePubKey(res.PublicKey, btcec.S256())
@@ -86,5 +130,19 @@ func parseBlobInfoRes(res *apiv1.BlobInfoRes) (*store.BlobInfo, error) {
 		Signature:     sig,
 		ReceivedAt:    time.Unix(int64(res.ReceivedAt), 0),
 		BannedAt:      time.Unix(int64(res.BannedAt), 0),
+	}, nil
+}
+
+func parseSubdomainInfoRes(res *apiv1.SubdomainInfoRes) (*store.SubdomainInfo, error) {
+	pub, err := btcec.ParsePubKey(res.PublicKey, btcec.S256())
+	if err != nil {
+		return nil, errors.Wrap(err, "error parsing public key")
+	}
+
+	return &store.SubdomainInfo{
+		Name:        res.Name,
+		PublicKey:   pub,
+		EpochHeight: int(res.EpochHeight),
+		Size:        int(res.Size),
 	}, nil
 }

@@ -22,7 +22,7 @@ func NewBlobReader(client apiv1.Footnotev1Client, name string) *BlobReader {
 }
 
 func (b *BlobReader) ReadAt(p []byte, off int64) (int, error) {
-	res, err := b.client.ReadAt(context.Background(), &apiv1.ReadAtReq{
+	res, err := b.client.BlobReadAt(context.Background(), &apiv1.BlobReadAtReq{
 		Name:   b.name,
 		Offset: uint32(off),
 		Len:    uint32(len(p)),

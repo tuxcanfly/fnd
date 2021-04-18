@@ -114,7 +114,7 @@ func TestUpdateServer(t *testing.T) {
 				epochHeight := uint16(0)
 				sectorSize := uint16(10)
 				sectorHashTip := blob.ZeroHash
-				sig, err := blob.SignSeal(signer, "valid", epochHeight, sectorSize, sectorHashTip, crypto.ZeroHash)
+				sig, err := blob.BlobSignSeal(signer, "valid", epochHeight, sectorSize, sectorHashTip, crypto.ZeroHash)
 				require.NoError(t, err)
 				require.NoError(t, store.WithTx(db, func(tx *leveldb.Transaction) error {
 					return store.SetHeaderTx(tx, &store.Header{

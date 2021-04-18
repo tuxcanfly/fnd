@@ -38,7 +38,7 @@ func TestUpdater(t *testing.T) {
 					setup.rs.BlobStore,
 					setup.tp.RemoteSigner,
 					name,
-					CurrentEpoch(name),
+					BlobEpoch(name),
 					blob.SectorBytes,
 					ts,
 				)
@@ -65,7 +65,7 @@ func TestUpdater(t *testing.T) {
 			"syncs sectors when remote has a sector update",
 			func(t *testing.T, setup *updaterTestSetup) {
 				ts := time.Now()
-				epochHeight := CurrentEpoch(name)
+				epochHeight := BlobEpoch(name)
 				sectorSize := uint16(10)
 				mockapp.FillBlobReader(
 					t,
@@ -117,7 +117,7 @@ func TestUpdater(t *testing.T) {
 			"syncs sectors when remote has a epoch update (rollover)",
 			func(t *testing.T, setup *updaterTestSetup) {
 				ts := time.Now()
-				epochHeight := CurrentEpoch(name)
+				epochHeight := BlobEpoch(name)
 				sectorSize := uint16(10)
 				mockapp.FillBlobReader(
 					t,
@@ -174,7 +174,7 @@ func TestUpdater(t *testing.T) {
 					return nil
 				}))
 				ts := time.Now()
-				epochHeight := CurrentEpoch(name)
+				epochHeight := BlobEpoch(name)
 				sectorSize := uint16(10)
 				mockapp.FillBlobReader(
 					t,
@@ -227,7 +227,7 @@ func TestUpdater(t *testing.T) {
 			"aborts sync when there is a invalid payload signature",
 			func(t *testing.T, setup *updaterTestSetup) {
 				ts := time.Now()
-				epochHeight := CurrentEpoch(name)
+				epochHeight := BlobEpoch(name)
 				sectorSize := uint16(10)
 				mockapp.FillBlobReader(
 					t,
@@ -285,7 +285,7 @@ func TestUpdater(t *testing.T) {
 			"aborts sync if the new sector size is equal to the stored sector size",
 			func(t *testing.T, setup *updaterTestSetup) {
 				ts := time.Now()
-				epochHeight := CurrentEpoch(name)
+				epochHeight := BlobEpoch(name)
 				sectorSize := uint16(0)
 				update := mockapp.FillBlobRandom(
 					t,
@@ -339,7 +339,7 @@ func TestUpdater(t *testing.T) {
 							crypto.HashPub(setup.tp.RemoteSigner.Pub()),
 						}),
 						Name:        name,
-						EpochHeight: CurrentEpoch(name),
+						EpochHeight: BlobEpoch(name),
 					},
 				}
 				err := UpdateBlob(cfg)
@@ -351,7 +351,7 @@ func TestUpdater(t *testing.T) {
 			"aborts sync if the new sector size is equal to the stored sector size",
 			func(t *testing.T, setup *updaterTestSetup) {
 				ts := time.Now()
-				epochHeight := CurrentEpoch(name)
+				epochHeight := BlobEpoch(name)
 				sectorSize := uint16(0)
 				update := mockapp.FillBlobRandom(
 					t,
@@ -405,7 +405,7 @@ func TestUpdater(t *testing.T) {
 							crypto.HashPub(setup.tp.RemoteSigner.Pub()),
 						}),
 						Name:        name,
-						EpochHeight: CurrentEpoch(name),
+						EpochHeight: BlobEpoch(name),
 					},
 				}
 				err := UpdateBlob(cfg)
@@ -504,7 +504,7 @@ func TestEpoch(t *testing.T) {
 							crypto.HashPub(setup.tp.RemoteSigner.Pub()),
 						}),
 						Name:        name,
-						EpochHeight: CurrentEpoch(name) + 1,
+						EpochHeight: BlobEpoch(name) + 1,
 					},
 				}
 				require.NoError(t, store.WithTx(setup.ls.DB, func(tx *leveldb.Transaction) error {
@@ -533,7 +533,7 @@ func TestEpoch(t *testing.T) {
 					setup.rs.BlobStore,
 					setup.tp.RemoteSigner,
 					name,
-					CurrentEpoch(name)+1,
+					BlobEpoch(name)+1,
 					blob.SectorBytes,
 					ts,
 				)
@@ -580,7 +580,7 @@ func TestEpoch(t *testing.T) {
 							crypto.HashPub(setup.tp.RemoteSigner.Pub()),
 						}),
 						Name:        name,
-						EpochHeight: CurrentEpoch(name) - 1,
+						EpochHeight: BlobEpoch(name) - 1,
 					},
 				}
 				require.NoError(t, store.WithTx(setup.ls.DB, func(tx *leveldb.Transaction) error {
@@ -614,7 +614,7 @@ func TestEpoch(t *testing.T) {
 				require.NoError(t, store.WithTx(setup.ls.DB, func(tx *leveldb.Transaction) error {
 					return store.SetHeaderTx(tx, &store.Header{
 						Name:        name,
-						EpochHeight: CurrentEpoch(name),
+						EpochHeight: BlobEpoch(name),
 						SectorSize:  10,
 					}, blob.ZeroSectorHashes)
 				}))
@@ -635,13 +635,13 @@ func TestEpoch(t *testing.T) {
 							crypto.HashPub(setup.tp.RemoteSigner.Pub()),
 						}),
 						Name:        name,
-						EpochHeight: CurrentEpoch(name) + 2,
+						EpochHeight: BlobEpoch(name) + 2,
 					},
 				}
 				require.NoError(t, store.WithTx(setup.ls.DB, func(tx *leveldb.Transaction) error {
 					return store.SetHeaderTx(tx, &store.Header{
 						Name:        name,
-						EpochHeight: CurrentEpoch(name),
+						EpochHeight: BlobEpoch(name),
 						SectorSize:  10,
 					}, blob.ZeroSectorHashes)
 				}))
@@ -660,7 +660,7 @@ func TestEpoch(t *testing.T) {
 					setup.rs.BlobStore,
 					setup.tp.RemoteSigner,
 					name,
-					CurrentEpoch(name),
+					BlobEpoch(name),
 					blob.SectorBytes,
 					ts,
 				)
@@ -682,7 +682,7 @@ func TestEpoch(t *testing.T) {
 				require.NoError(t, store.WithTx(setup.ls.DB, func(tx *leveldb.Transaction) error {
 					return store.SetHeaderTx(tx, &store.Header{
 						Name:        name,
-						EpochHeight: CurrentEpoch(name) - 1,
+						EpochHeight: BlobEpoch(name) - 1,
 						SectorSize:  10,
 					}, blob.ZeroSectorHashes)
 				}))

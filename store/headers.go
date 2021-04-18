@@ -99,6 +99,7 @@ func (h *Header) UnmarshalJSON(b []byte) error {
 var (
 	headersPrefix            = Prefixer("headers")
 	headerCountKey           = Prefixer(string(headersPrefix("count")))()
+	headerSubdomainsPrefix   = Prefixer(string(headersPrefix("subdomains")))
 	headerSectorHashesPrefix = Prefixer(string(headersPrefix("sector-hashes")))
 	headerBanPrefix          = Prefixer(string(headersPrefix("banned")))
 	headerDataPrefix         = Prefixer(string(headersPrefix("header")))
@@ -212,6 +213,47 @@ func SetHeaderTx(tx *leveldb.Transaction, header *Header, sectorHashes blob.Sect
 	return nil
 }
 
+func GetSubdomain(db *leveldb.DB, name string, index uint16) (blob.Subdomain, error) {
+	hashes, err := GetSubdomains(db, name)
+	if err != nil {
+		return blob.Subdomain{}, err
+	}
+	if int(index) > len(hashes) {
+		return blob.Subdomain{}, errors.Wrap(err, "error getting index")
+	}
+	return hashes[index], nil
+}
+
+func GetSubdomains(db *leveldb.DB, name string) ([]blob.Subdomain, error) {
+	var base []blob.Subdomain
+
+	iterRange := &util.Range{
+		Start: headerSubdomainsPrefix(name + string([]byte{0x00})),
+		Limit: headerSubdomainsPrefix(name + string([]byte{0xff})),
+	}
+	last := iterRange.Start[len(iterRange.Start)-1]
+	iterRange.Start[len(iterRange.Start)-1] = last + 1
+	iter := db.NewIterator(iterRange, nil)
+
+	for iter.Next() {
+		subdomain := new(blob.Subdomain)
+		mustUnmarshalJSON(iter.Value(), subdomain)
+		base = append(base, *subdomain)
+	}
+	iter.Release()
+
+	return base, nil
+}
+
+func SetSubdomainTx(tx *leveldb.Transaction, name string, subdomains []blob.Subdomain) error {
+	for _, subdomain := range subdomains {
+		if err := tx.Put(headerSubdomainsPrefix(name, subdomain.Name), mustMarshalJSON(&subdomain), nil); err != nil {
+			return errors.Wrap(err, "error writing subdomains")
+		}
+	}
+	return nil
+}
+
 type BlobInfo struct {
 	Name          string           `json:"name"`
 	PublicKey     *btcec.PublicKey `json:"public_key"`
@@ -265,7 +307,7 @@ func (bis *BlobInfoStream) Next() (*BlobInfo, error) {
 
 	header := new(Header)
 	mustUnmarshalJSON(bis.iter.Value(), header)
-	nameInfo, err := GetNameInfo(bis.db, header.Name)
+	nameInfo, err := GetSubdomainInfo(bis.db, header.Name)
 	if err != nil {
 		return nil, errors.Wrap(err, "error getting name info")
 	}
@@ -276,7 +318,6 @@ func (bis *BlobInfoStream) Next() (*BlobInfo, error) {
 	return &BlobInfo{
 		Name:          header.Name,
 		PublicKey:     nameInfo.PublicKey,
-		ImportHeight:  nameInfo.ImportHeight,
 		EpochHeight:   header.EpochHeight,
 		SectorSize:    header.SectorSize,
 		SectorTipHash: header.SectorTipHash,

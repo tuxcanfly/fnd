@@ -18,24 +18,24 @@ import (
 )
 
 var (
-	ErrUpdaterAlreadySynchronized   = errors.New("updater already synchronized")
-	ErrUpdaterSectorTipHashMismatch = errors.New("updater sector tip hash mismatch")
-	ErrNameLocked                   = errors.New("name is locked")
-	ErrNameBanned                   = errors.New("name is banned")
-	ErrInvalidEpochCurrent          = errors.New("name epoch invalid current")
-	ErrInvalidEpochThrottled        = errors.New("name epoch invalid throttled")
-	ErrInvalidEpochBackdated        = errors.New("name epoch invalid backdated")
-	ErrInvalidEpochFuturedated      = errors.New("name epoch invalid futuredated")
+	ErrBlobUpdaterAlreadySynchronized     = errors.New("updater already synchronized")
+	ErrBlobUpdaterSectorTipHashMismatch   = errors.New("updater sector tip hash mismatch")
+	ErrBlobUpdaterLocked                  = errors.New("name is locked")
+	ErrBlobUpdaterBanned                  = errors.New("name is banned")
+	ErrBlobUpdaterInvalidEpochCurrent     = errors.New("name epoch invalid current")
+	ErrBlobUpdaterInvalidEpochThrottled   = errors.New("name epoch invalid throttled")
+	ErrBlobUpdaterInvalidEpochBackdated   = errors.New("name epoch invalid backdated")
+	ErrBlobUpdaterInvalidEpochFuturedated = errors.New("name epoch invalid futuredated")
 
-	updaterLogger = log.WithModule("updater")
+	blobUpdaterLogger = log.WithModule("updater")
 )
 
-type Updater struct {
+type BlobUpdater struct {
 	PollInterval time.Duration
 	Workers      int
 	mux          *p2p.PeerMuxer
 	db           *leveldb.DB
-	queue        *UpdateQueue
+	queue        *BlobUpdateQueue
 	nameLocker   util.MultiLocker
 	bs           blob.Store
 	obs          *util.Observable
@@ -44,8 +44,8 @@ type Updater struct {
 	lgr          log.Logger
 }
 
-func NewUpdater(mux *p2p.PeerMuxer, db *leveldb.DB, queue *UpdateQueue, nameLocker util.MultiLocker, bs blob.Store) *Updater {
-	return &Updater{
+func NewBlobUpdater(mux *p2p.PeerMuxer, db *leveldb.DB, queue *BlobUpdateQueue, nameLocker util.MultiLocker, bs blob.Store) *BlobUpdater {
+	return &BlobUpdater{
 		PollInterval: config.ConvertDuration(config.DefaultConfig.Tuning.Updater.PollIntervalMS, time.Millisecond),
 		Workers:      config.DefaultConfig.Tuning.Updater.Workers,
 		mux:          mux,
@@ -59,7 +59,7 @@ func NewUpdater(mux *p2p.PeerMuxer, db *leveldb.DB, queue *UpdateQueue, nameLock
 	}
 }
 
-func (u *Updater) Start() error {
+func (u *BlobUpdater) Start() error {
 	for i := 0; i < u.Workers; i++ {
 		u.wg.Add(1)
 		go u.runWorker()
@@ -68,17 +68,17 @@ func (u *Updater) Start() error {
 	return nil
 }
 
-func (u *Updater) Stop() error {
+func (u *BlobUpdater) Stop() error {
 	close(u.quitCh)
 	u.wg.Wait()
 	return nil
 }
 
-func (u *Updater) OnUpdateProcessed(hdlr func(item *UpdateQueueItem, err error)) util.Unsubscriber {
+func (u *BlobUpdater) OnUpdateProcessed(hdlr func(item *BlobUpdateQueueItem, err error)) util.Unsubscriber {
 	return u.obs.On("update:processed", hdlr)
 }
 
-func (u *Updater) runWorker() {
+func (u *BlobUpdater) runWorker() {
 	defer u.wg.Done()
 
 	for {
@@ -90,14 +90,14 @@ func (u *Updater) runWorker() {
 				continue
 			}
 
-			cfg := &UpdateConfig{
+			cfg := &BlobUpdateConfig{
 				Mux:        u.mux,
 				DB:         u.db,
 				NameLocker: u.nameLocker,
 				BlobStore:  u.bs,
 				Item:       item,
 			}
-			if err := UpdateBlob(cfg); err != nil {
+			if err := BlobUpdateBlob(cfg); err != nil {
 				u.obs.Emit("update:processed", item, err)
 				u.lgr.Error("error processing update", "name", item.Name, "err", err)
 				continue
@@ -110,16 +110,16 @@ func (u *Updater) runWorker() {
 	}
 }
 
-type UpdateConfig struct {
+type BlobUpdateConfig struct {
 	Mux        *p2p.PeerMuxer
 	DB         *leveldb.DB
 	NameLocker util.MultiLocker
 	BlobStore  blob.Store
-	Item       *UpdateQueueItem
+	Item       *BlobUpdateQueueItem
 }
 
-func UpdateBlob(cfg *UpdateConfig) error {
-	l := updaterLogger.Sub("name", cfg.Item.Name)
+func BlobUpdateBlob(cfg *BlobUpdateConfig) error {
+	l := blobUpdaterLogger.Sub("name", cfg.Item.Name)
 	item := cfg.Item
 	defer item.Dispose()
 	header, err := store.GetHeader(cfg.DB, item.Name)
@@ -131,7 +131,7 @@ func UpdateBlob(cfg *UpdateConfig) error {
 	// same epoch. In the future, this may be an equivocation condition
 	// may not be eq
 	if header != nil && header.EpochHeight == item.EpochHeight && header.SectorSize >= item.SectorSize {
-		return ErrUpdaterAlreadySynchronized
+		return ErrBlobUpdaterAlreadySynchronized
 	}
 
 	var prevHash crypto.Hash = blob.ZeroHash
@@ -149,7 +149,7 @@ func UpdateBlob(cfg *UpdateConfig) error {
 
 	// The new header should have a higher or equal epoch
 	if item.EpochHeight < epochHeight {
-		return ErrInvalidEpochBackdated
+		return ErrBlobUpdaterInvalidEpochBackdated
 	}
 
 	bannedAt, err := store.GetHeaderBan(cfg.DB, item.Name)
@@ -164,14 +164,14 @@ func UpdateBlob(cfg *UpdateConfig) error {
 		if !bannedAt.IsZero() {
 			// Banned for at least a week
 			if bannedAt.Add(7 * 24 * time.Duration(time.Hour)).After(time.Now()) {
-				return ErrNameBanned
+				return ErrBlobUpdaterBanned
 			}
 
 			// Publisher is banned for the equivocating epoch and the next epoch
 			// The faulty epoch may be old or backdated, so the penalty may not be
 			// as large as it seems
 			if item.EpochHeight <= epochHeight+1 {
-				return ErrInvalidEpochCurrent
+				return ErrBlobUpdaterInvalidEpochCurrent
 			}
 		}
 
@@ -181,14 +181,14 @@ func UpdateBlob(cfg *UpdateConfig) error {
 		// conditions is only valid if the last local epoch increment is less
 		// than a week old.
 		if time.Now().Before(header.EpochStartAt.Add(7 * 24 * time.Duration(time.Hour))) {
-			if item.EpochHeight < CurrentEpoch(item.Name)+1 {
-				return ErrInvalidEpochThrottled
+			if item.EpochHeight < BlobEpoch(item.Name)+1 {
+				return ErrBlobUpdaterInvalidEpochThrottled
 			}
 		}
 
 		// Reject any epochs more than one in the future
-		if item.EpochHeight > CurrentEpoch(item.Name)+1 {
-			return ErrInvalidEpochFuturedated
+		if item.EpochHeight > BlobEpoch(item.Name)+1 {
+			return ErrBlobUpdaterInvalidEpochFuturedated
 		}
 
 		// Sync the entire blob on epoch rollover
@@ -199,17 +199,22 @@ func UpdateBlob(cfg *UpdateConfig) error {
 	}
 
 	if !cfg.NameLocker.TryLock(item.Name) {
-		return ErrNameLocked
+		return ErrBlobUpdaterLocked
 	}
 	defer cfg.NameLocker.Unlock(item.Name)
 
-	bl, err := cfg.BlobStore.Open(item.Name)
+	info, err := store.GetSubdomainInfo(cfg.DB, item.Name)
+	if err != nil {
+		return errors.Wrap(err, "error getting subdomain info")
+	}
+
+	bl, err := cfg.BlobStore.Open(item.Name, int64(info.Size*blob.SectorBytes))
 	if err != nil {
 		return errors.Wrap(err, "error getting blob")
 	}
 	defer func() {
 		if err := bl.Close(); err != nil {
-			updaterLogger.Error("error closing blob", "err", err)
+			blobUpdaterLogger.Error("error closing blob", "err", err)
 		}
 	}()
 
@@ -219,7 +224,7 @@ func UpdateBlob(cfg *UpdateConfig) error {
 	}
 
 	if epochUpdated {
-		if epochHeight > CurrentEpoch(item.Name)+1 {
+		if epochHeight > BlobEpoch(item.Name)+1 {
 			return errors.New("cannot reset epoch ahead of schedule")
 		}
 
@@ -233,8 +238,8 @@ func UpdateBlob(cfg *UpdateConfig) error {
 		return errors.Wrap(err, "error seeking transaction")
 	}
 
-	sectorMeta, err := SyncSectors(&SyncSectorsOpts{
-		Timeout:     DefaultSyncerBlobResTimeout,
+	sectorMeta, err := BlobSyncSectors(&BlobSyncSectorsOpts{
+		Timeout:     DefaultBlobSyncerBlobResTimeout,
 		Mux:         cfg.Mux,
 		Tx:          tx,
 		Peers:       item.PeerIDs,
@@ -246,21 +251,21 @@ func UpdateBlob(cfg *UpdateConfig) error {
 	})
 	if err != nil {
 		if err := tx.Rollback(); err != nil {
-			updaterLogger.Error("error rolling back blob transaction", "err", err)
+			blobUpdaterLogger.Error("error rolling back blob transaction", "err", err)
 		}
 		return errors.Wrap(err, "error during sync")
 	}
 	tree, err := blob.SerialHash(blob.NewReader(tx), blob.ZeroHash, item.SectorSize)
 	if err != nil {
 		if err := tx.Rollback(); err != nil {
-			updaterLogger.Error("error rolling back blob transaction", "err", err)
+			blobUpdaterLogger.Error("error rolling back blob transaction", "err", err)
 		}
 		return errors.Wrap(err, "error calculating new blob sector tip hash")
 	}
 
 	if sectorMeta.sectorTipHash != tree.Tip() {
 		if err := tx.Rollback(); err != nil {
-			updaterLogger.Error("error rolling back blob transaction", "err", err)
+			blobUpdaterLogger.Error("error rolling back blob transaction", "err", err)
 		}
 		return errors.Wrap(err, "sector tip hash mismatch")
 	}
@@ -295,23 +300,24 @@ func UpdateBlob(cfg *UpdateConfig) error {
 	})
 	if err != nil {
 		if err := tx.Rollback(); err != nil {
-			updaterLogger.Error("error rolling back blob transaction", "err", err)
+			blobUpdaterLogger.Error("error rolling back blob transaction", "err", err)
 		}
 		return errors.Wrap(err, "error storing header")
 	}
 	tx.Commit()
 
-	height, err := store.GetLastNameImportHeight(cfg.DB)
-	if err != nil {
-		updaterLogger.Error("error getting last name import height, skipping gossip", "err", err)
-		return nil
-	}
-	if height-item.Height < 10 {
-		updaterLogger.Info("updated name is below gossip height, skipping", "name", item.Name)
-		return nil
-	}
+	// TODO: revisit this now that we do not have height in update item
+	//height, err := store.GetLastNameImportHeight(cfg.DB)
+	//if err != nil {
+	//blobUpdaterLogger.Error("error getting last name import height, skipping gossip", "err", err)
+	//return nil
+	//}
+	//if height-item.Height < 10 {
+	//blobUpdaterLogger.Info("updated name is below gossip height, skipping", "name", item.Name)
+	//return nil
+	//}
 
-	update := &wire.Update{
+	update := &wire.BlobUpdate{
 		Name:        item.Name,
 		EpochHeight: item.EpochHeight,
 		SectorSize:  item.SectorSize,

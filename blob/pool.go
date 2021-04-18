@@ -1,13 +1,14 @@
 package blob
 
 import (
-	"github.com/pkg/errors"
 	"sync"
+
+	"github.com/pkg/errors"
 )
 
 var ErrNotFound = errors.New("not found")
 
-type PoolGetter func(name string) (Blob, error)
+type PoolGetter func(name string, size int64) (Blob, error)
 
 type Pool struct {
 	blobs  map[string]*poolEntry
@@ -27,7 +28,7 @@ func NewPool(getter PoolGetter) *Pool {
 	}
 }
 
-func (p *Pool) Get(name string) (Blob, error) {
+func (p *Pool) Get(name string, size int64) (Blob, error) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	entry := p.blobs[name]
@@ -35,7 +36,7 @@ func (p *Pool) Get(name string) (Blob, error) {
 		entry.refs++
 		return entry.blob, nil
 	}
-	blob, err := p.getter(name)
+	blob, err := p.getter(name, size)
 	if err != nil {
 		return nil, err
 	}

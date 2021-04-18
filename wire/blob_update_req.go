@@ -2,11 +2,12 @@ package wire
 
 import (
 	"fnd/crypto"
-	"fnd.localhost/dwire"
 	"io"
+
+	"fnd.localhost/dwire"
 )
 
-type UpdateReq struct {
+type BlobUpdateReq struct {
 	HashCacher
 
 	Name        string
@@ -14,14 +15,14 @@ type UpdateReq struct {
 	SectorSize  uint16
 }
 
-var _ Message = (*UpdateReq)(nil)
+var _ Message = (*BlobUpdateReq)(nil)
 
-func (n *UpdateReq) MsgType() MessageType {
-	return MessageTypeUpdateReq
+func (n *BlobUpdateReq) MsgType() MessageType {
+	return MessageTypeBlobUpdateReq
 }
 
-func (n *UpdateReq) Equals(other Message) bool {
-	cast, ok := other.(*UpdateReq)
+func (n *BlobUpdateReq) Equals(other Message) bool {
+	cast, ok := other.(*BlobUpdateReq)
 	if !ok {
 		return false
 	}
@@ -31,7 +32,7 @@ func (n *UpdateReq) Equals(other Message) bool {
 		n.SectorSize == cast.SectorSize
 }
 
-func (n *UpdateReq) Encode(w io.Writer) error {
+func (n *BlobUpdateReq) Encode(w io.Writer) error {
 	return dwire.EncodeFields(
 		w,
 		n.Name,
@@ -40,7 +41,7 @@ func (n *UpdateReq) Encode(w io.Writer) error {
 	)
 }
 
-func (n *UpdateReq) Decode(r io.Reader) error {
+func (n *BlobUpdateReq) Decode(r io.Reader) error {
 	return dwire.DecodeFields(
 		r,
 		&n.Name,
@@ -49,6 +50,6 @@ func (n *UpdateReq) Decode(r io.Reader) error {
 	)
 }
 
-func (n *UpdateReq) Hash() (crypto.Hash, error) {
+func (n *BlobUpdateReq) Hash() (crypto.Hash, error) {
 	return n.HashCacher.Hash(n)
 }

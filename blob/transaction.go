@@ -27,6 +27,7 @@ type Transaction interface {
 
 type txImpl struct {
 	name        string
+	size        int64
 	f           *os.File
 	sectorSize  uint16
 	mu          sync.Mutex
@@ -51,7 +52,7 @@ func (t *txImpl) Seek(off int64, whence int) (int64, error) {
 	}
 	switch whence {
 	case io.SeekStart:
-		if off > Size {
+		if off > t.size {
 			return 0, errors.New("seek beyond blob bounds")
 		}
 		t.sectorSize = uint16(off / SectorBytes)
@@ -142,7 +143,7 @@ func (t *txImpl) Truncate() error {
 	if err != nil {
 		return errors.Wrap(err, "error creating temporary file")
 	}
-	if err := clone.Truncate(Size); err != nil {
+	if err := clone.Truncate(t.size); err != nil {
 		return errors.Wrap(err, "error truncating file")
 	}
 	t.f = clone

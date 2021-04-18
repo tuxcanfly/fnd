@@ -17,10 +17,10 @@ import (
 )
 
 var (
-	ErrNameSyncerSyncResponseTimeout = errors.New("blob sync timed out")
+	ErrDomainSyncerSyncResponseTimeout = errors.New("subdomain sync timed out")
 )
 
-type NameSyncer struct {
+type DomainSyncer struct {
 	Workers               int
 	SampleSize            int
 	UpdateResponseTimeout time.Duration
@@ -29,15 +29,15 @@ type NameSyncer struct {
 	mux                   *p2p.PeerMuxer
 	db                    *leveldb.DB
 	nameLocker            util.MultiLocker
-	updater               *BlobUpdater
+	updater               *NameUpdater
 	obs                   *util.Observable
 	lgr                   log.Logger
 	doneCh                chan struct{}
 	once                  sync.Once
 }
 
-func NewNameSyncer(mux *p2p.PeerMuxer, db *leveldb.DB, nameLocker util.MultiLocker, updater *BlobUpdater) *NameSyncer {
-	return &NameSyncer{
+func NewDomainSyncer(mux *p2p.PeerMuxer, db *leveldb.DB, nameLocker util.MultiLocker, updater *NameUpdater) *DomainSyncer {
+	return &DomainSyncer{
 		Workers:               config.DefaultConfig.Tuning.NameSyncer.Workers,
 		SampleSize:            config.DefaultConfig.Tuning.NameSyncer.SampleSize,
 		UpdateResponseTimeout: config.ConvertDuration(config.DefaultConfig.Tuning.NameSyncer.UpdateResponseTimeoutMS, time.Millisecond),
@@ -53,8 +53,8 @@ func NewNameSyncer(mux *p2p.PeerMuxer, db *leveldb.DB, nameLocker util.MultiLock
 	}
 }
 
-func (ns *NameSyncer) Start() error {
-	ns.mux.AddMessageHandler(p2p.PeerMessageHandlerForType(wire.MessageTypeBlobUpdate, ns.handleUpdate))
+func (ns *DomainSyncer) Start() error {
+	ns.mux.AddMessageHandler(p2p.PeerMessageHandlerForType(wire.MessageTypeNameUpdate, ns.handleUpdate))
 	ns.mux.AddMessageHandler(p2p.PeerMessageHandlerForType(wire.MessageTypeNameNilUpdate, ns.handleNilUpdate))
 
 	resyncTick := time.NewTicker(ns.Interval)
@@ -62,7 +62,7 @@ func (ns *NameSyncer) Start() error {
 		in, out := ns.mux.PeerCount()
 		total := in + out
 		if total == 0 {
-			ns.lgr.Info("no connected peers, skipping name blob sync")
+			ns.lgr.Info("no connected peers, skipping name subdomain sync")
 			time.Sleep(5 * time.Second)
 			continue
 		}
@@ -73,7 +73,7 @@ func (ns *NameSyncer) Start() error {
 			continue
 		}
 		if !initialImportComplete {
-			ns.lgr.Info("initial import incomplete, skipping name blob sync")
+			ns.lgr.Info("initial import incomplete, skipping name subdomain sync")
 			time.Sleep(time.Minute)
 			continue
 		}
@@ -91,21 +91,21 @@ func (ns *NameSyncer) Start() error {
 	}
 }
 
-func (ns *NameSyncer) Stop() error {
+func (ns *DomainSyncer) Stop() error {
 	close(ns.doneCh)
 	return nil
 }
 
-func (ns *NameSyncer) handleUpdate(peerID crypto.Hash, envelope *wire.Envelope) {
-	ns.obs.Emit("message:update", envelope.Message.(*wire.BlobUpdate))
+func (ns *DomainSyncer) handleUpdate(peerID crypto.Hash, envelope *wire.Envelope) {
+	ns.obs.Emit("message:update", envelope.Message.(*wire.NameUpdate))
 }
 
-func (ns *NameSyncer) handleNilUpdate(peerID crypto.Hash, envelope *wire.Envelope) {
+func (ns *DomainSyncer) handleNilUpdate(peerID crypto.Hash, envelope *wire.Envelope) {
 	ns.obs.Emit("message:nil-update", envelope.Message.(*wire.NameNilUpdate))
 }
 
-func (ns *NameSyncer) onUpdate(name string, hdlr func()) util.Unsubscriber {
-	return ns.obs.On("message:update", func(update *wire.BlobUpdate) {
+func (ns *DomainSyncer) onUpdate(name string, hdlr func()) util.Unsubscriber {
+	return ns.obs.On("message:update", func(update *wire.NameUpdate) {
 		if update.Name != name {
 			return
 		}
@@ -113,7 +113,7 @@ func (ns *NameSyncer) onUpdate(name string, hdlr func()) util.Unsubscriber {
 	})
 }
 
-func (ns *NameSyncer) onNilUpdate(name string, hdlr func()) util.Unsubscriber {
+func (ns *DomainSyncer) onNilUpdate(name string, hdlr func()) util.Unsubscriber {
 	return ns.obs.On("message:nil-update", func(update *wire.NameNilUpdate) {
 		if update.Name != name {
 			return
@@ -122,8 +122,8 @@ func (ns *NameSyncer) onNilUpdate(name string, hdlr func()) util.Unsubscriber {
 	})
 }
 
-func (ns *NameSyncer) doSync() {
-	ns.lgr.Info("starting name blob sync")
+func (ns *DomainSyncer) doSync() {
+	ns.lgr.Info("starting name subdomain sync")
 
 	var syncCount int64
 	sem := make(chan struct{}, ns.Workers)
@@ -147,7 +147,7 @@ func (ns *NameSyncer) doSync() {
 
 		sem <- struct{}{}
 		go func() {
-			ns.syncName(info.Name)
+			ns.syncName(info)
 			atomic.AddInt64(&syncCount, 1)
 			<-sem
 		}()
@@ -156,36 +156,23 @@ func (ns *NameSyncer) doSync() {
 		sem <- struct{}{}
 	}
 	ns.obs.Emit("sync:job-complete", int(syncCount))
-	ns.lgr.Info("finished name blob sync", "count", syncCount)
+	ns.lgr.Info("finished name subdomain sync", "count", syncCount)
 }
 
-func (ns *NameSyncer) OnNameComplete(cb func(name string, receiptCount int)) util.Unsubscriber {
+func (ns *DomainSyncer) OnNameComplete(cb func(name string, receiptCount int)) util.Unsubscriber {
 	return ns.obs.On("sync:name-complete", cb)
 }
 
-func (ns *NameSyncer) OnJobComplete(cb func(count int)) util.Unsubscriber {
+func (ns *DomainSyncer) OnJobComplete(cb func(count int)) util.Unsubscriber {
 	return ns.obs.On("sync:job-complete", cb)
 }
 
-func (ns *NameSyncer) OnSyncError(cb func(name string, err error)) util.Unsubscriber {
+func (ns *DomainSyncer) OnSyncError(cb func(name string, err error)) util.Unsubscriber {
 	return ns.obs.On("sync:err", cb)
 }
 
-func (ns *NameSyncer) syncName(name string) {
-	var epochHeight, sectorSize uint16
-	header, err := store.GetHeader(ns.db, name)
-	if err != nil && !errors.Is(err, leveldb.ErrNotFound) {
-		ns.lgr.Error(
-			"failed to fetch name header",
-			"err", err,
-		)
-		return
-	}
-	if err == nil {
-		epochHeight = header.EpochHeight
-		sectorSize = header.SectorSize
-	}
-
+func (ns *DomainSyncer) syncName(info *store.NameInfo) {
+	name := info.Name
 	isEnvelopeCh := make(chan bool)
 	envelopeCountCh := make(chan int)
 	doneCh := make(chan struct{})
@@ -196,10 +183,18 @@ func (ns *NameSyncer) syncName(name string) {
 		isEnvelopeCh <- false
 	})
 
-	recips, _ := p2p.BroadcastRandom(ns.mux, ns.SampleSize, &wire.BlobUpdateReq{
-		Name:        name,
-		EpochHeight: epochHeight,
-		SectorSize:  sectorSize,
+	subdomains, err := store.GetSubdomains(ns.db, info.Name)
+	if err != nil {
+		ns.lgr.Error(
+			"failed to fetch subdomains",
+			"err", err,
+		)
+		return
+	}
+
+	recips, _ := p2p.BroadcastRandom(ns.mux, ns.SampleSize, &wire.NameUpdateReq{
+		Name:          name,
+		SubdomainSize: uint16(len(subdomains)),
 	})
 	sampleSize := len(recips)
 
@@ -237,11 +232,11 @@ func (ns *NameSyncer) syncName(name string) {
 	ns.awaitSyncCompletion(name, envelopeCount, sampleSize)
 }
 
-func (ns *NameSyncer) awaitSyncCompletion(name string, receiptCount int, sampleSize int) {
+func (ns *DomainSyncer) awaitSyncCompletion(name string, receiptCount int, sampleSize int) {
 	if receiptCount == 0 {
 		ns.obs.Emit("sync:name-complete", name, receiptCount)
 		ns.lgr.Info(
-			"synced name blob",
+			"synced name subdomain",
 			"name", name,
 			"receipt_count", receiptCount,
 			"nil_count", sampleSize-receiptCount,
@@ -251,7 +246,7 @@ func (ns *NameSyncer) awaitSyncCompletion(name string, receiptCount int, sampleS
 
 	var once sync.Once
 	errCh := make(chan error)
-	unsub := ns.updater.OnUpdateProcessed(func(item *BlobUpdateQueueItem, err error) {
+	unsub := ns.updater.OnUpdateProcessed(func(item *NameUpdateQueueItem, err error) {
 		if item.Name != name {
 			return
 		}
@@ -265,18 +260,18 @@ func (ns *NameSyncer) awaitSyncCompletion(name string, receiptCount int, sampleS
 
 	select {
 	case <-timeout.C:
-		ns.obs.Emit("sync:err", name, ErrNameSyncerSyncResponseTimeout)
-		ns.lgr.Error("blob sync timed out", "name", name)
+		ns.obs.Emit("sync:err", name, ErrDomainSyncerSyncResponseTimeout)
+		ns.lgr.Error("subdomain sync timed out", "name", name)
 		return
 	case err := <-errCh:
 		if err != nil {
-			ns.obs.Emit("sync:err", name, errors.Wrap(err, "failed to sync name blob"))
-			ns.lgr.Error("encountered error while syncing name blob", "err", err)
+			ns.obs.Emit("sync:err", name, errors.Wrap(err, "failed to sync name subdomain"))
+			ns.lgr.Error("encountered error while syncing name subdomain", "err", err)
 			return
 		}
 		ns.obs.Emit("sync:name-complete", name, receiptCount)
 		ns.lgr.Info(
-			"synced name blob",
+			"synced name subdomain",
 			"name", name,
 			"receipt_count", receiptCount,
 			"nil_count", sampleSize-receiptCount,

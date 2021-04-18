@@ -14,10 +14,6 @@ import (
 	"fnd/store"
 	"fnd/util"
 	"fnd/version"
-	"fnd.localhost/handshake/client"
-	"github.com/pkg/errors"
-	"github.com/spf13/cobra"
-	"github.com/syndtr/goleveldb/leveldb"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
@@ -25,6 +21,11 @@ import (
 	"runtime"
 	"syscall"
 	"time"
+
+	"fnd.localhost/handshake/client"
+	"github.com/pkg/errors"
+	"github.com/spf13/cobra"
+	"github.com/syndtr/goleveldb/leveldb"
 )
 
 var startCmd = &cobra.Command{
@@ -143,31 +144,49 @@ var startCmd = &cobra.Command{
 		importer.Workers = cfg.Tuning.NameImporter.Workers
 		importer.VerificationThreshold = cfg.Tuning.NameImporter.VerificationThreshold
 
-		updateQueue := protocol.NewUpdateQueue(mux, db)
-		updateQueue.MaxLen = int32(cfg.Tuning.UpdateQueue.MaxLen)
+		nameUpdateQueue := protocol.NewNameUpdateQueue(mux, db)
+		nameUpdateQueue.MaxLen = int32(cfg.Tuning.UpdateQueue.MaxLen)
 
-		updater := protocol.NewUpdater(mux, db, updateQueue, nameLocker, bs)
-		updater.PollInterval = config.ConvertDuration(cfg.Tuning.Updater.PollIntervalMS, time.Millisecond)
-		updater.Workers = cfg.Tuning.Updater.Workers
+		blobUpdateQueue := protocol.NewBlobUpdateQueue(mux, db)
+		blobUpdateQueue.MaxLen = int32(cfg.Tuning.UpdateQueue.MaxLen)
+
+		blobUpdater := protocol.NewBlobUpdater(mux, db, blobUpdateQueue, nameLocker, bs)
+		blobUpdater.PollInterval = config.ConvertDuration(cfg.Tuning.Updater.PollIntervalMS, time.Millisecond)
+		blobUpdater.Workers = cfg.Tuning.Updater.Workers
 
 		pinger := protocol.NewPinger(mux)
 
 		sectorServer := protocol.NewSectorServer(mux, db, bs, nameLocker)
 		sectorServer.CacheExpiry = config.ConvertDuration(cfg.Tuning.SectorServer.CacheExpiryMS, time.Millisecond)
 
-		updateServer := protocol.NewUpdateServer(mux, db, nameLocker)
+		subdomainServer := protocol.NewSubdomainServer(mux, db, nameLocker)
+		subdomainServer.CacheExpiry = config.ConvertDuration(cfg.Tuning.SectorServer.CacheExpiryMS, time.Millisecond)
+
+		blobUpdateServer := protocol.NewBlobUpdateServer(mux, db, nameLocker)
+		nameUpdateServer := protocol.NewNameUpdateServer(mux, db, nameLocker)
 
 		peerExchanger := protocol.NewPeerExchanger(pm, mux, db)
 		peerExchanger.SampleSize = cfg.Tuning.PeerExchanger.SampleSize
 		peerExchanger.ResponseTimeout = config.ConvertDuration(cfg.Tuning.PeerExchanger.ResponseTimeoutMS, time.Millisecond)
 		peerExchanger.RequestInterval = config.ConvertDuration(cfg.Tuning.PeerExchanger.RequestIntervalMS, time.Millisecond)
 
-		nameSyncer := protocol.NewNameSyncer(mux, db, nameLocker, updater)
+		nameSyncer := protocol.NewNameSyncer(mux, db, nameLocker, blobUpdater)
 		nameSyncer.Workers = cfg.Tuning.NameSyncer.Workers
 		nameSyncer.SampleSize = cfg.Tuning.NameSyncer.SampleSize
 		nameSyncer.UpdateResponseTimeout = config.ConvertDuration(cfg.Tuning.NameSyncer.UpdateResponseTimeoutMS, time.Millisecond)
 		nameSyncer.Interval = config.ConvertDuration(cfg.Tuning.NameSyncer.IntervalMS, time.Millisecond)
 		nameSyncer.SyncResponseTimeout = config.ConvertDuration(cfg.Tuning.NameSyncer.SyncResponseTimeoutMS, time.Millisecond)
+
+		nameUpdater := protocol.NewNameUpdater(mux, db, nameUpdateQueue, nameLocker, bs, nameSyncer)
+		nameUpdater.PollInterval = config.ConvertDuration(cfg.Tuning.Updater.PollIntervalMS, time.Millisecond)
+		nameUpdater.Workers = cfg.Tuning.Updater.Workers
+
+		domainSyncer := protocol.NewDomainSyncer(mux, db, nameLocker, nameUpdater)
+		domainSyncer.Workers = cfg.Tuning.NameSyncer.Workers
+		domainSyncer.SampleSize = cfg.Tuning.NameSyncer.SampleSize
+		domainSyncer.UpdateResponseTimeout = config.ConvertDuration(cfg.Tuning.NameSyncer.UpdateResponseTimeoutMS, time.Millisecond)
+		domainSyncer.Interval = config.ConvertDuration(cfg.Tuning.NameSyncer.IntervalMS, time.Millisecond)
+		domainSyncer.SyncResponseTimeout = config.ConvertDuration(cfg.Tuning.NameSyncer.SyncResponseTimeoutMS, time.Millisecond)
 
 		server := rpc.NewServer(&rpc.Opts{
 			PeerID:      ownPeerID,
@@ -181,13 +200,18 @@ var startCmd = &cobra.Command{
 		})
 		services = append(services, []service.Service{
 			importer,
-			updateQueue,
-			updater,
+			nameUpdateQueue,
+			blobUpdateQueue,
+			nameUpdater,
+			blobUpdater,
 			pinger,
 			sectorServer,
-			updateServer,
+			subdomainServer,
+			blobUpdateServer,
+			nameUpdateServer,
 			peerExchanger,
 			nameSyncer,
+			domainSyncer,
 			server,
 		}...)
 

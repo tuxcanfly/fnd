@@ -8,7 +8,7 @@ import (
 )
 
 type Store interface {
-	Open(name string) (Blob, error)
+	Open(name string, size int64) (Blob, error)
 	Exists(name string) (bool, error)
 }
 
@@ -20,15 +20,15 @@ type storeImpl struct {
 func NewStore(blobsPath string) *storeImpl {
 	s := &storeImpl{
 		blobsPath: blobsPath,
-		pool: NewPool(func(name string) (Blob, error) {
-			return NewInStorePath(blobsPath, name)
+		pool: NewPool(func(name string, size int64) (Blob, error) {
+			return NewInStorePath(blobsPath, name, size)
 		}),
 	}
 	return s
 }
 
-func (s *storeImpl) Open(name string) (Blob, error) {
-	blob, err := s.pool.Get(name)
+func (s *storeImpl) Open(name string, size int64) (Blob, error) {
+	blob, err := s.pool.Get(name, size)
 	if err != nil {
 		return nil, err
 	}
@@ -42,7 +42,7 @@ func (s *storeImpl) Exists(name string) (bool, error) {
 	return fileExists(path.Join(s.blobsPath, PathifyName(name)))
 }
 
-func NewInStorePath(blobsPath string, name string) (Blob, error) {
+func NewInStorePath(blobsPath string, name string, size int64) (Blob, error) {
 	blobSubpath := PathifyName(name)
 	blobFile := path.Join(blobsPath, blobSubpath)
 	exists, err := fileExists(blobFile)
@@ -62,11 +62,11 @@ func NewInStorePath(blobsPath string, name string) (Blob, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := f.Truncate(Size); err != nil {
+	if err := f.Truncate(size); err != nil {
 		return nil, err
 	}
 
-	return newFromFile(name, f), nil
+	return newFromFile(name, f, size), nil
 }
 
 func fileExists(f string) (bool, error) {
