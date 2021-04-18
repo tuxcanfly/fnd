@@ -419,6 +419,17 @@ func (s *Server) BlobReadAt(_ context.Context, req *apiv1.BlobReadAtReq) (*apiv1
 	}, nil
 }
 
+func (s *Server) BlobSize(_ context.Context, req *apiv1.BlobSizeReq) (*apiv1.BlobSizeRes, error) {
+	name := req.Name
+	info, err := store.GetSubdomainInfo(s.db, name)
+	if err != nil {
+		return nil, err
+	}
+	return &apiv1.BlobSizeRes{
+		Size: uint32(info.Size),
+	}, nil
+}
+
 func (s *Server) GetBlobInfo(_ context.Context, req *apiv1.BlobInfoReq) (*apiv1.BlobInfoRes, error) {
 	name := req.Name
 	header, err := store.GetHeader(s.db, name)

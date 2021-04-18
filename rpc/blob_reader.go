@@ -12,12 +12,18 @@ type BlobReader struct {
 	client apiv1.Footnotev1Client
 	name   string
 	off    int64
+	size   int64
 }
 
 func NewBlobReader(client apiv1.Footnotev1Client, name string) *BlobReader {
+	res, _ := client.BlobSize(context.Background(), &apiv1.BlobSizeReq{
+		Name: name,
+	})
+	// TODO; handle error
 	return &BlobReader{
 		client: client,
 		name:   name,
+		size:   int64(res.Size),
 	}
 }
 
@@ -39,12 +45,12 @@ func (b *BlobReader) ReadAt(p []byte, off int64) (int, error) {
 }
 
 func (b *BlobReader) Read(p []byte) (int, error) {
-	if b.off == blob.Size {
+	if b.off == b.size*blob.SectorBytes {
 		return 0, io.EOF
 	}
 	toRead := len(p)
-	if b.off+int64(toRead) > blob.Size {
-		toRead = blob.Size - int(b.off)
+	if b.off+int64(toRead) > b.size*blob.SectorBytes {
+		toRead = int(b.size*blob.SectorBytes) - int(b.off)
 	}
 	n, err := b.ReadAt(p[:toRead], b.off)
 	b.off += int64(n)
@@ -54,18 +60,18 @@ func (b *BlobReader) Read(p []byte) (int, error) {
 func (b *BlobReader) Seek(off int64, whence int) (int64, error) {
 	switch whence {
 	case io.SeekStart:
-		if b.off > blob.Size {
+		if b.off > b.size*blob.SectorBytes {
 			return b.off, errors.New("seek beyond blob bounds")
 		}
 		b.off = off
 	case io.SeekCurrent:
 		next := b.off + off
-		if next > blob.Size {
+		if next > b.size*blob.SectorBytes {
 			return b.off, errors.New("seek beyond blob bounds")
 		}
 		b.off = next
 	case io.SeekEnd:
-		next := blob.Size - off
+		next := b.size*blob.SectorBytes - off
 		if next < 0 {
 			return b.off, errors.New("seek beyond blob bounds")
 		}

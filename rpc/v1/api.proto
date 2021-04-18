@@ -13,6 +13,7 @@ service Footnotev1 {
     rpc BlobWriteSector (BlobWriteSectorReq) returns (BlobWriteSectorRes);
     rpc BlobCommit (BlobCommitReq) returns (BlobCommitRes);
     rpc BlobReadAt (BlobReadAtReq) returns (BlobReadAtRes);
+    rpc BlobSize (BlobSizeReq) returns (BlobSizeRes);
 
     rpc GetBlobInfo (BlobInfoReq) returns (BlobInfoRes);
     rpc ListBlobInfo (ListBlobInfoReq) returns (stream BlobInfoRes);
@@ -117,6 +118,14 @@ message BlobReadAtReq {
 message BlobReadAtRes {
     uint32 offset = 1;
     bytes data = 2;
+}
+
+message BlobSizeReq {
+    string name = 1;
+}
+
+message BlobSizeRes {
+    uint32 size = 1;
 }
 
 message BlobInfoReq {
