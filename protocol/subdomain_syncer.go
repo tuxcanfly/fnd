@@ -78,6 +78,43 @@ func NameSyncSubdomains(opts *NameSyncSubdomainsOpts) (*nameSyncUpdate, error) {
 					lgr.Trace("received payload for extraneous name", "other_name", msg.Name)
 					continue
 				}
+				if len(msg.Subdomains) > blob.MaxSubdomains {
+					lgr.Trace("received unexpected subdomain size", "subdomain_size", len(msg.Subdomains), "max", blob.MaxSubdomains)
+					continue
+				}
+				/*
+				 *ep h same
+				 *
+				 *eq size or larger
+				 *
+				 *compare with larger one
+				 *
+				 *compare bytes seq ordered - appends - order by counter
+				 *
+				 *and sig is valid
+				 *
+				 *create proof
+				 */
+
+				// TODO: epoch height check
+
+				subdomains, err := store.GetSubdomains(opts.DB, opts.Name)
+				if err != nil {
+					lgr.Trace("error reading subdomains", "err", err)
+					continue
+				}
+
+				if len(msg.Subdomains) >= len(subdomains) {
+					// compare both local and remote subdomains
+					for i, subdomain := range subdomains {
+						remote := msg.Subdomains[i]
+						if !subdomain.Equals(&remote) {
+							// write local equivocation proof
+						}
+						continue
+					}
+				}
+
 				for _, subdomain := range msg.Subdomains {
 					info, err := store.GetNameInfo(opts.DB, msg.Name)
 					if err != nil {
@@ -90,6 +127,7 @@ func NameSyncSubdomains(opts *NameSyncSubdomainsOpts) (*nameSyncUpdate, error) {
 						continue
 					}
 				}
+
 				payloadProcessedCh <- &nameSyncUpdate{
 					subdomains: msg.Subdomains,
 				}

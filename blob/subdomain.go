@@ -19,6 +19,14 @@ type Subdomain struct {
 	Signature   crypto.Signature `json:"signature"`
 }
 
+func (s *Subdomain) Equals(o *Subdomain) bool {
+	return s.Name == o.Name &&
+		s.EpochHeight == o.EpochHeight &&
+		s.Size == o.Size &&
+		s.PublicKey == o.PublicKey &&
+		s.Signature == o.Signature
+}
+
 func (s *Subdomain) MarshalJSON() ([]byte, error) {
 	out := &struct {
 		ID          uint8  `json:"id"`

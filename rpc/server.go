@@ -524,6 +524,10 @@ func (s *Server) AddSubdomain(_ context.Context, req *apiv1.AddSubdomainReq) (*a
 		return nil, err
 	}
 
+	if len(subdomains) > blob.MaxSubdomains {
+		return nil, errors.New("cannot add greater than max subdomains")
+	}
+
 	subdomain := blob.Subdomain{
 		ID:          uint8(len(subdomains)),
 		Name:        req.Subdomain,
