@@ -16,14 +16,18 @@ type BlobReader struct {
 }
 
 func NewBlobReader(client apiv1.Footnotev1Client, name string) *BlobReader {
-	res, _ := client.BlobSize(context.Background(), &apiv1.BlobSizeReq{
+	res, err := client.BlobSize(context.Background(), &apiv1.BlobSizeReq{
 		Name: name,
 	})
+	var size int64
+	if err == nil {
+		size = int64(res.Size)
+	}
 	// TODO; handle error
 	return &BlobReader{
 		client: client,
 		name:   name,
-		size:   int64(res.Size),
+		size:   size,
 	}
 }
 
