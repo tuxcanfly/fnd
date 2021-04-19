@@ -263,6 +263,10 @@ func BlobUpdateBlob(cfg *BlobUpdateConfig) error {
 		return errors.Wrap(err, "error calculating new blob sector tip hash")
 	}
 
+	if sectorMeta == nil {
+		return errors.New("error processing sector; received nil")
+	}
+
 	if sectorMeta.sectorTipHash != tree.Tip() {
 		if err := tx.Rollback(); err != nil {
 			blobUpdaterLogger.Error("error rolling back blob transaction", "err", err)
