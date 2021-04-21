@@ -3,12 +3,13 @@ package blob
 import (
 	"crypto/rand"
 	"fnd/testutil/testfs"
-	"github.com/stretchr/testify/require"
-	"golang.org/x/crypto/blake2b"
 	"io"
 	"os"
 	"path"
 	"testing"
+
+	"github.com/stretchr/testify/require"
+	"golang.org/x/crypto/blake2b"
 )
 
 func TestBlobStore(t *testing.T) {
@@ -19,7 +20,7 @@ func TestBlobStore(t *testing.T) {
 	require.True(t, os.IsNotExist(err))
 
 	store := NewStore(dir)
-	blob, err := store.Open("fooname")
+	blob, err := store.Open("fooname", Size)
 	require.NoError(t, err)
 
 	blobFile := path.Join(dir, "f2c9/fa97/ffbb/75c2/c523/a8d6/839c/7b41/2321/2ce2/cc03/50d2/7037/3059/646b/86ff_blob")
@@ -36,7 +37,7 @@ func TestBlobStore(t *testing.T) {
 	hash := h.Sum(nil)
 	h.Reset()
 
-	blob, err = store.Open("fooname")
+	blob, err = store.Open("fooname", Size)
 	require.NoError(t, err)
 	_, err = io.Copy(h, NewReader(blob))
 	require.NoError(t, err)

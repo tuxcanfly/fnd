@@ -991,7 +991,17 @@ func TestEpoch(t *testing.T) {
 				if err := store.SetInitialImportCompleteTx(tx); err != nil {
 					return err
 				}
-				if err := store.SetNameInfoTx(tx, name, testPeers.RemoteSigner.Pub(), 10); err != nil {
+				if err := store.SetSubdomainInfoTx(tx, name, testPeers.RemoteSigner.Pub(), 10, blob.Size); err != nil {
+					return err
+				}
+				return nil
+			}))
+
+			require.NoError(t, store.WithTx(remoteStorage.DB, func(tx *leveldb.Transaction) error {
+				if err := store.SetInitialImportCompleteTx(tx); err != nil {
+					return err
+				}
+				if err := store.SetSubdomainInfoTx(tx, name, testPeers.RemoteSigner.Pub(), 10, blob.Size); err != nil {
 					return err
 				}
 				return nil

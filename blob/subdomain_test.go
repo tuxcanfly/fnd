@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/hex"
-	"fnd/crypto"
 	"testing"
 
 	"github.com/btcsuite/btcd/btcec"
@@ -12,7 +11,6 @@ import (
 )
 
 var (
-	fixedHash        crypto.Hash
 	fixedEpochHeight = uint16(0)
 	fixedSize        = uint8(0)
 )
@@ -26,12 +24,11 @@ func TestSubdomain_Encoding(t *testing.T) {
 	}
 
 	fixture := Subdomain{
-		ID:           1,
-		Name:         "hello",
-		EpochHeight:  fixedEpochHeight,
-		Size:         fixedSize,
-		PublicKey:    key,
-		ReservedRoot: fixedHash,
+		ID:          1,
+		Name:        "hello",
+		EpochHeight: fixedEpochHeight,
+		Size:        fixedSize,
+		PublicKey:   key,
 	}
 
 	var buf bytes.Buffer
@@ -48,9 +45,4 @@ func TestSubdomain_Encoding(t *testing.T) {
 	require.Equal(t, fixture.EpochHeight, decoded.EpochHeight)
 	require.Equal(t, fixture.Size, decoded.Size)
 	require.Equal(t, fixture.PublicKey, decoded.PublicKey)
-	require.Equal(t, fixture.ReservedRoot, decoded.ReservedRoot)
-}
-
-func init() {
-	fixedHash[1] = 0xff
 }

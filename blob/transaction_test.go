@@ -3,19 +3,20 @@ package blob
 import (
 	"crypto/rand"
 	"fmt"
-	"github.com/stretchr/testify/require"
-	"golang.org/x/crypto/blake2b"
 	"io"
 	"os"
 	"sync"
 	"testing"
+
+	"github.com/stretchr/testify/require"
+	"golang.org/x/crypto/blake2b"
 )
 
 func TestBlob_Transaction_IO(t *testing.T) {
 	f, done := newTempBlobFile(t)
 	defer done()
 
-	blob := newFromFile("whatever", f)
+	blob := newFromFile("whatever", f, Size)
 	h, _ := blake2b.New256(nil)
 	tx, err := blob.Transaction()
 	require.NoError(t, err)
@@ -36,7 +37,7 @@ func TestBlob_Transaction_Truncation_Initialized(t *testing.T) {
 	f, done := newTempBlobFile(t)
 	defer done()
 
-	blob := newFromFile("whatever", f)
+	blob := newFromFile("whatever", f, Size)
 	tx, err := blob.Transaction()
 	require.NoError(t, err)
 	_, err = io.CopyN(NewWriter(tx), rand.Reader, Size)
@@ -63,7 +64,7 @@ func TestBlob_Transaction_Truncation_Uninitialized(t *testing.T) {
 	_, err := io.CopyN(f, rand.Reader, Size)
 	require.NoError(t, err)
 
-	blob := newFromFile("whatever", f)
+	blob := newFromFile("whatever", f, Size)
 	tx, err := blob.Transaction()
 	require.NoError(t, err)
 	require.NoError(t, tx.Truncate())
@@ -84,7 +85,7 @@ func TestBlob_Transaction_Remove(t *testing.T) {
 	_, err := io.CopyN(f, rand.Reader, Size)
 	require.NoError(t, err)
 
-	blob := newFromFile("whatever", f)
+	blob := newFromFile("whatever", f, Size)
 	tx, err := blob.Transaction()
 	require.NoError(t, err)
 	require.NoError(t, tx.Remove())
@@ -120,7 +121,7 @@ func TestBlob_Rollback_Initialized(t *testing.T) {
 	f, done := newTempBlobFile(t)
 	defer done()
 
-	blob := newFromFile("whatever", f)
+	blob := newFromFile("whatever", f, Size)
 	tx, err := blob.Transaction()
 	require.NoError(t, err)
 	_, err = io.CopyN(NewWriter(tx), rand.Reader, Size)
@@ -140,7 +141,7 @@ func TestBlob_Rollback_Uninitialized(t *testing.T) {
 	f, done := newTempBlobFile(t)
 	defer done()
 
-	blob := newFromFile("whatever", f)
+	blob := newFromFile("whatever", f, Size)
 	tx, err := blob.Transaction()
 	require.NoError(t, err)
 	sector, err := tx.ReadSector(0)
@@ -161,7 +162,7 @@ func TestBlob_Transaction_Race(t *testing.T) {
 	_, err := io.CopyN(f, rand.Reader, Size)
 	require.NoError(t, err)
 
-	blob := newFromFile("whatever", f)
+	blob := newFromFile("whatever", f, Size)
 	tx, err := blob.Transaction()
 	require.NoError(t, err)
 

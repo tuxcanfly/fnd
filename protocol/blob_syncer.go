@@ -9,6 +9,7 @@ import (
 	"fnd/wire"
 	"time"
 
+	"fnd.localhost/handshake/primitives"
 	"github.com/pkg/errors"
 	"github.com/syndtr/goleveldb/leveldb"
 )
@@ -53,11 +54,9 @@ type payloadRes struct {
 // known sector size, there exists a _unique_ compact proof of the update in
 // the form of the signature.
 func validateBlobUpdate(db *leveldb.DB, name string, epochHeight, sectorSize uint16, sectorTipHash crypto.Hash, reservedRoot crypto.Hash, sig crypto.Signature) error {
-	// TODO: temporarily allow names with "." in them
-	// to allow subdomain names to sync
-	//if err := primitives.ValidateName(name); err != nil {
-	//return errors.Wrap(err, "update name is invalid")
-	//}
+	if err := primitives.ValidateName(name); err != nil {
+		return errors.Wrap(err, "update name is invalid")
+	}
 	banned, err := store.NameIsBanned(db, name)
 	if err != nil {
 		return errors.Wrap(err, "error reading name ban state")

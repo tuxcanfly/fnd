@@ -1,13 +1,14 @@
 package blob
 
 import (
-	"github.com/stretchr/testify/require"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestPool(t *testing.T) {
 	var blobs []*BlobMock
-	pool := NewPool(func(name string) (Blob, error) {
+	pool := NewPool(func(name string, size int64) (Blob, error) {
 		blob := new(BlobMock)
 		blob.On("Name").Return(name)
 		blob.On("Close").Return(nil)
@@ -15,12 +16,12 @@ func TestPool(t *testing.T) {
 		return blob, nil
 	})
 
-	blob1, err := pool.Get("foo")
+	blob1, err := pool.Get("foo", Size)
 	require.NoError(t, err)
-	blob2, err := pool.Get("foo")
+	blob2, err := pool.Get("foo", Size)
 	require.NoError(t, err)
 	require.Equal(t, blob1, blob2)
-	blob3, err := pool.Get("bar")
+	blob3, err := pool.Get("bar", Size)
 	require.NoError(t, err)
 	require.NotEqual(t, blob1, blob3)
 

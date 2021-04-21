@@ -2,6 +2,8 @@ package primitives
 
 import (
 	"errors"
+	"fmt"
+
 	"fnd.localhost/handshake/encoding"
 	"golang.org/x/crypto/blake2b"
 )
@@ -30,7 +32,7 @@ const (
 var validCharset = []byte{
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0,
+	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 5, 0,
 	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0,
 	0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
 	2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 0, 0, 0, 0, 4,
@@ -65,6 +67,7 @@ func ValidateName(name string) error {
 		charType := validCharset[ch]
 		switch charType {
 		case 0:
+			fmt.Println(ch, charType)
 			return errors.New("invalid character")
 		case 1:
 			continue
@@ -78,6 +81,10 @@ func ValidateName(name string) error {
 			}
 			if i == len(name)-1 {
 				return errors.New("name cannot end with a hyphen")
+			}
+		case 5:
+			if i == len(name)-1 {
+				return errors.New("name cannot end with a dot")
 			}
 		}
 	}

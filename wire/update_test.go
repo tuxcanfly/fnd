@@ -5,11 +5,11 @@ import (
 )
 
 func TestUpdate_Encoding(t *testing.T) {
-	update := &Update{
+	update := &BlobUpdate{
 		Name:        "testname",
 		EpochHeight: fixedEpochHeight,
 		SectorSize:  fixedSectorSize,
 	}
 
-	testMessageEncoding(t, "update", update, &Update{})
+	testMessageEncoding(t, "update", update, &BlobUpdate{})
 }
