@@ -4,8 +4,9 @@ import (
 	"fnd/blob"
 	"fnd/store"
 	"fnd/testutil/testfs"
-	"github.com/stretchr/testify/require"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 // TODO: refactor to use the httptest server
@@ -17,7 +18,7 @@ func TestIngestBanLists(t *testing.T) {
 	defer doneDir()
 
 	bs := blob.NewStore(tmpDir)
-	bl, err := bs.Open("foo")
+	bl, err := bs.Open("foo", blob.Size)
 	require.NoError(t, err)
 	require.NoError(t, bl.Close())
 

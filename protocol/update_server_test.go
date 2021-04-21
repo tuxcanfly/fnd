@@ -22,7 +22,7 @@ func TestUpdateServer(t *testing.T) {
 	defer done()
 	mux := p2p.NewPeerMuxer(testutil.TestMagic, signer)
 	nameLocker := util.NewMultiLocker()
-	srv := NewUpdateServer(mux, db, nameLocker)
+	srv := NewBlobUpdateServer(mux, db, nameLocker)
 	require.NoError(t, srv.Start())
 	defer srv.Stop()
 
@@ -33,13 +33,13 @@ func TestUpdateServer(t *testing.T) {
 
 	tests := []struct {
 		name   string
-		req    *wire.UpdateReq
+		req    *wire.BlobUpdateReq
 		setup  func(t *testing.T)
 		verify func(t *testing.T)
 	}{
 		{
 			"sends a nil update for locked names",
-			&wire.UpdateReq{
+			&wire.BlobUpdateReq{
 				Name:        "locked",
 				EpochHeight: uint16(0),
 				SectorSize:  uint16(0),
@@ -53,7 +53,7 @@ func TestUpdateServer(t *testing.T) {
 		},
 		{
 			"sends a nil update for unknown names",
-			&wire.UpdateReq{
+			&wire.BlobUpdateReq{
 				Name:        "unknown",
 				EpochHeight: uint16(0),
 				SectorSize:  uint16(0),
@@ -65,7 +65,7 @@ func TestUpdateServer(t *testing.T) {
 		},
 		{
 			"sends a nil update for update requests with future timestamps",
-			&wire.UpdateReq{
+			&wire.BlobUpdateReq{
 				Name:        "future",
 				EpochHeight: uint16(0),
 				SectorSize:  uint16(10),
@@ -85,7 +85,7 @@ func TestUpdateServer(t *testing.T) {
 		},
 		{
 			"sends a nil update for update requests with timestamps equal to stored",
-			&wire.UpdateReq{
+			&wire.BlobUpdateReq{
 				Name:        "equal",
 				EpochHeight: uint16(0),
 				SectorSize:  uint16(10),
@@ -105,7 +105,7 @@ func TestUpdateServer(t *testing.T) {
 		},
 		{
 			"sends an update for valid update requests with past timestamps",
-			&wire.UpdateReq{
+			&wire.BlobUpdateReq{
 				Name:        "valid",
 				EpochHeight: uint16(0),
 				SectorSize:  uint16(5),
@@ -130,7 +130,7 @@ func TestUpdateServer(t *testing.T) {
 				header, err := store.GetHeader(db, "valid")
 				require.NoError(t, err)
 				envelope := testutil.ReceiveEnvelope(t, clientConn)
-				require.EqualValues(t, &wire.Update{
+				require.EqualValues(t, &wire.BlobUpdate{
 					Name:        header.Name,
 					EpochHeight: header.EpochHeight,
 					SectorSize:  header.SectorSize,
@@ -149,6 +149,6 @@ func TestUpdateServer(t *testing.T) {
 
 func requireNilUpdate(t *testing.T, name string, r io.Reader) {
 	envelope := testutil.ReceiveEnvelope(t, r)
-	require.Equal(t, wire.MessageTypeNilUpdate, envelope.MessageType)
-	require.Equal(t, name, envelope.Message.(*wire.NilUpdate).Name)
+	require.Equal(t, wire.MessageTypeBlobNilUpdate, envelope.MessageType)
+	require.Equal(t, name, envelope.Message.(*wire.BlobNilUpdate).Name)
 }

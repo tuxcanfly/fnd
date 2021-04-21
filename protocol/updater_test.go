@@ -42,12 +42,12 @@ func TestUpdater(t *testing.T) {
 					blob.SectorBytes,
 					ts,
 				)
-				cfg := &UpdateConfig{
+				cfg := &BlobUpdateConfig{
 					Mux:        setup.tp.LocalMux,
 					DB:         setup.ls.DB,
 					NameLocker: util.NewMultiLocker(),
 					BlobStore:  setup.ls.BlobStore,
-					Item: &UpdateQueueItem{
+					Item: &BlobUpdateQueueItem{
 						PeerIDs: NewPeerSet([]crypto.Hash{
 							crypto.HashPub(setup.tp.RemoteSigner.Pub()),
 						}),
@@ -57,7 +57,7 @@ func TestUpdater(t *testing.T) {
 						Pub:         setup.tp.RemoteSigner.Pub(),
 					},
 				}
-				require.NoError(t, UpdateBlob(cfg))
+				require.NoError(t, BlobUpdateBlob(cfg))
 				mockapp.RequireBlobsEqual(t, setup.ls.BlobStore, setup.rs.BlobStore, name)
 			},
 		},
@@ -94,12 +94,12 @@ func TestUpdater(t *testing.T) {
 					ts,
 					mockapp.LoremIpsumReader,
 				)
-				cfg := &UpdateConfig{
+				cfg := &BlobUpdateConfig{
 					Mux:        setup.tp.LocalMux,
 					DB:         setup.ls.DB,
 					NameLocker: util.NewMultiLocker(),
 					BlobStore:  setup.ls.BlobStore,
-					Item: &UpdateQueueItem{
+					Item: &BlobUpdateQueueItem{
 						PeerIDs: NewPeerSet([]crypto.Hash{
 							crypto.HashPub(setup.tp.RemoteSigner.Pub()),
 						}),
@@ -109,7 +109,7 @@ func TestUpdater(t *testing.T) {
 						Pub:         setup.tp.RemoteSigner.Pub(),
 					},
 				}
-				require.NoError(t, UpdateBlob(cfg))
+				require.NoError(t, BlobUpdateBlob(cfg))
 				mockapp.RequireBlobsEqual(t, setup.ls.BlobStore, setup.rs.BlobStore, name)
 			},
 		},
@@ -142,12 +142,12 @@ func TestUpdater(t *testing.T) {
 					ts,
 					mockapp.LoremIpsumReader,
 				)
-				cfg := &UpdateConfig{
+				cfg := &BlobUpdateConfig{
 					Mux:        setup.tp.LocalMux,
 					DB:         setup.ls.DB,
 					NameLocker: util.NewMultiLocker(),
 					BlobStore:  setup.ls.BlobStore,
-					Item: &UpdateQueueItem{
+					Item: &BlobUpdateQueueItem{
 						PeerIDs: NewPeerSet([]crypto.Hash{
 							crypto.HashPub(setup.tp.RemoteSigner.Pub()),
 						}),
@@ -157,7 +157,7 @@ func TestUpdater(t *testing.T) {
 						Pub:         setup.tp.RemoteSigner.Pub(),
 					},
 				}
-				require.NoError(t, UpdateBlob(cfg))
+				require.NoError(t, BlobUpdateBlob(cfg))
 				mockapp.RequireBlobsEqual(t, setup.ls.BlobStore, setup.rs.BlobStore, name)
 			},
 		},
@@ -190,7 +190,7 @@ func TestUpdater(t *testing.T) {
 				// create the new blob remotely
 				// this forces an equivocation because local has 10 random sectors
 				// and remote as 20 _different_ random sectors. Prev Hash at 10 will
-				// mismatch, leading to ErrInvalidPrevHash
+				// mismatch, leading to ErrBlobUpdaterInvalidPrevHash
 				update := mockapp.FillBlobReader(
 					t,
 					setup.rs.DB,
@@ -202,12 +202,12 @@ func TestUpdater(t *testing.T) {
 					ts,
 					rand.Reader,
 				)
-				cfg := &UpdateConfig{
+				cfg := &BlobUpdateConfig{
 					Mux:        setup.tp.LocalMux,
 					DB:         setup.ls.DB,
 					NameLocker: util.NewMultiLocker(),
 					BlobStore:  setup.ls.BlobStore,
-					Item: &UpdateQueueItem{
+					Item: &BlobUpdateQueueItem{
 						PeerIDs: NewPeerSet([]crypto.Hash{
 							crypto.HashPub(setup.tp.RemoteSigner.Pub()),
 						}),
@@ -217,7 +217,7 @@ func TestUpdater(t *testing.T) {
 						Pub:         setup.tp.RemoteSigner.Pub(),
 					},
 				}
-				err := UpdateBlob(cfg)
+				err := BlobUpdateBlob(cfg)
 				require.NotNil(t, err)
 				time.Sleep(time.Second)
 				require.True(t, errors.Is(err, ErrPayloadEquivocation))
@@ -245,7 +245,7 @@ func TestUpdater(t *testing.T) {
 				// signature.
 				require.NoError(t, store.WithTx(setup.ls.DB, func(tx *leveldb.Transaction) error {
 					// TODO: ideally setup a fake signer
-					if err := store.SetNameInfoTx(tx, name, setup.tp.LocalSigner.Pub(), 10); err != nil {
+					if err := store.SetSubdomainInfoTx(tx, name, setup.tp.LocalSigner.Pub(), 10, blob.Size); err != nil {
 						return err
 					}
 					return nil
@@ -261,12 +261,12 @@ func TestUpdater(t *testing.T) {
 					ts,
 					mockapp.LoremIpsumReader,
 				)
-				cfg := &UpdateConfig{
+				cfg := &BlobUpdateConfig{
 					Mux:        setup.tp.LocalMux,
 					DB:         setup.ls.DB,
 					NameLocker: util.NewMultiLocker(),
 					BlobStore:  setup.ls.BlobStore,
-					Item: &UpdateQueueItem{
+					Item: &BlobUpdateQueueItem{
 						PeerIDs: NewPeerSet([]crypto.Hash{
 							crypto.HashPub(setup.tp.RemoteSigner.Pub()),
 						}),
@@ -276,7 +276,7 @@ func TestUpdater(t *testing.T) {
 						Pub:         setup.tp.RemoteSigner.Pub(),
 					},
 				}
-				err := UpdateBlob(cfg)
+				err := BlobUpdateBlob(cfg)
 				require.NotNil(t, err)
 				require.True(t, errors.Is(err, ErrInvalidPayloadSignature))
 			},
@@ -297,12 +297,12 @@ func TestUpdater(t *testing.T) {
 					sectorSize,
 					ts,
 				)
-				cfg := &UpdateConfig{
+				cfg := &BlobUpdateConfig{
 					Mux:        setup.tp.LocalMux,
 					DB:         setup.ls.DB,
 					NameLocker: util.NewMultiLocker(),
 					BlobStore:  setup.ls.BlobStore,
-					Item: &UpdateQueueItem{
+					Item: &BlobUpdateQueueItem{
 						PeerIDs: NewPeerSet([]crypto.Hash{
 							crypto.HashPub(setup.tp.RemoteSigner.Pub()),
 						}),
@@ -319,9 +319,9 @@ func TestUpdater(t *testing.T) {
 						SectorSize:  sectorSize,
 					}, blob.ZeroSectorHashes)
 				}))
-				err := UpdateBlob(cfg)
+				err := BlobUpdateBlob(cfg)
 				require.NotNil(t, err)
-				require.True(t, errors.Is(err, ErrUpdaterAlreadySynchronized))
+				require.True(t, errors.Is(err, ErrBlobUpdaterAlreadySynchronized))
 			},
 		},
 		{
@@ -329,12 +329,12 @@ func TestUpdater(t *testing.T) {
 			func(t *testing.T, setup *updaterTestSetup) {
 				locker := util.NewMultiLocker()
 				require.True(t, locker.TryLock(name))
-				cfg := &UpdateConfig{
+				cfg := &BlobUpdateConfig{
 					Mux:        setup.tp.LocalMux,
 					DB:         setup.ls.DB,
 					NameLocker: locker,
 					BlobStore:  setup.ls.BlobStore,
-					Item: &UpdateQueueItem{
+					Item: &BlobUpdateQueueItem{
 						PeerIDs: NewPeerSet([]crypto.Hash{
 							crypto.HashPub(setup.tp.RemoteSigner.Pub()),
 						}),
@@ -342,9 +342,9 @@ func TestUpdater(t *testing.T) {
 						EpochHeight: BlobEpoch(name),
 					},
 				}
-				err := UpdateBlob(cfg)
+				err := BlobUpdateBlob(cfg)
 				require.NotNil(t, err)
-				require.True(t, errors.Is(err, ErrNameLocked))
+				require.True(t, errors.Is(err, ErrBlobUpdaterLocked))
 			},
 		},
 		{
@@ -363,12 +363,12 @@ func TestUpdater(t *testing.T) {
 					sectorSize,
 					ts,
 				)
-				cfg := &UpdateConfig{
+				cfg := &BlobUpdateConfig{
 					Mux:        setup.tp.LocalMux,
 					DB:         setup.ls.DB,
 					NameLocker: util.NewMultiLocker(),
 					BlobStore:  setup.ls.BlobStore,
-					Item: &UpdateQueueItem{
+					Item: &BlobUpdateQueueItem{
 						PeerIDs: NewPeerSet([]crypto.Hash{
 							crypto.HashPub(setup.tp.RemoteSigner.Pub()),
 						}),
@@ -385,9 +385,9 @@ func TestUpdater(t *testing.T) {
 						SectorSize:  sectorSize,
 					}, blob.ZeroSectorHashes)
 				}))
-				err := UpdateBlob(cfg)
+				err := BlobUpdateBlob(cfg)
 				require.NotNil(t, err)
-				require.True(t, errors.Is(err, ErrUpdaterAlreadySynchronized))
+				require.True(t, errors.Is(err, ErrBlobUpdaterAlreadySynchronized))
 			},
 		},
 		{
@@ -395,12 +395,12 @@ func TestUpdater(t *testing.T) {
 			func(t *testing.T, setup *updaterTestSetup) {
 				locker := util.NewMultiLocker()
 				require.True(t, locker.TryLock(name))
-				cfg := &UpdateConfig{
+				cfg := &BlobUpdateConfig{
 					Mux:        setup.tp.LocalMux,
 					DB:         setup.ls.DB,
 					NameLocker: locker,
 					BlobStore:  setup.ls.BlobStore,
-					Item: &UpdateQueueItem{
+					Item: &BlobUpdateQueueItem{
 						PeerIDs: NewPeerSet([]crypto.Hash{
 							crypto.HashPub(setup.tp.RemoteSigner.Pub()),
 						}),
@@ -408,9 +408,9 @@ func TestUpdater(t *testing.T) {
 						EpochHeight: BlobEpoch(name),
 					},
 				}
-				err := UpdateBlob(cfg)
+				err := BlobUpdateBlob(cfg)
 				require.NotNil(t, err)
-				require.True(t, errors.Is(err, ErrNameLocked))
+				require.True(t, errors.Is(err, ErrBlobUpdaterLocked))
 			},
 		},
 	}
@@ -429,7 +429,7 @@ func TestUpdater(t *testing.T) {
 			require.NoError(t, localSS.Start())
 			defer require.NoError(t, localSS.Stop())
 			go func() {
-				remoteUQ := NewUpdateQueue(testPeers.RemoteMux, localStorage.DB)
+				remoteUQ := NewBlobUpdateQueue(testPeers.RemoteMux, localStorage.DB)
 				require.NoError(t, remoteUQ.Start())
 				defer require.NoError(t, remoteUQ.Stop())
 			}()
@@ -438,7 +438,17 @@ func TestUpdater(t *testing.T) {
 				if err := store.SetInitialImportCompleteTx(tx); err != nil {
 					return err
 				}
-				if err := store.SetNameInfoTx(tx, name, testPeers.RemoteSigner.Pub(), 10); err != nil {
+				if err := store.SetSubdomainInfoTx(tx, name, testPeers.RemoteSigner.Pub(), 10, blob.Size); err != nil {
+					return err
+				}
+				return nil
+			}))
+
+			require.NoError(t, store.WithTx(remoteStorage.DB, func(tx *leveldb.Transaction) error {
+				if err := store.SetInitialImportCompleteTx(tx); err != nil {
+					return err
+				}
+				if err := store.SetSubdomainInfoTx(tx, name, testPeers.RemoteSigner.Pub(), 10, blob.Size); err != nil {
 					return err
 				}
 				return nil
@@ -473,12 +483,12 @@ func TestEpoch(t *testing.T) {
 					blob.SectorBytes,
 					ts,
 				)
-				cfg := &UpdateConfig{
+				cfg := &BlobUpdateConfig{
 					Mux:        setup.tp.LocalMux,
 					DB:         setup.ls.DB,
 					NameLocker: util.NewMultiLocker(),
 					BlobStore:  setup.ls.BlobStore,
-					Item: &UpdateQueueItem{
+					Item: &BlobUpdateQueueItem{
 						PeerIDs: NewPeerSet([]crypto.Hash{
 							crypto.HashPub(setup.tp.RemoteSigner.Pub()),
 						}),
@@ -488,18 +498,18 @@ func TestEpoch(t *testing.T) {
 						Pub:         setup.tp.RemoteSigner.Pub(),
 					},
 				}
-				require.NoError(t, UpdateBlob(cfg))
+				require.NoError(t, BlobUpdateBlob(cfg))
 				mockapp.RequireBlobsEqual(t, setup.ls.BlobStore, setup.rs.BlobStore, name)
 			},
 		},
 		{
 			"aborts sync if the name is banned",
 			func(t *testing.T, setup *updaterTestSetup) {
-				cfg := &UpdateConfig{
+				cfg := &BlobUpdateConfig{
 					Mux:       setup.tp.LocalMux,
 					DB:        setup.ls.DB,
 					BlobStore: setup.ls.BlobStore,
-					Item: &UpdateQueueItem{
+					Item: &BlobUpdateQueueItem{
 						PeerIDs: NewPeerSet([]crypto.Hash{
 							crypto.HashPub(setup.tp.RemoteSigner.Pub()),
 						}),
@@ -518,9 +528,9 @@ func TestEpoch(t *testing.T) {
 						SectorSize:  10,
 					}, blob.ZeroSectorHashes)
 				}))
-				err := UpdateBlob(cfg)
+				err := BlobUpdateBlob(cfg)
 				require.NotNil(t, err)
-				require.True(t, errors.Is(err, ErrNameBanned))
+				require.True(t, errors.Is(err, ErrBlobUpdaterBanned))
 			},
 		},
 		{
@@ -537,12 +547,12 @@ func TestEpoch(t *testing.T) {
 					blob.SectorBytes,
 					ts,
 				)
-				cfg := &UpdateConfig{
+				cfg := &BlobUpdateConfig{
 					Mux:        setup.tp.LocalMux,
 					DB:         setup.ls.DB,
 					NameLocker: util.NewMultiLocker(),
 					BlobStore:  setup.ls.BlobStore,
-					Item: &UpdateQueueItem{
+					Item: &BlobUpdateQueueItem{
 						PeerIDs: NewPeerSet([]crypto.Hash{
 							crypto.HashPub(setup.tp.RemoteSigner.Pub()),
 						}),
@@ -563,19 +573,19 @@ func TestEpoch(t *testing.T) {
 						SectorSize:  0,
 					}, blob.ZeroSectorHashes)
 				}))
-				require.NoError(t, UpdateBlob(cfg))
+				require.NoError(t, BlobUpdateBlob(cfg))
 				mockapp.RequireBlobsEqual(t, setup.ls.BlobStore, setup.rs.BlobStore, name)
 			},
 		},
 		{
 			"aborts sync if the epoch is throttled",
 			func(t *testing.T, setup *updaterTestSetup) {
-				cfg := &UpdateConfig{
+				cfg := &BlobUpdateConfig{
 					Mux:        setup.tp.LocalMux,
 					DB:         setup.ls.DB,
 					NameLocker: util.NewMultiLocker(),
 					BlobStore:  setup.ls.BlobStore,
-					Item: &UpdateQueueItem{
+					Item: &BlobUpdateQueueItem{
 						PeerIDs: NewPeerSet([]crypto.Hash{
 							crypto.HashPub(setup.tp.RemoteSigner.Pub()),
 						}),
@@ -591,19 +601,19 @@ func TestEpoch(t *testing.T) {
 						EpochStartAt: time.Now(),
 					}, blob.ZeroSectorHashes)
 				}))
-				err := UpdateBlob(cfg)
+				err := BlobUpdateBlob(cfg)
 				require.NotNil(t, err)
-				require.True(t, errors.Is(err, ErrInvalidEpochThrottled))
+				require.True(t, errors.Is(err, ErrBlobUpdaterInvalidEpochThrottled))
 			},
 		},
 		{
 			"aborts sync if the epoch is backdated",
 			func(t *testing.T, setup *updaterTestSetup) {
-				cfg := &UpdateConfig{
+				cfg := &BlobUpdateConfig{
 					Mux:       setup.tp.LocalMux,
 					DB:        setup.ls.DB,
 					BlobStore: setup.ls.BlobStore,
-					Item: &UpdateQueueItem{
+					Item: &BlobUpdateQueueItem{
 						PeerIDs: NewPeerSet([]crypto.Hash{
 							crypto.HashPub(setup.tp.RemoteSigner.Pub()),
 						}),
@@ -618,19 +628,19 @@ func TestEpoch(t *testing.T) {
 						SectorSize:  10,
 					}, blob.ZeroSectorHashes)
 				}))
-				err := UpdateBlob(cfg)
+				err := BlobUpdateBlob(cfg)
 				require.NotNil(t, err)
-				require.True(t, errors.Is(err, ErrInvalidEpochBackdated))
+				require.True(t, errors.Is(err, ErrBlobUpdaterInvalidEpochBackdated))
 			},
 		},
 		{
 			"aborts sync if the epoch is futuredated",
 			func(t *testing.T, setup *updaterTestSetup) {
-				cfg := &UpdateConfig{
+				cfg := &BlobUpdateConfig{
 					Mux:       setup.tp.LocalMux,
 					DB:        setup.ls.DB,
 					BlobStore: setup.ls.BlobStore,
-					Item: &UpdateQueueItem{
+					Item: &BlobUpdateQueueItem{
 						PeerIDs: NewPeerSet([]crypto.Hash{
 							crypto.HashPub(setup.tp.RemoteSigner.Pub()),
 						}),
@@ -645,9 +655,9 @@ func TestEpoch(t *testing.T) {
 						SectorSize:  10,
 					}, blob.ZeroSectorHashes)
 				}))
-				err := UpdateBlob(cfg)
+				err := BlobUpdateBlob(cfg)
 				require.NotNil(t, err)
-				require.True(t, errors.Is(err, ErrInvalidEpochFuturedated))
+				require.True(t, errors.Is(err, ErrBlobUpdaterInvalidEpochFuturedated))
 			},
 		},
 		{
@@ -664,12 +674,12 @@ func TestEpoch(t *testing.T) {
 					blob.SectorBytes,
 					ts,
 				)
-				cfg := &UpdateConfig{
+				cfg := &BlobUpdateConfig{
 					Mux:        setup.tp.LocalMux,
 					DB:         setup.ls.DB,
 					NameLocker: util.NewMultiLocker(),
 					BlobStore:  setup.ls.BlobStore,
-					Item: &UpdateQueueItem{
+					Item: &BlobUpdateQueueItem{
 						PeerIDs: NewPeerSet([]crypto.Hash{
 							crypto.HashPub(setup.tp.RemoteSigner.Pub()),
 						}),
@@ -686,7 +696,7 @@ func TestEpoch(t *testing.T) {
 						SectorSize:  10,
 					}, blob.ZeroSectorHashes)
 				}))
-				require.NoError(t, UpdateBlob(cfg))
+				require.NoError(t, BlobUpdateBlob(cfg))
 				mockapp.RequireBlobsEqual(t, setup.ls.BlobStore, setup.rs.BlobStore, name)
 			},
 		},

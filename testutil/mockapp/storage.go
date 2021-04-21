@@ -46,8 +46,8 @@ func CreateTestDB(t *testing.T) (*leveldb.DB, func()) {
 	return db, done
 }
 
-func FillBlobReader(t *testing.T, db *leveldb.DB, bs blob.Store, signer crypto.Signer, name string, epochHeight, sectorSize uint16, receivedAt time.Time, r io.Reader) *wire.Update {
-	bl, err := bs.Open(name)
+func FillBlobReader(t *testing.T, db *leveldb.DB, bs blob.Store, signer crypto.Signer, name string, epochHeight, sectorSize uint16, receivedAt time.Time, r io.Reader) *wire.BlobUpdate {
+	bl, err := bs.Open(name, blob.Size)
 	require.NoError(t, err)
 	tx, err := bl.Transaction()
 	require.NoError(t, err)
@@ -69,14 +69,14 @@ func FillBlobReader(t *testing.T, db *leveldb.DB, bs blob.Store, signer crypto.S
 		}, tree)
 	}))
 	require.NoError(t, tx.Commit())
-	return &wire.Update{
+	return &wire.BlobUpdate{
 		Name:        name,
 		EpochHeight: epochHeight,
 		SectorSize:  sectorSize,
 	}
 }
 
-func FillBlobRandom(t *testing.T, db *leveldb.DB, bs blob.Store, signer crypto.Signer, name string, epochHeight, sectorSize uint16, receivedAt time.Time) *wire.Update {
+func FillBlobRandom(t *testing.T, db *leveldb.DB, bs blob.Store, signer crypto.Signer, name string, epochHeight, sectorSize uint16, receivedAt time.Time) *wire.BlobUpdate {
 	return FillBlobReader(
 		t,
 		db,
@@ -91,9 +91,9 @@ func FillBlobRandom(t *testing.T, db *leveldb.DB, bs blob.Store, signer crypto.S
 }
 
 func RequireBlobsEqual(t *testing.T, localBS blob.Store, remoteBS blob.Store, name string) {
-	localBl, err := localBS.Open(name)
+	localBl, err := localBS.Open(name, blob.Size)
 	require.NoError(t, err)
-	remoteBl, err := remoteBS.Open(name)
+	remoteBl, err := remoteBS.Open(name, blob.Size)
 	require.NoError(t, err)
 	for i := 0; i < blob.MaxSectors; i++ {
 		localSector, err := localBl.ReadSector(uint8(i))
