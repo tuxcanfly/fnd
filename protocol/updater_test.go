@@ -31,16 +31,15 @@ func TestNameUpdater(t *testing.T) {
 		{
 			"syncs subdomains when the local node has never seen the name",
 			func(t *testing.T, setup *updaterTestSetup) {
-				remoteSubdomains := []blob.Subdomain{
-					{
-						Name:        "foo",
-						EpochHeight: 10,
-						Size:        128,
-						PublicKey:   setup.tp.RemoteSigner.Pub(),
-					},
-				}
 				require.NoError(t, store.WithTx(setup.rs.DB, func(tx *leveldb.Transaction) error {
-					if err := store.SetSubdomainTx(tx, name, remoteSubdomains); err != nil {
+					if err := store.SetSubdomainTx(tx, name, []blob.Subdomain{
+						{
+							Name:        "foo",
+							EpochHeight: 10,
+							Size:        128,
+							PublicKey:   setup.tp.RemoteSigner.Pub(),
+						},
+					}); err != nil {
 						return err
 					}
 					return nil
@@ -62,7 +61,78 @@ func TestNameUpdater(t *testing.T) {
 				require.NoError(t, NameUpdateBlob(cfg))
 				localSubdomains, err := store.GetSubdomains(setup.ls.DB, name)
 				require.NoError(t, err)
+				remoteSubdomains, err := store.GetSubdomains(setup.rs.DB, name)
+				require.NoError(t, err)
 				require.ElementsMatch(t, remoteSubdomains, localSubdomains)
+			},
+		},
+		{
+			"syncs subdomains when remote has a subdomain update",
+			func(t *testing.T, setup *updaterTestSetup) {
+				// local: ["foo.bar"]
+				require.NoError(t, store.WithTx(setup.ls.DB, func(tx *leveldb.Transaction) error {
+					if err := store.SetSubdomainTx(tx, name, []blob.Subdomain{
+						{
+							Name:        "foo",
+							EpochHeight: 10,
+							Size:        128,
+							PublicKey:   setup.tp.RemoteSigner.Pub(),
+						},
+					}); err != nil {
+						return err
+					}
+					return nil
+				}))
+				// remote: ["foo.bar", "bar.bar"]
+				require.NoError(t, store.WithTx(setup.rs.DB, func(tx *leveldb.Transaction) error {
+					if err := store.SetSubdomainTx(tx, name, []blob.Subdomain{
+						{
+							Name:        "foo",
+							EpochHeight: 10,
+							Size:        128,
+							PublicKey:   setup.tp.RemoteSigner.Pub(),
+						},
+						{
+							Name:        "bar",
+							EpochHeight: 10,
+							Size:        128,
+							PublicKey:   setup.tp.RemoteSigner.Pub(),
+						},
+					}); err != nil {
+						return err
+					}
+					return nil
+				}))
+
+				cfg := &NameUpdateConfig{
+					Mux:        setup.tp.LocalMux,
+					DB:         setup.ls.DB,
+					NameLocker: util.NewMultiLocker(),
+					BlobStore:  setup.ls.BlobStore,
+					Item: &NameUpdateQueueItem{
+						PeerIDs: NewPeerSet([]crypto.Hash{
+							crypto.HashPub(setup.tp.RemoteSigner.Pub()),
+						}),
+						Name: name,
+						Pub:  setup.tp.RemoteSigner.Pub(),
+					},
+				}
+				require.NoError(t, NameUpdateBlob(cfg))
+				localSubdomains, err := store.GetSubdomains(setup.ls.DB, name)
+				require.NoError(t, err)
+				remoteSubdomains, err := store.GetSubdomains(setup.rs.DB, name)
+				require.NoError(t, err)
+				require.ElementsMatch(t, remoteSubdomains, localSubdomains)
+			},
+		},
+		{
+			"aborts sync when there is an equivocation",
+			func(t *testing.T, setup *updaterTestSetup) {
+			},
+		},
+		{
+			"aborts sync when there is a invalid payload signature",
+			func(t *testing.T, setup *updaterTestSetup) {
 			},
 		},
 	}
