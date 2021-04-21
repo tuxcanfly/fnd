@@ -19,6 +19,7 @@ const (
 
 var (
 	ErrInvalidSubdomainSignature = errors.New("update signature is invalid")
+	ErrSubdomainEquivocation     = errors.New("update payload is equivocated")
 )
 
 type nameSyncUpdate struct {
@@ -110,14 +111,17 @@ func NameSyncSubdomains(opts *NameSyncSubdomainsOpts) (*nameSyncUpdate, error) {
 					continue
 				}
 
+				// TODO: subdomains are sorted by alphabetical order
+				// so this only works as long as subdomains are added in alphabetical order
+				// FIXME: order by id or position instead
 				if len(msg.Subdomains) >= len(subdomains) {
 					// compare both local and remote subdomains
 					for i, subdomain := range subdomains {
 						remote := msg.Subdomains[i]
 						if !subdomain.Equals(&remote) {
-							// write local equivocation proof
+							errs <- ErrSubdomainEquivocation
+							break out
 						}
-						continue
 					}
 				}
 

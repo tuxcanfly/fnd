@@ -23,7 +23,7 @@ func (s *Subdomain) Equals(o *Subdomain) bool {
 	return s.Name == o.Name &&
 		s.EpochHeight == o.EpochHeight &&
 		s.Size == o.Size &&
-		s.PublicKey == o.PublicKey &&
+		s.PublicKey.IsEqual(o.PublicKey) &&
 		s.Signature == o.Signature
 }
 

@@ -74,15 +74,15 @@ func TestNameUpdater(t *testing.T) {
 		{
 			"syncs subdomains when remote has a subdomain update",
 			func(t *testing.T, setup *updaterTestSetup) {
-				// local: ["foo.bar"]
+				// local: ["bar.bar"]
 				require.NoError(t, store.WithTx(setup.ls.DB, func(tx *leveldb.Transaction) error {
-					sig, err := blob.NameSignSeal(setup.tp.RemoteSigner, "foo", 10, 128)
+					sig, err := blob.NameSignSeal(setup.tp.RemoteSigner, "bar", 10, 128)
 					if err != nil {
 						return err
 					}
 					if err := store.SetSubdomainTx(tx, name, []blob.Subdomain{
 						{
-							Name:        "foo",
+							Name:        "bar",
 							EpochHeight: 10,
 							Size:        128,
 							PublicKey:   setup.tp.RemoteSigner.Pub(),
@@ -148,6 +148,61 @@ func TestNameUpdater(t *testing.T) {
 		{
 			"aborts sync when there is an equivocation",
 			func(t *testing.T, setup *updaterTestSetup) {
+				// local: ["foo.bar"]
+				require.NoError(t, store.WithTx(setup.ls.DB, func(tx *leveldb.Transaction) error {
+					sig, err := blob.NameSignSeal(setup.tp.RemoteSigner, "foo", 10, 128)
+					if err != nil {
+						return err
+					}
+					if err := store.SetSubdomainTx(tx, name, []blob.Subdomain{
+						{
+							Name:        "foo",
+							EpochHeight: 10,
+							Size:        128,
+							PublicKey:   setup.tp.RemoteSigner.Pub(),
+							Signature:   sig,
+						},
+					}); err != nil {
+						return err
+					}
+					return nil
+				}))
+				// remote: ["bar.bar"]
+				require.NoError(t, store.WithTx(setup.rs.DB, func(tx *leveldb.Transaction) error {
+					sig, err := blob.NameSignSeal(setup.tp.RemoteSigner, "bar", 10, 128)
+					if err != nil {
+						return err
+					}
+					if err := store.SetSubdomainTx(tx, name, []blob.Subdomain{
+						{
+							Name:        "bar",
+							EpochHeight: 10,
+							Size:        128,
+							PublicKey:   setup.tp.RemoteSigner.Pub(),
+							Signature:   sig,
+						},
+					}); err != nil {
+						return err
+					}
+					return nil
+				}))
+
+				cfg := &NameUpdateConfig{
+					Mux:        setup.tp.LocalMux,
+					DB:         setup.ls.DB,
+					NameLocker: util.NewMultiLocker(),
+					BlobStore:  setup.ls.BlobStore,
+					Item: &NameUpdateQueueItem{
+						PeerIDs: NewPeerSet([]crypto.Hash{
+							crypto.HashPub(setup.tp.RemoteSigner.Pub()),
+						}),
+						Name: name,
+						Pub:  setup.tp.RemoteSigner.Pub(),
+					},
+				}
+				err := NameUpdateBlob(cfg)
+				require.NotNil(t, err)
+				require.True(t, errors.Is(err, ErrSubdomainEquivocation))
 			},
 		},
 		{
