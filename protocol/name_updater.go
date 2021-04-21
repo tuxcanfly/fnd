@@ -145,7 +145,9 @@ func NameUpdateBlob(cfg *NameUpdateConfig) error {
 			}
 			return nil
 		})
-		cfg.NameSyncer.syncName(name)
+		if cfg.NameSyncer != nil {
+			cfg.NameSyncer.syncName(name)
+		}
 	}
 
 	err = store.WithTx(cfg.DB, func(tx *leveldb.Transaction) error {

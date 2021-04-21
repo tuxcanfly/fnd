@@ -22,8 +22,81 @@ type updaterTestSetup struct {
 	rs *mockapp.TestStorage
 }
 
-func TestUpdater(t *testing.T) {
-	name := "foobar"
+func TestNameUpdater(t *testing.T) {
+	name := "bar"
+	tests := []struct {
+		name string
+		run  func(t *testing.T, setup *updaterTestSetup)
+	}{
+		{
+			"syncs subdomains when the local node has never seen the name",
+			func(t *testing.T, setup *updaterTestSetup) {
+				remoteSubdomains := []blob.Subdomain{
+					{
+						Name:        "foo",
+						EpochHeight: 10,
+						Size:        128,
+						PublicKey:   setup.tp.RemoteSigner.Pub(),
+					},
+				}
+				require.NoError(t, store.WithTx(setup.rs.DB, func(tx *leveldb.Transaction) error {
+					if err := store.SetSubdomainTx(tx, name, remoteSubdomains); err != nil {
+						return err
+					}
+					return nil
+				}))
+
+				cfg := &NameUpdateConfig{
+					Mux:        setup.tp.LocalMux,
+					DB:         setup.ls.DB,
+					NameLocker: util.NewMultiLocker(),
+					BlobStore:  setup.ls.BlobStore,
+					Item: &NameUpdateQueueItem{
+						PeerIDs: NewPeerSet([]crypto.Hash{
+							crypto.HashPub(setup.tp.RemoteSigner.Pub()),
+						}),
+						Name: name,
+						Pub:  setup.tp.RemoteSigner.Pub(),
+					},
+				}
+				require.NoError(t, NameUpdateBlob(cfg))
+				localSubdomains, err := store.GetSubdomains(setup.ls.DB, name)
+				require.NoError(t, err)
+				require.ElementsMatch(t, remoteSubdomains, localSubdomains)
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			testPeers, peersDone := mockapp.ConnectTestPeers(t)
+			defer peersDone()
+			remoteStorage, remoteStorageDone := mockapp.CreateStorage(t)
+			defer remoteStorageDone()
+			localStorage, localStorageDone := mockapp.CreateStorage(t)
+			defer localStorageDone()
+			remoteSS := NewSubdomainServer(testPeers.RemoteMux, remoteStorage.DB, util.NewMultiLocker())
+			require.NoError(t, remoteSS.Start())
+			defer require.NoError(t, remoteSS.Stop())
+			localSS := NewSubdomainServer(testPeers.LocalMux, localStorage.DB, util.NewMultiLocker())
+			require.NoError(t, localSS.Start())
+			defer require.NoError(t, localSS.Stop())
+			go func() {
+				remoteUQ := NewNameUpdateQueue(testPeers.RemoteMux, localStorage.DB)
+				require.NoError(t, remoteUQ.Start())
+				defer require.NoError(t, remoteUQ.Stop())
+			}()
+
+			tt.run(t, &updaterTestSetup{
+				tp: testPeers,
+				ls: localStorage,
+				rs: remoteStorage,
+			})
+		})
+	}
+}
+
+func TestBlobUpdater(t *testing.T) {
+	name := "foo.bar"
 	tests := []struct {
 		name string
 		run  func(t *testing.T, setup *updaterTestSetup)
