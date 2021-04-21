@@ -9,11 +9,16 @@ import (
 	"fnd/wire"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/syndtr/goleveldb/leveldb"
 )
 
 const (
 	DefaultNameSyncerBlobResTimeout = 15 * time.Second
+)
+
+var (
+	ErrInvalidSubdomainSignature = errors.New("update signature is invalid")
 )
 
 type nameSyncUpdate struct {
@@ -71,6 +76,7 @@ func NameSyncSubdomains(opts *NameSyncSubdomainsOpts) (*nameSyncUpdate, error) {
 				)
 				sendCount++
 			}
+		out:
 			select {
 			case res := <-namePayloadResCh:
 				msg := res.msg
@@ -123,8 +129,9 @@ func NameSyncSubdomains(opts *NameSyncSubdomainsOpts) (*nameSyncUpdate, error) {
 					}
 					h := blob.NameSealHash(subdomain.Name, subdomain.EpochHeight, subdomain.Size)
 					if !crypto.VerifySigPub(info.PublicKey, subdomain.Signature, h) {
-						lgr.Trace("error validating signature", "err", err)
-						continue
+						lgr.Trace("subdomain res validation failed")
+						errs <- errors.Wrap(ErrInvalidSubdomainSignature, "signature validation failed")
+						break out
 					}
 				}
 

@@ -32,12 +32,17 @@ func TestNameUpdater(t *testing.T) {
 			"syncs subdomains when the local node has never seen the name",
 			func(t *testing.T, setup *updaterTestSetup) {
 				require.NoError(t, store.WithTx(setup.rs.DB, func(tx *leveldb.Transaction) error {
+					sig, err := blob.NameSignSeal(setup.tp.RemoteSigner, "foo", 10, 128)
+					if err != nil {
+						return err
+					}
 					if err := store.SetSubdomainTx(tx, name, []blob.Subdomain{
 						{
 							Name:        "foo",
 							EpochHeight: 10,
 							Size:        128,
 							PublicKey:   setup.tp.RemoteSigner.Pub(),
+							Signature:   sig,
 						},
 					}); err != nil {
 						return err
@@ -71,12 +76,17 @@ func TestNameUpdater(t *testing.T) {
 			func(t *testing.T, setup *updaterTestSetup) {
 				// local: ["foo.bar"]
 				require.NoError(t, store.WithTx(setup.ls.DB, func(tx *leveldb.Transaction) error {
+					sig, err := blob.NameSignSeal(setup.tp.RemoteSigner, "foo", 10, 128)
+					if err != nil {
+						return err
+					}
 					if err := store.SetSubdomainTx(tx, name, []blob.Subdomain{
 						{
 							Name:        "foo",
 							EpochHeight: 10,
 							Size:        128,
 							PublicKey:   setup.tp.RemoteSigner.Pub(),
+							Signature:   sig,
 						},
 					}); err != nil {
 						return err
@@ -85,18 +95,28 @@ func TestNameUpdater(t *testing.T) {
 				}))
 				// remote: ["foo.bar", "bar.bar"]
 				require.NoError(t, store.WithTx(setup.rs.DB, func(tx *leveldb.Transaction) error {
+					sig1, err := blob.NameSignSeal(setup.tp.RemoteSigner, "foo", 10, 128)
+					if err != nil {
+						return err
+					}
+					sig2, err := blob.NameSignSeal(setup.tp.RemoteSigner, "bar", 10, 128)
+					if err != nil {
+						return err
+					}
 					if err := store.SetSubdomainTx(tx, name, []blob.Subdomain{
 						{
 							Name:        "foo",
 							EpochHeight: 10,
 							Size:        128,
 							PublicKey:   setup.tp.RemoteSigner.Pub(),
+							Signature:   sig1,
 						},
 						{
 							Name:        "bar",
 							EpochHeight: 10,
 							Size:        128,
 							PublicKey:   setup.tp.RemoteSigner.Pub(),
+							Signature:   sig2,
 						},
 					}); err != nil {
 						return err
@@ -133,6 +153,42 @@ func TestNameUpdater(t *testing.T) {
 		{
 			"aborts sync when there is a invalid payload signature",
 			func(t *testing.T, setup *updaterTestSetup) {
+				// use an invalid signature using local signer instead of remote
+				require.NoError(t, store.WithTx(setup.rs.DB, func(tx *leveldb.Transaction) error {
+					sig, err := blob.NameSignSeal(setup.tp.LocalSigner, "foo", 10, 128)
+					if err != nil {
+						return err
+					}
+					if err := store.SetSubdomainTx(tx, name, []blob.Subdomain{
+						{
+							Name:        "foo",
+							EpochHeight: 10,
+							Size:        128,
+							PublicKey:   setup.tp.RemoteSigner.Pub(),
+							Signature:   sig,
+						},
+					}); err != nil {
+						return err
+					}
+					return nil
+				}))
+
+				cfg := &NameUpdateConfig{
+					Mux:        setup.tp.LocalMux,
+					DB:         setup.ls.DB,
+					NameLocker: util.NewMultiLocker(),
+					BlobStore:  setup.ls.BlobStore,
+					Item: &NameUpdateQueueItem{
+						PeerIDs: NewPeerSet([]crypto.Hash{
+							crypto.HashPub(setup.tp.RemoteSigner.Pub()),
+						}),
+						Name: name,
+						Pub:  setup.tp.RemoteSigner.Pub(),
+					},
+				}
+				err := NameUpdateBlob(cfg)
+				require.NotNil(t, err)
+				require.True(t, errors.Is(err, ErrInvalidSubdomainSignature))
 			},
 		},
 	}
@@ -155,6 +211,26 @@ func TestNameUpdater(t *testing.T) {
 				require.NoError(t, remoteUQ.Start())
 				defer require.NoError(t, remoteUQ.Stop())
 			}()
+
+			require.NoError(t, store.WithTx(localStorage.DB, func(tx *leveldb.Transaction) error {
+				if err := store.SetInitialImportCompleteTx(tx); err != nil {
+					return err
+				}
+				if err := store.SetNameInfoTx(tx, name, testPeers.RemoteSigner.Pub(), 10); err != nil {
+					return err
+				}
+				return nil
+			}))
+
+			require.NoError(t, store.WithTx(remoteStorage.DB, func(tx *leveldb.Transaction) error {
+				if err := store.SetInitialImportCompleteTx(tx); err != nil {
+					return err
+				}
+				if err := store.SetNameInfoTx(tx, name, testPeers.RemoteSigner.Pub(), 10); err != nil {
+					return err
+				}
+				return nil
+			}))
 
 			tt.run(t, &updaterTestSetup{
 				tp: testPeers,
