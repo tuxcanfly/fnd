@@ -9,6 +9,7 @@ import (
 	"fnd/wire"
 	"time"
 
+	"fnd.localhost/handshake/primitives"
 	"github.com/pkg/errors"
 	"github.com/syndtr/goleveldb/leveldb"
 )
@@ -20,6 +21,7 @@ const (
 var (
 	ErrInvalidSubdomainSignature = errors.New("update signature is invalid")
 	ErrSubdomainEquivocation     = errors.New("update payload is equivocated")
+	ErrSubdomainInvalidName      = errors.New("invalid name")
 )
 
 type nameSyncUpdate struct {
@@ -130,6 +132,10 @@ func NameSyncSubdomains(opts *NameSyncSubdomainsOpts) (*nameSyncUpdate, error) {
 					if err != nil {
 						lgr.Trace("error reading name info", "err", err)
 						continue
+					}
+					if err := primitives.ValidateName(msg.Name); err != nil {
+						lgr.Trace("invalid name")
+						errs <- ErrSubdomainInvalidName
 					}
 					h := blob.NameSealHash(subdomain.Name, subdomain.EpochHeight, subdomain.Size)
 					if !crypto.VerifySigPub(info.PublicKey, subdomain.Signature, h) {

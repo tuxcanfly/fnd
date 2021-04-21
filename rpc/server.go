@@ -19,6 +19,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"fnd.localhost/handshake/primitives"
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/pkg/errors"
 	"github.com/syndtr/goleveldb/leveldb"
@@ -540,6 +541,9 @@ func (s *Server) AddSubdomain(_ context.Context, req *apiv1.AddSubdomainReq) (*a
 	subdomains = append(subdomains, subdomain)
 
 	name := fmt.Sprintf("%s.%s", subdomain.Name, req.Name)
+	if err := primitives.ValidateName(name); err != nil {
+		return nil, err
+	}
 	err = store.WithTx(s.db, func(tx *leveldb.Transaction) error {
 		if err := store.SetSubdomainInfoTx(tx, name, pubkey, int(req.EpochHeight), int(req.Size)); err != nil {
 			return errors.Wrap(err, "error inserting name info")
