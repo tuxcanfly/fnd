@@ -103,8 +103,10 @@ func (e *Envelope) Decode(r io.Reader) error {
 		msg = &NameUpdateReq{}
 	case MessageTypeBlobUpdateReq:
 		msg = &BlobUpdateReq{}
-	case MessageTypeEquivocationProof:
-		msg = &EquivocationProof{}
+	case MessageTypeBlobEquivocationProof:
+		msg = &BlobEquivocationProof{}
+	case MessageTypeNameEquivocationProof:
+		msg = &NameEquivocationProof{}
 	default:
 		return fmt.Errorf("invalid message type: %d", e.MessageType)
 	}

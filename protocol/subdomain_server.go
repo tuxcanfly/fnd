@@ -36,6 +36,7 @@ func NewSubdomainServer(mux *p2p.PeerMuxer, db *leveldb.DB, nameLocker util.Mult
 
 func (s *SubdomainServer) Start() error {
 	s.mux.AddMessageHandler(p2p.PeerMessageHandlerForType(wire.MessageTypeNameReq, s.onNameReq))
+	s.mux.AddMessageHandler(p2p.PeerMessageHandlerForType(wire.MessageTypeNameEquivocationProof, s.onEquivocationProof))
 	return nil
 }
 
@@ -104,4 +105,8 @@ func (s *SubdomainServer) sendResponse(peerID crypto.Hash, name string, subdomai
 		"served subdomain response",
 		"peer_id", peerID,
 	)
+}
+
+func (s *SubdomainServer) onEquivocationProof(peerID crypto.Hash, envelope *wire.Envelope) {
+	return
 }

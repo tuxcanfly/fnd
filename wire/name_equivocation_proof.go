@@ -9,7 +9,7 @@ import (
 	"fnd.localhost/dwire"
 )
 
-type EquivocationProof struct {
+type NameEquivocationProof struct {
 	HashCacher
 
 	Name string
@@ -28,14 +28,14 @@ type EquivocationProof struct {
 	LocalSignature     crypto.Signature
 }
 
-var _ Message = (*EquivocationProof)(nil)
+var _ Message = (*NameEquivocationProof)(nil)
 
-func (s *EquivocationProof) MsgType() MessageType {
-	return MessageTypeEquivocationProof
+func (s *NameEquivocationProof) MsgType() MessageType {
+	return MessageTypeNameEquivocationProof
 }
 
-func (s *EquivocationProof) Equals(other Message) bool {
-	cast, ok := other.(*EquivocationProof)
+func (s *NameEquivocationProof) Equals(other Message) bool {
+	cast, ok := other.(*NameEquivocationProof)
 	if !ok {
 		return false
 	}
@@ -53,7 +53,7 @@ func (s *EquivocationProof) Equals(other Message) bool {
 		s.LocalSignature == cast.LocalSignature
 }
 
-func (s *EquivocationProof) Encode(w io.Writer) error {
+func (s *NameEquivocationProof) Encode(w io.Writer) error {
 	return dwire.EncodeFields(
 		w,
 		s.Name,
@@ -71,7 +71,7 @@ func (s *EquivocationProof) Encode(w io.Writer) error {
 	)
 }
 
-func (s *EquivocationProof) Decode(r io.Reader) error {
+func (s *NameEquivocationProof) Decode(r io.Reader) error {
 	return dwire.DecodeFields(
 		r,
 		&s.Name,
@@ -89,6 +89,6 @@ func (s *EquivocationProof) Decode(r io.Reader) error {
 	)
 }
 
-func (s *EquivocationProof) Hash() (crypto.Hash, error) {
+func (s *NameEquivocationProof) Hash() (crypto.Hash, error) {
 	return s.HashCacher.Hash(s)
 }

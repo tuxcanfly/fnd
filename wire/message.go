@@ -32,7 +32,8 @@ const (
 	MessageTypePeerRes
 	MessageTypeBlobUpdateReq
 	MessageTypeNameUpdateReq
-	MessageTypeEquivocationProof
+	MessageTypeBlobEquivocationProof
+	MessageTypeNameEquivocationProof
 )
 
 func (t MessageType) String() string {
@@ -67,8 +68,10 @@ func (t MessageType) String() string {
 		return "NameUpdateReq"
 	case MessageTypeBlobUpdateReq:
 		return "BlobUpdateReq"
-	case MessageTypeEquivocationProof:
-		return "EquivocationProof"
+	case MessageTypeBlobEquivocationProof:
+		return "BlobEquivocationProof"
+	case MessageTypeNameEquivocationProof:
+		return "NameEquivocationProof"
 	default:
 		return "unknown"
 	}

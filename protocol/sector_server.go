@@ -40,7 +40,7 @@ func NewSectorServer(mux *p2p.PeerMuxer, db *leveldb.DB, bs blob.Store, nameLock
 
 func (s *SectorServer) Start() error {
 	s.mux.AddMessageHandler(p2p.PeerMessageHandlerForType(wire.MessageTypeBlobReq, s.onBlobReq))
-	s.mux.AddMessageHandler(p2p.PeerMessageHandlerForType(wire.MessageTypeEquivocationProof, s.onEquivocationProof))
+	s.mux.AddMessageHandler(p2p.PeerMessageHandlerForType(wire.MessageTypeBlobEquivocationProof, s.onEquivocationProof))
 	return nil
 }
 
@@ -97,7 +97,7 @@ func (s *SectorServer) onBlobReq(peerID crypto.Hash, envelope *wire.Envelope) {
 				"err", err)
 			return
 		}
-		proof := &wire.EquivocationProof{}
+		proof := &wire.BlobEquivocationProof{}
 		buf := bytes.NewReader(raw)
 		if err := proof.Decode(buf); err != nil {
 			lgr.Error(
@@ -199,7 +199,7 @@ func (s *SectorServer) sendResponse(peerID crypto.Hash, name string, prevHash cr
 }
 
 func (s *SectorServer) onEquivocationProof(peerID crypto.Hash, envelope *wire.Envelope) {
-	msg := envelope.Message.(*wire.EquivocationProof)
+	msg := envelope.Message.(*wire.BlobEquivocationProof)
 	lgr := s.lgr.Sub(
 		"name", msg.Name,
 		"peer_id", peerID,
@@ -272,7 +272,7 @@ func (s *SectorServer) onEquivocationProof(peerID crypto.Hash, envelope *wire.En
 		lgr.Warn("remote signaure validation failed", "err", err)
 		return
 	}
-	lgr.Trace("equivocation proof valid ", "name", msg.Name)
+	lgr.Trace("equivocation proof valid", "name", msg.Name)
 	if err := store.WithTx(s.db, func(tx *leveldb.Transaction) error {
 		return store.SetEquivocationProofTx(tx, msg.Name, msg)
 	}); err != nil {

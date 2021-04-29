@@ -20,7 +20,7 @@ func GetEquivocationProof(db *leveldb.DB, name string) ([]byte, error) {
 	return bytes, nil
 }
 
-func SetEquivocationProofTx(tx *leveldb.Transaction, name string, proof *wire.EquivocationProof) error {
+func SetEquivocationProofTx(tx *leveldb.Transaction, name string, proof *wire.BlobEquivocationProof) error {
 	var buf bytes.Buffer
 	proof.Encode(&buf)
 	err := tx.Put(equivocationProofsPrefix(name), buf.Bytes(), nil)

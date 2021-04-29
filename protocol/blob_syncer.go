@@ -204,7 +204,7 @@ func BlobSyncSectors(opts *BlobSyncSectorsOpts) (*syncUpdate, error) {
 						}
 						// TODO: rename A, B
 						if err := store.WithTx(opts.DB, func(tx *leveldb.Transaction) error {
-							proof := &wire.EquivocationProof{
+							proof := &wire.BlobEquivocationProof{
 								Name:                  msg.Name,
 								RemoteEpochHeight:     msg.EpochHeight,
 								RemotePayloadPosition: msg.PayloadPosition,
