@@ -202,6 +202,7 @@ func TestNameUpdater(t *testing.T) {
 				}
 				err := NameUpdateBlob(cfg)
 				require.NotNil(t, err)
+				time.Sleep(time.Second)
 				require.True(t, errors.Is(err, ErrSubdomainEquivocation))
 			},
 		},

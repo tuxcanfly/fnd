@@ -11,9 +11,9 @@ import (
 type NameReq struct {
 	HashCacher
 
-	Name        string
-	EpochHeight uint16
-	SectorSize  uint16
+	Name          string
+	EpochHeight   uint16
+	SubdomainSize uint16
 }
 
 var _ Message = (*NameReq)(nil)
@@ -30,7 +30,7 @@ func (u *NameReq) Equals(other Message) bool {
 
 	return u.Name == cast.Name &&
 		u.EpochHeight == cast.EpochHeight &&
-		u.SectorSize == cast.SectorSize
+		u.SubdomainSize == cast.SubdomainSize
 }
 
 func (u *NameReq) Encode(w io.Writer) error {
@@ -38,7 +38,7 @@ func (u *NameReq) Encode(w io.Writer) error {
 		w,
 		u.Name,
 		u.EpochHeight,
-		u.SectorSize,
+		u.SubdomainSize,
 	)
 }
 
@@ -47,7 +47,7 @@ func (u *NameReq) Decode(r io.Reader) error {
 		r,
 		&u.Name,
 		&u.EpochHeight,
-		&u.SectorSize,
+		&u.SubdomainSize,
 	)
 }
 

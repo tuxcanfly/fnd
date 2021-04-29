@@ -121,6 +121,40 @@ func NameSyncSubdomains(opts *NameSyncSubdomainsOpts) (*nameSyncUpdate, error) {
 					for i, subdomain := range subdomains {
 						remote := msg.Subdomains[i]
 						if !subdomain.Equals(&remote) {
+							// Skip if equivocation already exists
+							if _, err := store.GetNameEquivocationProof(opts.DB, msg.Name); err == nil {
+								lgr.Trace("skipping update, equivocation exists")
+								errs <- ErrSubdomainEquivocation
+								break out
+							}
+							err = store.WithTx(opts.DB, func(tx *leveldb.Transaction) error {
+								return store.SetHeaderBan(tx, msg.Name, time.Time{})
+							})
+							if err != nil {
+								lgr.Trace("error setting header banned", "err", err)
+								break out
+							}
+							// TODO: rename A, B
+							if err := store.WithTx(opts.DB, func(tx *leveldb.Transaction) error {
+								proof := &wire.NameEquivocationProof{
+									Name:              msg.Name,
+									RemoteEpochHeight: msg.EpochHeight,
+									RemoteSize:        uint16(len(msg.Subdomains)),
+									RemoteSubdomains:  msg.Subdomains,
+									// FIXME: LocalEpochHeight:  LocalEpochHeight,
+									LocalSize:       uint16(len(subdomains)),
+									LocalSubdomains: subdomains,
+								}
+								return store.SetNameEquivocationProofTx(tx, msg.Name, proof)
+							}); err != nil {
+								lgr.Trace("error writing equivocation proof", "err", err)
+							}
+							update := &wire.NameUpdate{
+								Name:          msg.Name,
+								EpochHeight:   msg.EpochHeight,
+								SubdomainSize: 0,
+							}
+							p2p.GossipAll(opts.Mux, update)
 							errs <- ErrSubdomainEquivocation
 							break out
 						}

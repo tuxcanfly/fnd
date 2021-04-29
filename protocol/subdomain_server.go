@@ -1,6 +1,7 @@
 package protocol
 
 import (
+	"bytes"
 	"fnd/blob"
 	"fnd/config"
 	"fnd/crypto"
@@ -66,6 +67,31 @@ func (s *SubdomainServer) onNameReq(peerID crypto.Hash, envelope *wire.Envelope)
 		"name", reqMsg.Name,
 		"peer_id", peerID,
 	)
+
+	// Name request with SubdomainSize == blob.MaxSubdomains is an equivocation
+	// request. Respond with equivocation proof.
+	if reqMsg.SubdomainSize == blob.MaxSubdomains {
+		raw, err := store.GetNameEquivocationProof(s.db, reqMsg.Name)
+		if err != nil {
+			lgr.Error(
+				"failed to fetch equivocation proof",
+				"err", err)
+			return
+		}
+		proof := &wire.NameEquivocationProof{}
+		buf := bytes.NewReader(raw)
+		if err := proof.Decode(buf); err != nil {
+			lgr.Error(
+				"failed to deserialize equivocation proof",
+				"err", err)
+			return
+		}
+		if err := s.mux.Send(peerID, proof); err != nil {
+			s.lgr.Error("error serving equivocation proof", "err", err)
+			return
+		}
+		return
+	}
 
 	if !s.nameLocker.TryRLock(reqMsg.Name) {
 		lgr.Info("dropping sector req for busy name")

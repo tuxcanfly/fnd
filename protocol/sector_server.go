@@ -90,7 +90,7 @@ func (s *SectorServer) onBlobReq(peerID crypto.Hash, envelope *wire.Envelope) {
 	// Blob request with SectorSize == blob.MaxSectors is an equivocation
 	// request. Respond with equivocation proof.
 	if reqMsg.SectorSize == blob.MaxSectors {
-		raw, err := store.GetEquivocationProof(s.db, reqMsg.Name)
+		raw, err := store.GetBlobEquivocationProof(s.db, reqMsg.Name)
 		if err != nil {
 			lgr.Error(
 				"failed to fetch equivocation proof",
@@ -274,7 +274,7 @@ func (s *SectorServer) onEquivocationProof(peerID crypto.Hash, envelope *wire.En
 	}
 	lgr.Trace("equivocation proof valid", "name", msg.Name)
 	if err := store.WithTx(s.db, func(tx *leveldb.Transaction) error {
-		return store.SetEquivocationProofTx(tx, msg.Name, msg)
+		return store.SetBlobEquivocationProofTx(tx, msg.Name, msg)
 	}); err != nil {
 		lgr.Trace("error writing equivocation proof", "err", err)
 	}

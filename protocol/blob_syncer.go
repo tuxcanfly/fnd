@@ -184,7 +184,7 @@ func BlobSyncSectors(opts *BlobSyncSectorsOpts) (*syncUpdate, error) {
 					lgr.Trace("received unexpected prev hash", "expected_prev_hash", opts.PrevHash, "received_prev_hash", msg.PrevHash)
 					if opts.EpochHeight == msg.EpochHeight {
 						// Skip if equivocation already exists
-						if _, err := store.GetEquivocationProof(opts.DB, msg.Name); err == nil {
+						if _, err := store.GetBlobEquivocationProof(opts.DB, msg.Name); err == nil {
 							lgr.Trace("skipping update, equivocation exists")
 							errs <- ErrPayloadEquivocation
 							break
@@ -218,7 +218,7 @@ func BlobSyncSectors(opts *BlobSyncSectorsOpts) (*syncUpdate, error) {
 								LocalReservedRoot:     header.ReservedRoot,
 								LocalSignature:        header.Signature,
 							}
-							return store.SetEquivocationProofTx(tx, msg.Name, proof)
+							return store.SetBlobEquivocationProofTx(tx, msg.Name, proof)
 						}); err != nil {
 							lgr.Trace("error writing equivocation proof", "err", err)
 						}

@@ -1,6 +1,7 @@
 package protocol
 
 import (
+	"fnd/blob"
 	"fnd/config"
 	"fnd/crypto"
 	"fnd/log"
@@ -97,6 +98,22 @@ func (u *NameUpdateQueue) Enqueue(peerID crypto.Hash, update *wire.NameUpdate) e
 	}
 	if !initialImportComplete {
 		return ErrNameInitialImportIncomplete
+	}
+
+	// An Update with SubdomainSize zero is a special case i.e.
+	// A Equivocation Notification Update. We need to resolve this
+	// by requesting an Equivocation Proof by using the special
+	// NameReq Message with SubdomainSize MaxSubdomains and handling the
+	// subsequent NameRes (which contains the Equivocation Proof).
+	// NOTE: In normal cases, Update with SubdomainSize zero
+	// and NameReq with SubdomainSize MaxSubdomains doesn't make sense.
+	if update.SubdomainSize == 0 {
+		err := u.mux.Send(peerID, &wire.NameReq{
+			Name:          update.Name,
+			EpochHeight:   update.EpochHeight,
+			SubdomainSize: blob.MaxSubdomains,
+		})
+		return err
 	}
 
 	if err := u.validateUpdate(update.Name); err != nil {
