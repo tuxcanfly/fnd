@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"fnd/crypto"
 	"io"
 
@@ -17,6 +18,10 @@ type Subdomain struct {
 	Size        uint8            `json:"size"`
 	PublicKey   *btcec.PublicKey `json:"public_key"`
 	Signature   crypto.Signature `json:"signature"`
+}
+
+func (s *Subdomain) String() string {
+	return fmt.Sprintf("%v: %v, %v, %v\n", s.ID, s.Name, s.EpochHeight, s.Size)
 }
 
 func (s *Subdomain) Equals(o *Subdomain) bool {

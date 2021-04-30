@@ -12,6 +12,7 @@ import (
 	"fnd/wire"
 	"time"
 
+	"fnd.localhost/handshake/primitives"
 	"github.com/syndtr/goleveldb/leveldb"
 )
 
@@ -134,5 +135,96 @@ func (s *SubdomainServer) sendResponse(peerID crypto.Hash, name string, subdomai
 }
 
 func (s *SubdomainServer) onEquivocationProof(peerID crypto.Hash, envelope *wire.Envelope) {
+	msg := envelope.Message.(*wire.NameEquivocationProof)
+
+	lgr := s.lgr.Sub(
+		"name", msg.Name,
+		"peer_id", peerID,
+	)
+
+	lgr.Trace("handling equivocation response", "name", msg.Name)
+	if msg.LocalEpochHeight != msg.RemoteEpochHeight {
+		s.lgr.Warn("unexpected epoch height", "local_epoch_height", msg.LocalEpochHeight, "remote_epoch_height", msg.RemoteEpochHeight)
+		return
+	}
+
+	bannedAt, err := store.GetHeaderBan(s.db, msg.Name)
+	if err != nil {
+		lgr.Error(
+			"failed to fetch header ban",
+			"err", err)
+		return
+	}
+
+	// Skip if name is already in equivocated state.
+	if !bannedAt.IsZero() && bannedAt.Add(7*24*time.Duration(time.Hour)).After(time.Now()) {
+		s.lgr.Warn("name banned", "name", msg.Name)
+		return
+	}
+
+	// TODO: verify assumption that local size == remote size for equivocation proof
+	if msg.LocalSize != msg.RemoteSize {
+		s.lgr.Warn("unexpected subdomain size", "local_size", msg.LocalSize, "remote_size", msg.RemoteSize)
+		return
+	}
+
+	if msg.LocalSize != uint16(len(msg.LocalSubdomains)) {
+		s.lgr.Warn("unexpected subdomains", "local_size", msg.LocalSize, "subdomain_size", len(msg.LocalSubdomains))
+		return
+	}
+
+	if msg.RemoteSize != uint16(len(msg.RemoteSubdomains)) {
+		s.lgr.Warn("unexpected subdomains", "remote_size", msg.RemoteSize, "subdomain_size", len(msg.RemoteSubdomains))
+		return
+	}
+
+	// Run through local and remote, making sure subdomains are signed. Only
+	// consider equivocation proof valid if both are signed _and_ both are
+	// different
+	var equivocated = false
+	for i, localSubdomain := range msg.LocalSubdomains {
+		info, err := store.GetNameInfo(s.db, msg.Name)
+		if err != nil {
+			lgr.Trace("error reading name info", "err", err)
+			continue
+		}
+		if err := primitives.ValidateName(msg.Name); err != nil {
+			s.lgr.Warn("invalid name", "name", msg.Name)
+			return
+		}
+		h := blob.NameSealHash(localSubdomain.Name, localSubdomain.EpochHeight, localSubdomain.Size)
+		if !crypto.VerifySigPub(info.PublicKey, localSubdomain.Signature, h) {
+			s.lgr.Warn("subdomain validation failed", "name", msg.Name, "subdomain", localSubdomain.Name)
+			return
+		}
+		remoteSubdomain := msg.RemoteSubdomains[i]
+		h = blob.NameSealHash(remoteSubdomain.Name, remoteSubdomain.EpochHeight, remoteSubdomain.Size)
+		if !crypto.VerifySigPub(info.PublicKey, remoteSubdomain.Signature, h) {
+			s.lgr.Warn("subdomain validation failed", "name", msg.Name, "subdomain", remoteSubdomain.Name)
+			return
+		}
+		if !localSubdomain.Equals(&remoteSubdomain) {
+			equivocated = true
+		}
+	}
+
+	if !equivocated {
+		s.lgr.Warn("equivocation proof invalid", "name", msg.Name)
+		return
+	}
+
+	lgr.Trace("equivocation proof valid", "name", msg.Name)
+	if err := store.WithTx(s.db, func(tx *leveldb.Transaction) error {
+		return store.SetNameEquivocationProofTx(tx, msg.Name, msg)
+	}); err != nil {
+		lgr.Trace("error writing equivocation proof", "err", err)
+	}
+	err = store.WithTx(s.db, func(tx *leveldb.Transaction) error {
+		return store.SetHeaderBan(tx, msg.Name, time.Time{})
+	})
+	if err != nil {
+		lgr.Warn("error setting header banned", "err", err)
+		return
+	}
 	return
 }
