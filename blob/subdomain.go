@@ -11,14 +11,28 @@ import (
 	"github.com/btcsuite/btcd/btcec"
 )
 
+// leveldb: key by ID, disabled bool value
+// ignore blob updates when disabled
+// when duplicate disable old, remap name to new id, delete existing blob
+// size accunting: counts all including disabled
+// name -> ID
+// name -> tld.sld
+// subdomain record - only subdomain name
+// wire - separate field for domain
+// sign - pass domain
+// blob update - keyed by id, not name
 type Subdomain struct {
-	ID          uint8            `json:"id"`
-	Name        string           `json:"name"`
-	EpochHeight uint16           `json:"epoch_height"`
+	ID          uint8            `json:"id"`           // TODO: dont need on wire
+	Name        string           `json:"name"`         // TODO 64 bytes, syncer: update with latest always
+	EpochHeight uint16           `json:"epoch_height"` // TODO: syncer check if update is current epoch eq or higher than subdomain record epoch
 	Size        uint8            `json:"size"`
 	PublicKey   *btcec.PublicKey `json:"public_key"`
-	Signature   crypto.Signature `json:"signature"`
+	Signature   crypto.Signature `json:"signature"` // TODO: move sig to end, wire
+	// TODO: Persistent ID uint16, inc counter, for now eq ID, wire
+	// TODO: 88B Padding, wire
 }
+
+// 256 B
 
 func (s *Subdomain) String() string {
 	return fmt.Sprintf("%v: %v, %v, %v\n", s.ID, s.Name, s.EpochHeight, s.Size)

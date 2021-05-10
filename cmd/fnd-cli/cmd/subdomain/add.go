@@ -2,6 +2,7 @@ package subdomain
 
 import (
 	"context"
+	"fmt"
 	"fnd/blob"
 	"fnd/cli"
 	"fnd/protocol"
@@ -51,7 +52,15 @@ var addCmd = &cobra.Command{
 
 		epochHeight := protocol.BlobEpoch(subdomain)
 
-		sig, err := blob.NameSignSeal(signer, subdomain, epochHeight, uint8(size))
+		s := &blob.Subdomain{
+			// ID:: TODO: fetch and assign new id
+			Name:        fmt.Sprint("%s.%S", name, subdomain),
+			EpochHeight: epochHeight,
+			Size:        uint8(size),
+			PublicKey:   publicKey,
+		}
+
+		sig, err := blob.NameSignSeal(signer, s)
 		if err != nil {
 			return err
 		}

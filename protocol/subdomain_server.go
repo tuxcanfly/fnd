@@ -12,7 +12,6 @@ import (
 	"fnd/wire"
 	"time"
 
-	"fnd.localhost/handshake/primitives"
 	"github.com/syndtr/goleveldb/leveldb"
 )
 
@@ -188,17 +187,14 @@ func (s *SubdomainServer) onEquivocationProof(peerID crypto.Hash, envelope *wire
 			lgr.Trace("error reading name info", "err", err)
 			continue
 		}
-		if err := primitives.ValidateName(msg.Name); err != nil {
-			s.lgr.Warn("invalid name", "name", msg.Name)
-			return
-		}
-		h := blob.NameSealHash(localSubdomain.Name, localSubdomain.EpochHeight, localSubdomain.Size)
+		// pass ID
+		h := blob.NameSealHash(&localSubdomain)
 		if !crypto.VerifySigPub(info.PublicKey, localSubdomain.Signature, h) {
 			s.lgr.Warn("subdomain validation failed", "name", msg.Name, "subdomain", localSubdomain.Name)
 			return
 		}
 		remoteSubdomain := msg.RemoteSubdomains[i]
-		h = blob.NameSealHash(remoteSubdomain.Name, remoteSubdomain.EpochHeight, remoteSubdomain.Size)
+		h = blob.NameSealHash(&remoteSubdomain)
 		if !crypto.VerifySigPub(info.PublicKey, remoteSubdomain.Signature, h) {
 			s.lgr.Warn("subdomain validation failed", "name", msg.Name, "subdomain", remoteSubdomain.Name)
 			return
@@ -207,6 +203,14 @@ func (s *SubdomainServer) onEquivocationProof(peerID crypto.Hash, envelope *wire
 			equivocated = true
 		}
 	}
+
+	// check bytes in local do not equal byts in remotr
+	// read first 1k bytes of remote if local is 1k bytes
+	// compare first 1k bytes o remote wit local
+	// should match == valid eq proof
+
+	// verify any remotes after local bytes, verify sig, no data
+	// break after first remote invalid sig == invalid eq, ignore eq
 
 	if !equivocated {
 		s.lgr.Warn("equivocation proof invalid", "name", msg.Name)

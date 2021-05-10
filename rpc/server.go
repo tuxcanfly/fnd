@@ -502,23 +502,6 @@ func (s *Server) AddSubdomain(_ context.Context, req *apiv1.AddSubdomainReq) (*a
 		return nil, errors.New("initial import incomplete")
 	}
 
-	info, err := store.GetNameInfo(s.db, req.Name)
-	if err != nil {
-		return nil, err
-	}
-
-	var sig crypto.Signature
-	copy(sig[:], req.Signature)
-	h := blob.NameSealHash(req.Subdomain, uint16(req.EpochHeight), uint8(req.Size))
-	if !crypto.VerifySigPub(info.PublicKey, sig, h) {
-		return nil, errors.New("signature verification failed")
-	}
-
-	pubkey, err := btcec.ParsePubKey(req.PublicKey, btcec.S256())
-	if err != nil {
-		return nil, err
-	}
-
 	var subdomains []blob.Subdomain
 	subdomains, err = store.GetSubdomains(s.db, req.Name)
 	if err != nil {
@@ -529,14 +512,32 @@ func (s *Server) AddSubdomain(_ context.Context, req *apiv1.AddSubdomainReq) (*a
 		return nil, errors.New("cannot add greater than max subdomains")
 	}
 
+	info, err := store.GetNameInfo(s.db, req.Name)
+	if err != nil {
+		return nil, err
+	}
+
+	pubkey, err := btcec.ParsePubKey(req.PublicKey, btcec.S256())
+	if err != nil {
+		return nil, err
+	}
+
 	subdomain := blob.Subdomain{
 		ID:          uint8(len(subdomains)),
 		Name:        req.Subdomain,
 		EpochHeight: uint16(req.EpochHeight),
 		Size:        uint8(req.Size),
 		PublicKey:   pubkey,
-		Signature:   sig,
 	}
+
+	var sig crypto.Signature
+	copy(sig[:], req.Signature)
+	h := blob.NameSealHash(&subdomain)
+	if !crypto.VerifySigPub(info.PublicKey, sig, h) {
+		return nil, errors.New("signature verification failed")
+	}
+
+	subdomain.Signature = sig
 
 	subdomains = append(subdomains, subdomain)
 

@@ -7,18 +7,24 @@ import (
 	"golang.org/x/crypto/blake2b"
 )
 
-func NameSealHash(name string, epochHeight uint16, size uint8) crypto.Hash {
+func NameSealHash(subdomain *Subdomain) crypto.Hash {
 	h, _ := blake2b.New256(nil)
 	if _, err := h.Write([]byte("FNBLOB")); err != nil {
 		panic(err)
 	}
-	if err := dwire.EncodeField(h, name); err != nil {
+	if err := dwire.EncodeField(h, subdomain.ID); err != nil {
 		panic(err)
 	}
-	if err := dwire.EncodeField(h, epochHeight); err != nil {
+	if err := dwire.EncodeField(h, subdomain.Name); err != nil {
 		panic(err)
 	}
-	if err := dwire.EncodeField(h, size); err != nil {
+	if err := dwire.EncodeField(h, subdomain.EpochHeight); err != nil {
+		panic(err)
+	}
+	if err := dwire.EncodeField(h, subdomain.Size); err != nil {
+		panic(err)
+	}
+	if err := dwire.EncodeField(h, subdomain.PublicKey); err != nil {
 		panic(err)
 	}
 
@@ -27,7 +33,7 @@ func NameSealHash(name string, epochHeight uint16, size uint8) crypto.Hash {
 	return out
 }
 
-func NameSignSeal(signer crypto.Signer, name string, epochHeight uint16, size uint8) (crypto.Signature, error) {
-	h := NameSealHash(name, epochHeight, size)
+func NameSignSeal(signer crypto.Signer, subdomain *Subdomain) (crypto.Signature, error) {
+	h := NameSealHash(subdomain)
 	return signer.Sign(h)
 }

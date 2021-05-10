@@ -170,8 +170,11 @@ func NameSyncSubdomains(opts *NameSyncSubdomainsOpts) (*nameSyncUpdate, error) {
 					if err := primitives.ValidateName(msg.Name); err != nil {
 						lgr.Trace("invalid name")
 						errs <- ErrSubdomainInvalidName
+						break out
 					}
-					h := blob.NameSealHash(subdomain.Name, subdomain.EpochHeight, subdomain.Size)
+					// TODO: validate size. break if overflow.
+					// TODO: pass iterator as ID, and subdomain record to namesealhash
+					h := blob.NameSealHash(&subdomain)
 					if !crypto.VerifySigPub(info.PublicKey, subdomain.Signature, h) {
 						lgr.Trace("subdomain res validation failed")
 						errs <- errors.Wrap(ErrInvalidSubdomainSignature, "signature validation failed")
