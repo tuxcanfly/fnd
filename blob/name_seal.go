@@ -24,9 +24,6 @@ func NameSealHash(subdomain *Subdomain) crypto.Hash {
 	if err := dwire.EncodeField(h, subdomain.Size); err != nil {
 		panic(err)
 	}
-	if err := dwire.EncodeField(h, subdomain.PublicKey); err != nil {
-		panic(err)
-	}
 
 	var out crypto.Hash
 	copy(out[:], h.Sum(nil))

@@ -24,6 +24,18 @@ type updaterTestSetup struct {
 
 func TestNameUpdater(t *testing.T) {
 	name := "bar"
+	foo := &blob.Subdomain{
+		ID:          0,
+		Name:        "foo",
+		EpochHeight: 10,
+		Size:        128,
+	}
+	bar := &blob.Subdomain{
+		ID:          0,
+		Name:        "bar",
+		EpochHeight: 10,
+		Size:        128,
+	}
 	tests := []struct {
 		name string
 		run  func(t *testing.T, setup *updaterTestSetup)
@@ -32,7 +44,7 @@ func TestNameUpdater(t *testing.T) {
 			"syncs subdomains when the local node has never seen the name",
 			func(t *testing.T, setup *updaterTestSetup) {
 				require.NoError(t, store.WithTx(setup.rs.DB, func(tx *leveldb.Transaction) error {
-					sig, err := blob.NameSignSeal(setup.tp.RemoteSigner, "foo", 10, 128)
+					sig, err := blob.NameSignSeal(setup.tp.RemoteSigner, foo)
 					if err != nil {
 						return err
 					}
@@ -76,7 +88,7 @@ func TestNameUpdater(t *testing.T) {
 			func(t *testing.T, setup *updaterTestSetup) {
 				// local: ["bar.bar"]
 				require.NoError(t, store.WithTx(setup.ls.DB, func(tx *leveldb.Transaction) error {
-					sig, err := blob.NameSignSeal(setup.tp.RemoteSigner, "bar", 10, 128)
+					sig, err := blob.NameSignSeal(setup.tp.RemoteSigner, bar)
 					if err != nil {
 						return err
 					}
@@ -95,11 +107,11 @@ func TestNameUpdater(t *testing.T) {
 				}))
 				// remote: ["foo.bar", "bar.bar"]
 				require.NoError(t, store.WithTx(setup.rs.DB, func(tx *leveldb.Transaction) error {
-					sig1, err := blob.NameSignSeal(setup.tp.RemoteSigner, "foo", 10, 128)
+					sig1, err := blob.NameSignSeal(setup.tp.RemoteSigner, foo)
 					if err != nil {
 						return err
 					}
-					sig2, err := blob.NameSignSeal(setup.tp.RemoteSigner, "bar", 10, 128)
+					sig2, err := blob.NameSignSeal(setup.tp.RemoteSigner, bar)
 					if err != nil {
 						return err
 					}
@@ -150,7 +162,7 @@ func TestNameUpdater(t *testing.T) {
 			func(t *testing.T, setup *updaterTestSetup) {
 				// local: ["foo.bar"]
 				require.NoError(t, store.WithTx(setup.ls.DB, func(tx *leveldb.Transaction) error {
-					sig, err := blob.NameSignSeal(setup.tp.RemoteSigner, "foo", 10, 128)
+					sig, err := blob.NameSignSeal(setup.tp.RemoteSigner, foo)
 					if err != nil {
 						return err
 					}
@@ -169,7 +181,7 @@ func TestNameUpdater(t *testing.T) {
 				}))
 				// remote: ["bar.bar"]
 				require.NoError(t, store.WithTx(setup.rs.DB, func(tx *leveldb.Transaction) error {
-					sig, err := blob.NameSignSeal(setup.tp.RemoteSigner, "bar", 10, 128)
+					sig, err := blob.NameSignSeal(setup.tp.RemoteSigner, bar)
 					if err != nil {
 						return err
 					}
@@ -211,7 +223,7 @@ func TestNameUpdater(t *testing.T) {
 			func(t *testing.T, setup *updaterTestSetup) {
 				// use an invalid signature using local signer instead of remote
 				require.NoError(t, store.WithTx(setup.rs.DB, func(tx *leveldb.Transaction) error {
-					sig, err := blob.NameSignSeal(setup.tp.LocalSigner, "foo", 10, 128)
+					sig, err := blob.NameSignSeal(setup.tp.LocalSigner, foo)
 					if err != nil {
 						return err
 					}
