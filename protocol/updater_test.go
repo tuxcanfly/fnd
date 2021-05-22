@@ -31,7 +31,7 @@ func TestNameUpdater(t *testing.T) {
 		Size:        128,
 	}
 	bar := &blob.Subdomain{
-		ID:          0,
+		ID:          1,
 		Name:        "bar",
 		EpochHeight: 10,
 		Size:        128,
@@ -88,13 +88,14 @@ func TestNameUpdater(t *testing.T) {
 			func(t *testing.T, setup *updaterTestSetup) {
 				// local: ["bar.bar"]
 				require.NoError(t, store.WithTx(setup.ls.DB, func(tx *leveldb.Transaction) error {
-					sig, err := blob.NameSignSeal(setup.tp.RemoteSigner, bar)
+					sig, err := blob.NameSignSeal(setup.tp.RemoteSigner, foo)
 					if err != nil {
 						return err
 					}
 					if err := store.SetSubdomainTx(tx, name, []blob.Subdomain{
 						{
-							Name:        "bar",
+							ID:          0,
+							Name:        "foo",
 							EpochHeight: 10,
 							Size:        128,
 							PublicKey:   setup.tp.RemoteSigner.Pub(),
@@ -117,6 +118,7 @@ func TestNameUpdater(t *testing.T) {
 					}
 					if err := store.SetSubdomainTx(tx, name, []blob.Subdomain{
 						{
+							ID:          0,
 							Name:        "foo",
 							EpochHeight: 10,
 							Size:        128,
@@ -124,6 +126,7 @@ func TestNameUpdater(t *testing.T) {
 							Signature:   sig1,
 						},
 						{
+							ID:          1,
 							Name:        "bar",
 							EpochHeight: 10,
 							Size:        128,

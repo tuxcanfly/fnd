@@ -247,7 +247,7 @@ func GetSubdomains(db *leveldb.DB, name string) ([]blob.Subdomain, error) {
 
 func SetSubdomainTx(tx *leveldb.Transaction, name string, subdomains []blob.Subdomain) error {
 	for _, subdomain := range subdomains {
-		if err := tx.Put(headerSubdomainsPrefix(name, subdomain.Name), mustMarshalJSON(&subdomain), nil); err != nil {
+		if err := tx.Put(headerSubdomainsPrefix(name, string(mustEncodeInt(int(subdomain.ID)))), mustMarshalJSON(&subdomain), nil); err != nil {
 			return errors.Wrap(err, "error writing subdomains")
 		}
 	}
